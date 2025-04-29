@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gears", "Gears\Gears.csproj", "{D8109C2A-B970-468F-9C4F-68AE13E74ABC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{D8109C2A-B970-468F-9C4F-68AE13E74ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D8109C2A-B970-468F-9C4F-68AE13E74ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D8109C2A-B970-468F-9C4F-68AE13E74ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
