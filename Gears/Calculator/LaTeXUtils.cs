@@ -6,7 +6,7 @@ using WpfMath;
 using WpfMath.Parsers;
 using XamlMath;
 
-namespace Bolsover.Gears.Model;
+namespace Bolsover.Gears.Calculator;
 
 /// <summary>
 /// Provides utility methods for processing LaTeX strings and generating image representations.

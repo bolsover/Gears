@@ -4,7 +4,7 @@ namespace UnitTests
 {
     public class ConsoleIO
     {
-        public void WriteLine(string s)
+        public static void WriteLine(string s)
         {
             Console.WriteLine(s);
         }

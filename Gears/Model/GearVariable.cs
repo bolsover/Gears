@@ -24,6 +24,9 @@ public sealed class GearVariable : INotifyPropertyChanged
     public string Symbol { get; set; }
     public string Formula { get; set; }
     public string NCalc { get; set; }
+    public string CalcMethod { get; set; }
+    public string GroupId { get; set; }
+
 
     private double _value;
     

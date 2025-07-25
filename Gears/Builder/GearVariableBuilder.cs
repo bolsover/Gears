@@ -65,4 +65,16 @@ public class GearVariableBuilder
         _gearVariable.ValueType = valueType;
         return this;
     }
+    
+    public GearVariableBuilder SetCalcMethod(string calcMethod)
+    {
+        _gearVariable.CalcMethod = calcMethod;
+        return this;
+    }
+
+    public GearVariableBuilder SetGroupId(string groupId)
+    {
+        _gearVariable.GroupId = groupId;
+        return this;
+    }
 }

@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Newtonsoft.Json;
+using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Gui;
+using Bolsover.Gears.Model;
 
-namespace GearsUI;
+namespace Bolsover.Gears;
 
 static class Program
 {
@@ -18,6 +17,14 @@ static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-    //    Application.Run(new Form3());
+      
+        var gear = new Gear(GearContext.ProfileShiftedExternalInvolutePair, CalculationMode.Automatic);
+        gear.Calculate();
+        
+        var control = new GearVariableControl(gear);
+        var form = new Form();
+        form.Controls.Add(control);
+        Application.Run(form);
+   
     }
 }

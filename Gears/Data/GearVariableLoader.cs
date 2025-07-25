@@ -32,7 +32,7 @@ public class GearVariableLoader
         // Prepare the SQL query
         var contextKey = ctx.ToString();
         var query =
-            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType FROM GearVariables where Context = '{contextKey}' order by Ordinal";
+            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType, CalcMethod, GroupId FROM GearVariables where Context = '{contextKey}' order by Ordinal";
         using var command = new SQLiteCommand(query, connection);
         // Execute the query and read the results
         using var reader = command.ExecuteReader();
@@ -49,6 +49,9 @@ public class GearVariableLoader
             var ordinal = GetReaderValue(reader, "Ordinal", reader.GetInt32);
             var nCalc = GetReaderValue(reader, "NCalc", reader.GetString, null);
             var valueType = GetReaderValue(reader, "ValueType", reader.GetString, null);
+            var calcMethod = GetReaderValue(reader, "CalcMethod", reader.GetString, "");
+            var groupId = GetReaderValue(reader, "GroupId", reader.GetString, "");
+            
 
             builder.SetGearContext(context)
                 .SetVariableName(variableName)
@@ -58,10 +61,12 @@ public class GearVariableLoader
                 .SetIsDesgn(isDesign)
                 .SetOrdinal(ordinal)
                 .SetNCalc(nCalc)
-                .SetValueType(valueType);
+                .SetValueType(valueType)
+                .SetCalcMethod(calcMethod)
+                .SetGroupId(groupId);
 
             variables.Add(builder.Build());
-            Console.Out.WriteLine(builder.Build());
+           // Console.Out.WriteLine(builder.Build());
         }
 
         return variables;

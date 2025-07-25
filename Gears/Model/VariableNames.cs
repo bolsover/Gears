@@ -166,6 +166,8 @@ public enum VariableNames
 
     [System.ComponentModel.Description("Working Pressure Angle"), Symbol("alphaw")]
     WorkingPressureAngle,
+    [System.ComponentModel.Description("Working Pressure Angle"), Symbol("alphaw#")]
+    WorkingPressureAngleNR,
 
    [System.ComponentModel.Description("Working Centre Distance"), Symbol("ax")]
     WorkingCentreDistanceax,

@@ -27,27 +27,32 @@ public class Gear
         Context = context;
         GearVariables = new Dictionary<VariableNames, GearVariable>();
         NCalcVariables = new Dictionary<string, VariableNames>();
-        LoadVariables();
+        InitializeGearVariables();
     }
 
     public CalculationMode Mode { get; set; }
-    public GearContext Context { get; set; }
+    private GearContext Context { get; set; }
 
     public Dictionary<VariableNames, GearVariable> GearVariables { get; }
-    public Dictionary<string, VariableNames> NCalcVariables { get; }
+    private Dictionary<string, VariableNames> NCalcVariables { get; }
 
-    private void LoadVariables()
+    private void InitializeGearVariables()
     {
         var loader = new GearVariableLoader();
         loader.LoadGearVariables(Context).ToList().ForEach(AddVariable);
     }
 
+    /// <summary>
+    /// Adds a GearVariable to the GearVariables dictionary and updates associated event handlers and NCalc variable mappings.
+    /// </summary>
+    /// <param name="variable">The GearVariable to be added. This variable contains properties including its name and whether it is a design variable.</param>
     private void AddVariable(GearVariable variable)
     {
         if (variable.IsDesign)
         {
             variable.PropertyChanged += OnDesignVariableChanged;
         }
+
         GearVariables.Add(variable.Name, variable);
         var fieldInfo = typeof(VariableNames)
             .GetField(variable.Name.ToString(), BindingFlags.Public | BindingFlags.Static);
@@ -75,11 +80,44 @@ public class Gear
     public double CalculateGearVariable(VariableNames name)
     {
         var variable = GetVariable(name);
-        if (variable.IsDesign) return variable.Value;
+        variable.Value = GetVariableValue(variable);
+        return variable.Value;
+    }
 
+    /// <summary>
+    /// Returns the value of a gear variable based on its name and expression.
+    /// </summary>
+    /// <param name="variable"></param>
+    /// <returns></returns>
+    private double GetVariableValue(GearVariable variable)
+    {
+        if (variable.IsDesign)
+            return variable.Value;
+
+        switch (variable.CalcMethod)
+        {
+            case "NCalc":
+                EvaluateNCalc(variable);
+                break;
+            case "PressureAngleByNewtonRaphson":
+                variable.Value = CustomCalculations.PressureAngleByNewtonRaphson(
+                    CalculateGearVariable(VariableNames.WorkingInvoluteFunction), initialGuess: 0.5, tolerance: 1e-6,
+                    maxIterations: 100);
+                break;
+        }
+
+        return variable.Value;
+    }
+
+    /// <summary>
+    /// Evaluates a mathematical expression defined in the provided GearVariable
+    /// using the NCalc library and updates its Value property with the result.
+    /// </summary>
+    /// <param name="variable">The GearVariable instance containing the expression to evaluate.</param>
+    private void EvaluateNCalc(GearVariable variable)
+    {
         var expression = new Expression(variable.NCalc);
         AssignExpressionParameters(expression, variable.NCalc);
-
         try
         {
             variable.Value = (double)expression.Evaluate()!;
@@ -89,11 +127,15 @@ public class Gear
             LogEvaluationError(variable.NCalc, ex);
             throw;
         }
-
-        return variable.Value;
     }
 
-    private void LogEvaluationError(string formula, Exception ex)
+
+    /// <summary>
+    /// Logs an error that occurred during the evaluation of a formula.
+    /// </summary>
+    /// <param name="formula">The formula that caused the evaluation error.</param>
+    /// <param name="ex">The exception detailing the error that occurred during evaluation.</param>
+    private static void LogEvaluationError(string formula, Exception ex)
     {
         Console.WriteLine($"Error evaluating formula: {formula}");
         Console.WriteLine($"Exception: {ex}");
@@ -108,10 +150,16 @@ public class Gear
     {
         foreach (var variableEntry in GearVariables.Values)
         {
-            CalculateGearVariable(variableEntry.Name); // Inlined ProcessGearVariable logic
+            CalculateGearVariable(variableEntry.Name); 
         }
     }
 
+    /// <summary>
+    /// Assigns parameters to the given NCalc expression based on the specified string formula,
+    /// linking variable names within the expression to their corresponding values or constants.
+    /// </summary>
+    /// <param name="expression">The NCalc expression object to which parameters will be assigned.</param>
+    /// <param name="nCalc">The string representation of the formula, containing variable placeholders in brackets.</param>
     private void AssignExpressionParameters(Expression expression, string nCalc)
     {
         foreach (var parameter in GetStringsWithinBrackets(nCalc))
@@ -122,6 +170,11 @@ public class Gear
         }
     }
 
+    /// <summary>
+    /// Extracts unique strings enclosed within square brackets from the provided input string.
+    /// </summary>
+    /// <param name="input">The input string from which to extract strings within square brackets.</param>
+    /// <returns>An array of unique strings found within square brackets in the input. Returns an empty array if the input is null or empty.</returns>
     private static string[] GetStringsWithinBrackets(string input)
     {
         if (string.IsNullOrEmpty(input)) return Array.Empty<string>();
@@ -134,7 +187,12 @@ public class Gear
             .ToArray();
     }
 
-    public void OnDesignVariableChanged(object sender, PropertyChangedEventArgs e)
+    /// <summary>
+    /// Handles the PropertyChanged event of a design variable and triggers recalculation of all gear variables.
+    /// </summary>
+    /// <param name="sender">The source of the event, typically the design variable that was changed.</param>
+    /// <param name="e">An object containing data about the property change event.</param>
+    private void OnDesignVariableChanged(object sender, PropertyChangedEventArgs e)
     {
         Calculate();
     }

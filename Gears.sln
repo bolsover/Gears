@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gears", "Gears\Gears.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearsUI", "GearsUI\GearsUI.csproj", "{66E3EAFD-CDF3-459A-A934-6060EEFF519B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

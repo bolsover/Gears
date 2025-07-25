@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
+using Bolsover.Gears.Calculator;
 using Bolsover.Gears.Model;
 //using Microsoft.Data.Sqlite;
 
