@@ -96,11 +96,11 @@ public static class Geometry
         }
 
         /// <summary>
-        /// Spherical involute curve function.
+        /// Spherical involute geometry function.
         /// </summary>
         /// <param name="gamma0">Base polar angle that corresponds to the pitch cone.</param>
-        /// <param name="gamma">Polar angle(s) of the point(s) lying on the curve, for which the corresponding azimuth angle(s) are to be calculated.</param>
-        /// <returns>Azimuth angle(s) of the point(s) lying on the curve.</returns>
+        /// <param name="gamma">Polar angle(s) of the point(s) lying on the geometry, for which the corresponding azimuth angle(s) are to be calculated.</param>
+        /// <returns>Azimuth angle(s) of the point(s) lying on the geometry.</returns>
         public static double SphericalInvolute(double gamma0, double gamma)
         {
             // Calculate phi as the arccosine of the tangent ratio

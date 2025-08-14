@@ -164,6 +164,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Gui\GearVariableControl.cs" />
+    <Compile Include="Gui\ToothProfileControl.cs" />
+    <Compile Include="PointConverter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">

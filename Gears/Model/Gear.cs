@@ -33,13 +33,32 @@ public class Gear
     public CalculationMode Mode { get; set; }
     private GearContext Context { get; set; }
 
+    /// <summary>
+    /// Represents a collection of gear-related variables, where each variable is
+    /// identified by a unique name and represented as a key-value pair. The keys
+    /// are of type <see cref="VariableNames"/>, and the values are instances of
+    /// <see cref="GearVariable"/>. This property provides access to a dictionary
+    /// that encapsulates the state and characteristics of a gear's behavior or
+    /// configuration.
+    /// </summary>
     public Dictionary<VariableNames, GearVariable> GearVariables { get; }
+
+    /// <summary>
+    /// Represents a collection of calculation-related variables used within the context of
+    /// NCalc, where each variable is identified by a string key and its corresponding value
+    /// is associated with <see cref="VariableNames"/>. This property provides a mechanism
+    /// to manage and access variables essential for expression evaluation and dynamic
+    /// computations.
+    /// </summary>
     private Dictionary<string, VariableNames> NCalcVariables { get; }
 
+    /// <summary>
+    /// Initializes the gear variables by loading them from the specified gear context and adds
+    /// them to the gear's internal variable dictionary for further calculations and management.
+    /// </summary>
     private void InitializeGearVariables()
     {
-        var loader = new GearVariableLoader();
-        loader.LoadGearVariables(Context).ToList().ForEach(AddVariable);
+      GearVariableLoader.LoadGearVariables(Context).ToList().ForEach(AddVariable);
     }
 
     /// <summary>

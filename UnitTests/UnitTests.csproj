@@ -16,7 +16,7 @@
     <LangVersion>9</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,6 +24,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32bit>true</Prefer32bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -118,6 +119,9 @@
     <Reference Include="NCalc.Sync, Version=5.4.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NCalcSync.5.4.2\lib\net462\NCalc.Sync.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Numbers, Version=1.8.0.0, Culture=neutral, PublicKeyToken=9cd62db60ea5554c, processorArchitecture=MSIL">
       <HintPath>..\packages\PeterO.Numbers.1.8.0\lib\net40\Numbers.dll</HintPath>
     </Reference>
@@ -198,8 +202,13 @@
     <Compile Include="TestProfileShiftedExternalRadialHelicalPair.cs" />
     <Compile Include="TestProfileShiftedInternalExternalInvolutePair.cs" />
     <Compile Include="TestVariableNames.cs" />
+    <Compile Include="ToothProfileControlTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\GearsUI\GearsUI.csproj">
+      <Project>{66e3eafd-cdf3-459a-a934-6060eeff519b}</Project>
+      <Name>GearsUI</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Gears\Gears.csproj">
       <Project>{d8109c2a-b970-468f-9c4f-68ae13e74abc}</Project>
       <Name>Gears</Name>

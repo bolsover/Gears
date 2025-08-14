@@ -1,31 +1,61 @@
-﻿namespace Bolsover.Gears.Calculator;
+﻿using System.Drawing;
+using Bolsover.Gears.Model;
+
+namespace Bolsover.Gears.Calculator;
 
 using System;
 
 public class ConversionUtils
 {
+    /// <summary>
+    /// Formats a measurement in millimeters to a string with three decimal places and an "in" suffix.
+    /// </summary>
+    /// <param name="mm">The length in millimeters to be converted and formatted in inches.</param>
+    /// <returns>A string representation of the measurement in inches, formatted to three decimal places with an "in" suffix.</returns>
     public static string ToInchFormat(double mm)
     {
         return ToInches(mm).ToString("0.000 in");
     }
 
-
+    /// <summary>
+    /// Formats an angle in degrees to a string with three decimal places and a "°" suffix.
+    /// </summary>
+    /// <param name="angle">The angle in degrees to be formatted.</param>
+    /// <returns>A string representation of the angle in degrees, formatted to three decimal places with a "°" suffix.</returns>
     public static string ToDegreeFormat(double angle)
     {
         return angle.ToString("0.000°");
     }
 
+    /// <summary>
+    /// Formats a measurement in millimeters to a string with three decimal places and the "mm" unit suffix.
+    /// </summary>
+    /// <param name="mm">The length in millimeters to be formatted.</param>
+    /// <returns>A string representation of the measurement in millimeters, formatted to three decimal places with a "mm" unit suffix.</returns>
     public static string ToMmFormat(double mm)
     {
         return mm.ToString("0.000 mm");
     }
 
-
+    /// <summary>
+    /// Converts a measurement in millimeters to inches.
+    /// The conversion uses the formula: inches = millimeters / 25.4.
+    /// </summary>
+    /// <param name="mm">The length in millimeters to be converted.</param>
+    /// <returns>The equivalent length in inches.</returns>
     public static double ToInches(double mm)
     {
         return mm / 25.4;
     }
 
+    /// <summary>
+    /// Formats the given double value according to the specified string format.
+    /// The output string is generated using the specified format, allowing for precision
+    /// or unit appending, such as decimal places or specific unit formats (e.g., "0.000 mm").
+    /// </summary>
+    /// <param name="d">The double value to be formatted.</param>
+    /// <param name="format">A string format to dictate how the double value should be represented.</param>
+    /// <returns>A string representation of the double value formatted according to the provided format.</returns>
     public static string ToFormat(double d, string format)
     {
         return d.ToString(format);
@@ -216,5 +246,26 @@ public class ConversionUtils
     {
         var mt = WormNormalModuleToRadialModule(WormAxialModuleToNormalModule(axialModule, helixAngle), helixAngle);
         return mt;
+    }
+    
+    /// <summary>
+    /// Converts a System.Windows.Point to a System.Drawing.PointF.
+    /// </summary>
+    /// <param name="point">The System.Windows.Point to convert.</param>
+    /// <returns>The equivalent System.Drawing.PointF.</returns>
+    public static PointF ToPointF(GearPoint point)
+    {
+        return new PointF((float)point.X, (float)point.Y);
+    }
+    
+    
+    /// <summary>
+    /// Converts a System.Drawing.PointF to a System.Windows.Point.
+    /// </summary>
+    /// <param name="point">The System.Drawing.PointF to convert.</param>
+    /// <returns>The equivalent System.Windows.Point.</returns>
+    public static GearPoint ToPoint(PointF point)
+    {
+        return new GearPoint(point.X, point.Y);
     }
 }

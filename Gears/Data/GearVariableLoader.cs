@@ -15,14 +15,14 @@ namespace Bolsover.Gears.Data;
 /// This class provides functionality to query a database and retrieve a list of
 /// <see cref="GearVariable"/> objects associated with a specific gear context.
 /// </remarks>
-public class GearVariableLoader
+public static class GearVariableLoader
 {
     /// <summary>
     /// Loads gear variables associated with the specified gear context.
     /// </summary>
     /// <param name="context">The gear context that determines which gear variables to load.</param>
     /// <returns>A list of gear variables corresponding to the specified context.</returns>
-    public List<GearVariable> LoadGearVariables(GearContext ctx)
+    public static List<GearVariable> LoadGearVariables(GearContext ctx)
     {
         var variables = new List<GearVariable>();
         const string connectionString = @"Data Source=.\Data\Nexus.db";
@@ -68,6 +68,7 @@ public class GearVariableLoader
             variables.Add(builder.Build());
            // Console.Out.WriteLine(builder.Build());
         }
+        connection.Close();
 
         return variables;
     }
