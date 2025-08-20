@@ -11,7 +11,7 @@ namespace Bolsover.Gears.Model;
     /// </summary>
     public class GearPoint
     {
-        public GearPoint()
+        private GearPoint()
         {
         }
         
@@ -24,17 +24,11 @@ namespace Bolsover.Gears.Model;
         public double X { get; set; }
         public double Y { get; set; }
         
-        public double Phase
-        {
-            get => Math.Atan2(Y, X);
-        }
-        
-        public double Gradient
-        {
-            get => X == 0 ? Y < 0 ? double.MinValue : double.MaxValue : Y / X;
-        }
-        
-        
+        public double Phase => Math.Atan2(Y, X);
+
+        public double Gradient => X == 0 ? Y < 0 ? double.MinValue : double.MaxValue : Y / X;
+
+
         public override string ToString()
         {
             return "X: " + X + " Y: " + Y;

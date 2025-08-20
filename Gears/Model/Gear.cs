@@ -31,7 +31,7 @@ public class Gear
     }
 
     public CalculationMode Mode { get; set; }
-    private GearContext Context { get; set; }
+    public GearContext Context { get; private set; }
 
     /// <summary>
     /// Represents a collection of gear-related variables, where each variable is

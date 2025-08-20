@@ -6,5 +6,7 @@
                  name="Gears"
                  start-page="starter-topic.md">
 
+    <toc-element topic="tasks.md"/>
     <toc-element topic="starter-topic.md"/>
+    <toc-element topic="plan.md"/>
 </instance-profile>

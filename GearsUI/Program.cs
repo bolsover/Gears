@@ -19,13 +19,14 @@ public class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         
-        var gear = new Gear(GearContext.ProfileShiftedExternalInvolutePair, CalculationMode.Automatic);
-        gear.Calculate();
-        
-        var control = new GearVariableControl(gear);
-        var form = new Form();
-       
-        form.Controls.Add(control);
+        // var gear = new Gear(GearContext.ProfileShiftedExternalInvolutePair, CalculationMode.Automatic);
+        // gear.Calculate();
+        //
+        // var control = new GearVariableControl(gear);
+        // var form = new Form();
+        //
+        // form.Controls.Add(control);
+        GearVariableTestForm form = new GearVariableTestForm();
         
         Application.Run(form);
    

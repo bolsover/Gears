@@ -191,6 +191,7 @@
     <Compile Include="StraightBevelGleasonPair.cs" />
     <Compile Include="StraightBevelStandardPair.cs" />
     <Compile Include="TestConversionUtils.cs" />
+    <Compile Include="TestGearVariableExporter.cs" />
     <Compile Include="TestProfileShiftedInternalExternalHelicalPair.cs" />
     <Compile Include="TestExternalInvolutePair.cs" />
     <Compile Include="TestExternalRadialHelicalGear.cs" />
