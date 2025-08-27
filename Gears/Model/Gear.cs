@@ -14,25 +14,19 @@ namespace Bolsover.Gears.Model;
 /// Represents a gear model, providing tools to manage and calculate gear variables
 /// based on the given context and calculation mode.
 /// </summary>
-public class Gear
+public class Gear : IVariableResolver
 {
+    // Constants
     private const string BracketsRegexPattern = @"\[(.*?)\]"; // Extracted constant for regex pattern
+    private const double DefaultInitialGuess = 0.5;
+    private const double DefaultTolerance = 1e-6;
+    private const int DefaultMaxIterations = 100;
 
-    /// <summary>
-    /// Represents a Gear object with associated context, calculation mode, and variable management.
-    /// </summary>
-    public Gear(GearContext context, CalculationMode mode)
-    {
-        Mode = mode;
-        Context = context;
-        GearVariables = new Dictionary<VariableNames, GearVariable>();
-        NCalcVariables = new Dictionary<string, VariableNames>();
-        InitializeGearVariables();
-    }
-
+    // Properties
+    public string Name { get; set; }
     public CalculationMode Mode { get; set; }
     public GearContext Context { get; private set; }
-
+    public List<Gear> Gears { get; } = new();
     /// <summary>
     /// Represents a collection of gear-related variables, where each variable is
     /// identified by a unique name and represented as a key-value pair. The keys
@@ -41,7 +35,7 @@ public class Gear
     /// that encapsulates the state and characteristics of a gear's behavior or
     /// configuration.
     /// </summary>
-    public Dictionary<VariableNames, GearVariable> GearVariables { get; }
+    public Dictionary<VariableNames, GearVariable> GearVariables { get; } = new();
 
     /// <summary>
     /// Represents a collection of calculation-related variables used within the context of
@@ -50,22 +44,91 @@ public class Gear
     /// to manage and access variables essential for expression evaluation and dynamic
     /// computations.
     /// </summary>
-    private Dictionary<string, VariableNames> NCalcVariables { get; }
+    protected Dictionary<string, VariableNames> NCalcVariables { get; } = new();
+
+    private Gear ParentGear { get; set; }
+
+    /// <summary>
+    /// Adds a gear to this set and wires the resolver so it can use set-level and cross-gear variables.
+    /// </summary>
+    private void AddGear(Gear gear)
+    {
+        if (gear == null || Gears.Contains(gear)) return;
+        gear.ParentGear = this;
+        Gears.Add(gear);
+        gear.VariableResolver = this;
+    }
+
+
+    /// <summary>
+    /// Represents a Gear object with associated context, calculation mode, and variable management.
+    /// </summary>
+    public Gear(GearContext context, CalculationMode mode)
+    {
+        Mode = mode;
+        Context = context;
+        // Load grouped variables from DB
+        var grouped = Data.GearVariableLoader.LoadGroupedGearVariables(context);
+
+        // Add set-level variables
+        foreach (var v in grouped.Common)
+        {
+            AddVariable(v);
+        }
+
+        // Create gears with deferred loading and add them to the set
+        var gear1 = new Gear(context, mode, false);
+        var gear2 = new Gear(context, mode, false);
+        AddGear(gear1);
+        AddGear(gear2);
+
+        // Populate per-gear variables
+        foreach (var v in grouped.Gear1)
+        {
+            gear1.AddVariable(v);
+        }
+
+        foreach (var v in grouped.Gear2)
+        {
+            gear2.AddVariable(v);
+        }
+
+        VariableResolver = this;
+    }
+
+    /// <summary>
+    /// Constructor that allows deferring the automatic loading of variables. Useful when the gear is part of a GearSet
+    /// and variables are supplied externally (e.g., from a grouped loader).
+    /// </summary>
+    public Gear(GearContext context, CalculationMode mode, bool autoLoad)
+    {
+        Mode = mode;
+        Context = context;
+
+        if (autoLoad)
+        {
+            LoadAndInitializeGearVariables();
+        }
+    }
+
+
+
 
     /// <summary>
     /// Initializes the gear variables by loading them from the specified gear context and adds
     /// them to the gear's internal variable dictionary for further calculations and management.
     /// </summary>
-    private void InitializeGearVariables()
+    private void LoadAndInitializeGearVariables()
     {
-      GearVariableLoader.LoadGearVariables(Context).ToList().ForEach(AddVariable);
+        GearVariableLoader.LoadGearVariables(Context).ToList().ForEach(AddVariable);
     }
+
 
     /// <summary>
     /// Adds a GearVariable to the GearVariables dictionary and updates associated event handlers and NCalc variable mappings.
     /// </summary>
     /// <param name="variable">The GearVariable to be added. This variable contains properties including its name and whether it is a design variable.</param>
-    private void AddVariable(GearVariable variable)
+    internal void AddVariable(GearVariable variable)
     {
         if (variable.IsDesign)
         {
@@ -96,47 +159,60 @@ public class Gear
     /// </summary>
     /// <param name="name">The name of the variable to calculate.</param>
     /// <returns>Returns the calculated value of the specified variable.</returns>
-    public double CalculateGearVariable(VariableNames name)
+    public double CalculateVariable(VariableNames name)
     {
-        var variable = GetVariable(name);
-        variable.Value = GetVariableValue(variable);
+        var variable = FindVariable(name);
+        if (variable == null) return 0;
+
+        variable.Value = EvaluateVariableValue(variable);
         return variable.Value;
     }
+
+
+    private GearVariable FindVariable(VariableNames name) =>
+        GearVariables.TryGetValue(name, out var variable) ? variable : null;
+
 
     /// <summary>
     /// Returns the value of a gear variable based on its name and expression.
     /// </summary>
     /// <param name="variable"></param>
     /// <returns></returns>
-    private double GetVariableValue(GearVariable variable)
+    private double EvaluateVariableValue(GearVariable variable)
     {
         if (variable.IsDesign)
+        {
             return variable.Value;
+        }
 
         switch (variable.CalcMethod)
         {
             case "NCalc":
-                EvaluateNCalc(variable);
+                EvaluateNCalcExpression(variable);
                 break;
             case "PressureAngleByNewtonRaphson":
                 variable.Value = CustomCalculations.PressureAngleByNewtonRaphson(
-                    CalculateGearVariable(VariableNames.WorkingInvoluteFunction), initialGuess: 0.5, tolerance: 1e-6,
-                    maxIterations: 100);
+                    CalculateVariable(VariableNames.WorkingInvoluteFunction),
+                    DefaultInitialGuess,
+                    DefaultTolerance,
+                    DefaultMaxIterations);
                 break;
         }
 
         return variable.Value;
     }
 
+
     /// <summary>
     /// Evaluates a mathematical expression defined in the provided GearVariable
     /// using the NCalc library and updates its Value property with the result.
     /// </summary>
     /// <param name="variable">The GearVariable instance containing the expression to evaluate.</param>
-    private void EvaluateNCalc(GearVariable variable)
+    private void EvaluateNCalcExpression(GearVariable variable)
     {
         var expression = new Expression(variable.NCalc);
         AssignExpressionParameters(expression, variable.NCalc);
+
         try
         {
             variable.Value = (double)expression.Evaluate()!;
@@ -169,7 +245,18 @@ public class Gear
     {
         foreach (var variableEntry in GearVariables.Values)
         {
-            CalculateGearVariable(variableEntry.Name); 
+            CalculateVariable
+                (variableEntry.Name);
+        }
+
+// calculate all the child gears
+        foreach (var gear in Gears)
+        {
+            foreach (var variableEntry in gear.GearVariables.Values)
+            {
+                gear.CalculateVariable
+                    (variableEntry.Name);
+            }
         }
     }
 
@@ -179,13 +266,43 @@ public class Gear
     /// </summary>
     /// <param name="expression">The NCalc expression object to which parameters will be assigned.</param>
     /// <param name="nCalc">The string representation of the formula, containing variable placeholders in brackets.</param>
+    private IVariableResolver VariableResolver { get; set; }
+
     private void AssignExpressionParameters(Expression expression, string nCalc)
     {
         foreach (var parameter in GetStringsWithinBrackets(nCalc))
         {
-            expression.Parameters[parameter] = parameter == "pi"
-                ? Math.PI
-                : GetVariable(NCalcVariables[parameter])?.Value;
+            if (parameter == "pi")
+            {
+                expression.Parameters[parameter] = Math.PI;
+                continue;
+            }
+
+            // Try resolve from this gear's known NCalcVariables mapping first
+            if (NCalcVariables != null && NCalcVariables.TryGetValue(parameter, out var varName))
+            {
+                var localVar = GetVariable(varName);
+                if (localVar != null)
+                {
+                    expression.Parameters[parameter] = localVar.Value;
+                    continue;
+                }
+            }
+
+
+            // Fallback to external resolver (e.g., GearSet) if available
+            if (VariableResolver != null)
+            {
+                var resolvedVal = VariableResolver.ResolveByNCalcSymbol(parameter, this);
+                if (resolvedVal != null)
+                {
+                    expression.Parameters[parameter] = resolvedVal;
+                    continue;
+                }
+            }
+
+            // If still unresolved, leave as null (NCalc may throw, which we log upstream)
+            expression.Parameters[parameter] = null;
         }
     }
 
@@ -214,5 +331,52 @@ public class Gear
     private void OnDesignVariableChanged(object sender, PropertyChangedEventArgs e)
     {
         Calculate();
+    }
+
+    /// <summary>
+    /// Resolve a value by symbol from set-level variables or any gear in the set,
+    /// prioritizing the current gear, then other gears.
+    /// </summary>
+    public double? ResolveByNCalcSymbol(string symbol, Gear current)
+    {
+        symbol = "[" + symbol + "]"; // NCalc requires brackets around symbols, e.g., "[z1]"
+        // Try set-level variables via NCalcVariables mapping first
+        if (NCalcVariables.TryGetValue(symbol, out var setVarName))
+        {
+            var setVar = GetVariable(setVarName);
+            if (setVar != null) return setVar.Value;
+        }
+
+        // Prefer the current gear, if provided
+        if (current != null)
+        {
+            var curMatch = current.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
+            if (curMatch != null) return curMatch.Value;
+        }
+
+        // Search other gears
+        foreach (var g in Gears)
+        {
+            if (g == null || ReferenceEquals(g, current)) continue;
+            var match = g.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
+            if (match != null) return match.Value;
+        }
+
+        // Search parent
+        if (current != null && current.ParentGear != null)
+        {
+            var parentMatch = current.ParentGear.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
+            if (parentMatch != null) return parentMatch.Value;
+        }
+
+        // Search parent children
+        foreach (var g in current.ParentGear.Gears)
+        {
+            if (g == null || ReferenceEquals(g, current)) continue;
+            var childMatch = g.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
+            if (childMatch != null) return childMatch.Value;
+        }
+
+        return null;
     }
 }

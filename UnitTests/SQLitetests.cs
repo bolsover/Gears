@@ -49,6 +49,7 @@ namespace UnitTests
                             string formula = reader.GetString(reader.GetOrdinal("Formula"));
                             string valueType = reader.GetString(reader.GetOrdinal("Valuetype"));
                             int isDesign = reader.GetInt32(reader.GetOrdinal("IsDesign"));
+                            string nCalc = reader.GetString(reader.GetOrdinal("NCalc"));
                             var variable = new GearVariable( 
                                 (GearContext)Enum.Parse(typeof(GearContext), context),
                                 (VariableNames)Enum.Parse(typeof(VariableNames), variableName), 
@@ -56,7 +57,7 @@ namespace UnitTests
                                 symbol, 
                                 formula,
                                 isDesign== 1? true: false,
-                                valueType);
+                                valueType, nCalc);
                            
                             variables.Add(variable);
                             // io.WriteLine($"Context: {context}, Name: {variableName}, Value: {value}, Symbol: {symbol}, Formula: {formula}, IsDesign: {isDesign}");

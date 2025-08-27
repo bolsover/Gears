@@ -32,7 +32,7 @@ public static class GearVariableLoader
         // Prepare the SQL query
         var contextKey = ctx.ToString();
         var query =
-            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType, CalcMethod, GroupId FROM GearVariables where Context = '{contextKey}' order by Ordinal";
+            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType, CalcMethod, GroupId, GearPart FROM GearVariables where Context = '{contextKey}' order by Ordinal";
         using var command = new SQLiteCommand(query, connection);
         // Execute the query and read the results
         using var reader = command.ExecuteReader();
@@ -51,6 +51,7 @@ public static class GearVariableLoader
             var valueType = GetReaderValue(reader, "ValueType", reader.GetString, null);
             var calcMethod = GetReaderValue(reader, "CalcMethod", reader.GetString, "");
             var groupId = GetReaderValue(reader, "GroupId", reader.GetString, "");
+            var gearPart = GetReaderValue(reader, "GearPart", reader.GetString, "");
             
 
             builder.SetGearContext(context)
@@ -63,7 +64,8 @@ public static class GearVariableLoader
                 .SetNCalc(nCalc)
                 .SetValueType(valueType)
                 .SetCalcMethod(calcMethod)
-                .SetGroupId(groupId);
+                .SetGroupId(groupId)
+                .SetGearPart(gearPart);
 
             variables.Add(builder.Build());
            // Console.Out.WriteLine(builder.Build());
@@ -80,4 +82,50 @@ public static class GearVariableLoader
         return !reader.IsDBNull(ordinal) ? valueGetter(ordinal) : defaultValue;
     }
 
+    
+    public class GroupedGearVariables
+    {
+        public List<GearVariable> Common { get; }
+        public List<GearVariable> Gear1 { get; }
+        public List<GearVariable> Gear2 { get; }
+
+        public GroupedGearVariables(List<GearVariable> common, List<GearVariable> gear1, List<GearVariable> gear2)
+        {
+            Common = common ?? new List<GearVariable>();
+            Gear1 = gear1 ?? new List<GearVariable>();
+            Gear2 = gear2 ?? new List<GearVariable>();
+        }
+    }
+
+    /// <summary>
+    /// Loads and groups variables for a GearContext that may represent a GearSet (e.g., Pair).
+    /// Non-suffixed variable names are treated as set-level (common) variables.
+    /// Variable names ending with '1' go to Gear1; ending with '2' go to Gear2.
+    /// </summary>
+    public static GroupedGearVariables LoadGroupedGearVariables(GearContext ctx)
+    {
+        var all = LoadGearVariables(ctx);
+        var common = new List<GearVariable>();
+        var gear1 = new List<GearVariable>();
+        var gear2 = new List<GearVariable>();
+
+        foreach (var v in all)
+        {
+            var gearPart = v.GearPart;;
+            if (gearPart.Equals("Gear1"))
+            {
+                gear1.Add(v);
+            }
+            else if (gearPart.Equals("Gear2"))
+            {
+                gear2.Add(v);
+            }
+            else
+            {
+                common.Add(v);
+            }
+        }
+
+        return new GroupedGearVariables(common, gear1, gear2);
+    }
 }

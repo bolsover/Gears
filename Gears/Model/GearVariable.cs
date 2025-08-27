@@ -26,7 +26,8 @@ public sealed class GearVariable : INotifyPropertyChanged
     public string NCalc { get; set; }
     public string CalcMethod { get; set; }
     public string GroupId { get; set; }
-
+ public int Ordinal { get; set; }
+    public string GearPart { get; set; }
 
     private double _value;
     
@@ -38,10 +39,10 @@ public sealed class GearVariable : INotifyPropertyChanged
         set => SetField(ref _value, value);
     }
 
-    public int Ordinal { get; set; }
+   
 
     public GearVariable(GearContext context, VariableNames name, double value, string symbol, string formula,
-        bool isDesign, string valueType)
+        bool isDesign, string valueType,  string nCalc)
     {
         Context = context;
         Name = name;
@@ -50,12 +51,14 @@ public sealed class GearVariable : INotifyPropertyChanged
         Formula = formula;
         IsDesign = isDesign;
         ValueType = valueType;
+        NCalc = nCalc;
     }
 
     public override string ToString()
     {
         return "GearVariable [Name=" + Name + ", Value=" + Value + ", Symbol=" + Symbol + ", Formula=" + Formula +
-               ", IsDesign=" + IsDesign + "]";
+               ", IsDesign=" + IsDesign +
+               ", NCalc=" + NCalc+ "]";
     }
 
     public GearVariable()

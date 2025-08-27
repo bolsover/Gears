@@ -36,7 +36,7 @@ namespace Bolsover.Gears.Gui
 
             _headerLabel = new Label
             {
-                Text = "Gear Variables",
+                Text = "Gear GearVariables",
                 AutoSize = true,
                 Font = new Font(FontFamily.GenericSansSerif, 10f, FontStyle.Bold),
                 Dock = DockStyle.Top,
@@ -152,7 +152,7 @@ namespace Bolsover.Gears.Gui
             var mode = obj["mode"]?.ToString();
             if (!string.IsNullOrEmpty(context) || !string.IsNullOrEmpty(mode))
             {
-                Caption = $"Gear Variables{(string.IsNullOrEmpty(context) ? string.Empty : $" — {context}")}{(string.IsNullOrEmpty(mode) ? string.Empty : $" ({mode})")}";
+                Caption = $"Gear GearVariables{(string.IsNullOrEmpty(context) ? string.Empty : $" — {context}")}{(string.IsNullOrEmpty(mode) ? string.Empty : $" ({mode})")}";
             }
 
             var rows = new List<RowModel>();

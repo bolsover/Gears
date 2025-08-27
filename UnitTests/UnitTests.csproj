@@ -188,9 +188,10 @@
     <Compile Include="NCalcTests.cs" />
     <Compile Include="NewtonRaphsonTest.cs" />
     <Compile Include="SQLitetests.cs" />
-    <Compile Include="StraightBevelGleasonPair.cs" />
-    <Compile Include="StraightBevelStandardPair.cs" />
+    <Compile Include="TestStraightBevelGleasonPair.cs" />
+    <Compile Include="TestStraightBevelStandardPair.cs" />
     <Compile Include="TestConversionUtils.cs" />
+    <Compile Include="TestGearLoading.cs" />
     <Compile Include="TestGearVariableExporter.cs" />
     <Compile Include="TestProfileShiftedInternalExternalHelicalPair.cs" />
     <Compile Include="TestExternalInvolutePair.cs" />

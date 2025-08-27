@@ -209,7 +209,7 @@ namespace UnitTests
                     ConsoleIO.WriteLine(insert);
                 }
 
-                // foreach (var variable in group.Variables)
+                // foreach (var variable in group.GearVariables)
                 // {
                 //     AddImageIfExists(panel, LaTeXUtils.CreateImageFromLatex(variable.Symbol), symbolColumn1++, row, colspan);
                 //     AddImageIfExists(panel, LaTeXUtils.CreateImageFromLatex(variable.Formula), formulaColumn1++, row, colspan);

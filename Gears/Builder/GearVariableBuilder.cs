@@ -77,4 +77,12 @@ public class GearVariableBuilder
         _gearVariable.GroupId = groupId;
         return this;
     }
+    
+    public GearVariableBuilder SetGearPart(string gearPart)
+    {
+        _gearVariable.GearPart = gearPart;
+        return this;
+    }
+    
+   
 }
