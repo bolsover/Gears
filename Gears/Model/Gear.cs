@@ -27,6 +27,7 @@ public class Gear : IVariableResolver
     public CalculationMode Mode { get; set; }
     public GearContext Context { get; private set; }
     public List<Gear> Gears { get; } = new();
+
     /// <summary>
     /// Represents a collection of gear-related variables, where each variable is
     /// identified by a unique name and represented as a key-value pair. The keys
@@ -112,8 +113,6 @@ public class Gear : IVariableResolver
     }
 
 
-
-
     /// <summary>
     /// Initializes the gear variables by loading them from the specified gear context and adds
     /// them to the gear's internal variable dictionary for further calculations and management.
@@ -128,7 +127,7 @@ public class Gear : IVariableResolver
     /// Adds a GearVariable to the GearVariables dictionary and updates associated event handlers and NCalc variable mappings.
     /// </summary>
     /// <param name="variable">The GearVariable to be added. This variable contains properties including its name and whether it is a design variable.</param>
-    internal void AddVariable(GearVariable variable)
+    private void AddVariable(GearVariable variable)
     {
         if (variable.IsDesign)
         {
@@ -243,21 +242,47 @@ public class Gear : IVariableResolver
     /// </summary>
     public void Calculate()
     {
+        // Traverse to the top-most parent and calculate the entire tree from there
+        var root = GetRoot();
+        var visited = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
+        root.CalculateSubtree(visited);
+    }
+
+    private Gear GetRoot()
+    {
+        var current = this;
+        while (current.ParentGear != null)
+        {
+            current = current.ParentGear;
+        }
+        return current;
+    }
+
+    private void CalculateSubtree(HashSet<Gear> visited)
+    {
+        if (visited == null) visited = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
+        if (!visited.Add(this)) return; // prevent cycles
+
+        // Calculate this gear's variables
         foreach (var variableEntry in GearVariables.Values)
         {
-            CalculateVariable
-                (variableEntry.Name);
+            CalculateVariable(variableEntry.Name);
         }
 
-// calculate all the child gears
-        foreach (var gear in Gears)
+        // Recurse into children
+        if (Gears == null) return;
+        foreach (var child in Gears)
         {
-            foreach (var variableEntry in gear.GearVariables.Values)
-            {
-                gear.CalculateVariable
-                    (variableEntry.Name);
-            }
+            child?.CalculateSubtree(visited);
         }
+    }
+
+    // Reference equality comparer to protect against accidental cycles in the graph
+    private sealed class ReferenceEqualityComparer : IEqualityComparer<Gear>
+    {
+        public static readonly ReferenceEqualityComparer Instance = new ReferenceEqualityComparer();
+        public bool Equals(Gear x, Gear y) => ReferenceEquals(x, y);
+        public int GetHashCode(Gear obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
     }
 
     /// <summary>
@@ -333,50 +358,63 @@ public class Gear : IVariableResolver
         Calculate();
     }
 
+    
+
     /// <summary>
     /// Resolve a value by symbol from set-level variables or any gear in the set,
     /// prioritizing the current gear, then other gears.
     /// </summary>
-    public double? ResolveByNCalcSymbol(string symbol, Gear current)
+    public double? ResolveByNCalcSymbol(string symbol, Gear currentGear)
     {
-        symbol = "[" + symbol + "]"; // NCalc requires brackets around symbols, e.g., "[z1]"
-        // Try set-level variables via NCalcVariables mapping first
-        if (NCalcVariables.TryGetValue(symbol, out var setVarName))
-        {
-            var setVar = GetVariable(setVarName);
-            if (setVar != null) return setVar.Value;
-        }
+        if (string.IsNullOrWhiteSpace(symbol)) return null;
+        // Symbols in variables are stored with brackets in GearVariable.NCalc, so ensure we compare correctly
+        string formattedSymbol = FormatNCalcSymbol(symbol);
 
-        // Prefer the current gear, if provided
-        if (current != null)
-        {
-            var curMatch = current.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
-            if (curMatch != null) return curMatch.Value;
-        }
+        // Start recursion at the current gear as requested
+        var start = currentGear ?? this;
+        var visited = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
+        var match = FindFirstVariableRecursive(start, formattedSymbol, visited);
+        if (match != null) return match.Value;
 
-        // Search other gears
-        foreach (var g in Gears)
+        // Fallback: search from root (covers set-level/common and sibling gears)
+        var root = start;
+        while (root?.ParentGear != null) root = root.ParentGear;
+        if (!ReferenceEquals(root, start))
         {
-            if (g == null || ReferenceEquals(g, current)) continue;
-            var match = g.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
-            if (match != null) return match.Value;
-        }
-
-        // Search parent
-        if (current != null && current.ParentGear != null)
-        {
-            var parentMatch = current.ParentGear.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
-            if (parentMatch != null) return parentMatch.Value;
-        }
-
-        // Search parent children
-        foreach (var g in current.ParentGear.Gears)
-        {
-            if (g == null || ReferenceEquals(g, current)) continue;
-            var childMatch = g.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
-            if (childMatch != null) return childMatch.Value;
+            var visitedFromRoot = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
+            var rootMatch = FindFirstVariableRecursive(root, formattedSymbol, visitedFromRoot);
+            if (rootMatch != null) return rootMatch.Value;
         }
 
         return null;
+    }
+
+    private static GearVariable FindFirstVariableRecursive(Gear gear, string formattedSymbol, HashSet<Gear> visited)
+    {
+        if (gear == null) return null;
+        if (visited != null && !visited.Add(gear)) return null; // prevent cycles
+
+        // Check current gear
+        var current = SearchVariables(gear, formattedSymbol);
+        if (current != null) return current;
+
+        // Recurse into children in order
+        if (gear.Gears != null)
+        {
+            foreach (var child in gear.Gears)
+            {
+                var found = FindFirstVariableRecursive(child, formattedSymbol, visited);
+                if (found != null) return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static string FormatNCalcSymbol(string symbol) => $"[{symbol}]";
+
+    private static GearVariable SearchVariables(Gear gear, string symbol)
+    {
+        return gear?.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
     }
 }
