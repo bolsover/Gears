@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using Bolsover.Gears.Calculator;
 using Bolsover.Gears.Data;
-using NCalc;
 
 namespace Bolsover.Gears.Model;
 
@@ -21,6 +18,8 @@ public class Gear
     public CalculationMode Mode { get; set; }
     public GearContext Context { get; private set; }
     public List<Gear> Gears { get; } = new();
+
+    private readonly GearCalculator _calculator = new();
 
     /// <summary>
     /// Represents a collection of gear-related variables, where each variable is
@@ -42,7 +41,7 @@ public class Gear
         if (gear == null || Gears.Contains(gear)) return;
         gear.ParentGear = this;
         Gears.Add(gear);
-        gear.VariableResolver = new GearCalculator();
+        gear.VariableResolver = _calculator;
     }
 
 
@@ -54,7 +53,7 @@ public class Gear
         Mode = mode;
         Context = context;
         // Load grouped variables from DB (now supports N named gears)
-        var grouped = Data.GearVariableLoader.LoadGroupedGearVariables(context);
+        var grouped = GearVariableLoader.LoadGroupedGearVariables(context);
 
         // Add set-level variables
         foreach (var v in grouped.Common)
@@ -93,7 +92,7 @@ public class Gear
             }
         }
 
-        VariableResolver = new GearCalculator();
+        VariableResolver = _calculator;
     }
 
     /// <summary>
@@ -147,14 +146,13 @@ public class Gear
 
     /// <summary>
     /// Calculates the value of a gear variable based on its name and expression.
+    /// Delegates to external calculator to avoid mixing calculations into model
     /// </summary>
     /// <param name="name">The name of the variable to calculate.</param>
     /// <returns>Returns the calculated value of the specified variable.</returns>
     public double CalculateVariable(VariableNames name)
     {
-        // Delegates to external calculator to avoid mixing calculations into model
-        var calculator = new GearCalculator();
-        return calculator.CalculateVariable(this, name);
+        return _calculator.CalculateVariable(this, name);
     }
 
 
@@ -165,8 +163,7 @@ public class Gear
     /// </summary>
     public void Calculate()
     {
-        var calculator = new Bolsover.Gears.Calculator.GearCalculator();
-        calculator.CalculateAll(this);
+        _calculator.CalculateAll(this);
     }
 
 
@@ -174,8 +171,6 @@ public class Gear
     /// Assigns parameters to the given NCalc expression based on the specified string formula,
     /// linking variable names within the expression to their corresponding values or constants.
     /// </summary>
-    /// <param name="expression">The NCalc expression object to which parameters will be assigned.</param>
-    /// <param name="nCalc">The string representation of the formula, containing variable placeholders in brackets.</param>
     private IVariableResolver VariableResolver { get; set; }
 
 

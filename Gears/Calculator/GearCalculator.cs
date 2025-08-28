@@ -36,8 +36,9 @@ namespace Bolsover.Gears.Calculator
 
         private static Gear GetRoot(Gear gear)
         {
-            var current = gear;
-            var parentProp = typeof(Gear).GetProperty("ParentGear", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var current = gear ?? throw new ArgumentNullException(nameof(gear));
+            var parentProp = typeof(Gear).GetProperty("ParentGear",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             while (true)
             {
                 var parent = (Gear)parentProp?.GetValue(current);
@@ -49,7 +50,7 @@ namespace Bolsover.Gears.Calculator
         private void CalculateSubtree(Gear gear, HashSet<Gear> visited)
         {
             if (gear == null) return;
-            if (visited == null) visited = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
+            visited ??= new HashSet<Gear>(ReferenceEqualityComparer.Instance);
             if (!visited.Add(gear)) return;
 
             foreach (var variable in gear.GearVariables.Values)
@@ -112,7 +113,8 @@ namespace Bolsover.Gears.Calculator
                 }
 
                 // local variables available on this gear via NCalcVariables map
-                var ncalcMapProp = typeof(Gear).GetProperty("NCalcVariables", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var ncalcMapProp = typeof(Gear).GetProperty("NCalcVariables",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var map = (Dictionary<string, VariableNames>)ncalcMapProp?.GetValue(gear);
                 if (map != null && map.TryGetValue(parameter, out var varName))
                 {
@@ -150,7 +152,7 @@ namespace Bolsover.Gears.Calculator
         public double? ResolveByNCalcSymbol(string symbol, Gear currentGear)
         {
             if (string.IsNullOrWhiteSpace(symbol)) return null;
-            string formatted = $"[{symbol}]";
+            var formatted = $"[{symbol}]";
 
             var start = currentGear;
             var visited = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
@@ -183,6 +185,7 @@ namespace Bolsover.Gears.Calculator
                     if (found != null) return found;
                 }
             }
+
             return null;
         }
 
@@ -194,7 +197,7 @@ namespace Bolsover.Gears.Calculator
         // Reference equality comparer copy (internal to calculator) to avoid accessing Gear internals.
         private sealed class ReferenceEqualityComparer : IEqualityComparer<Gear>
         {
-            public static readonly ReferenceEqualityComparer Instance = new ();
+            public static readonly ReferenceEqualityComparer Instance = new();
             public bool Equals(Gear x, Gear y) => ReferenceEquals(x, y);
             public int GetHashCode(Gear obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
         }

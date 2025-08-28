@@ -21,7 +21,7 @@ public static class GearVariableLoader
     /// <summary>
     /// Loads gear variables associated with the specified gear context.
     /// </summary>
-    /// <param name="context">The gear context that determines which gear variables to load.</param>
+    /// <param name="ctx">The gear context that determines which gear variables to load.</param>
     /// <returns>A list of gear variables corresponding to the specified context.</returns>
     public static List<GearVariable> LoadGearVariables(GearContext ctx)
     {
@@ -41,19 +41,21 @@ public static class GearVariableLoader
         {
             GearVariableBuilder builder = new();
 
-            var context = (GearContext)Enum.Parse(typeof(GearContext), GetReaderValue(reader, "Context", reader.GetString));
-            var variableName = (VariableNames)Enum.Parse(typeof(VariableNames), GetReaderValue(reader, "VariableName", reader.GetString));
+            var context =
+                (GearContext)Enum.Parse(typeof(GearContext), GetReaderValue(reader, "Context", reader.GetString));
+            var variableName = (VariableNames)Enum.Parse(typeof(VariableNames),
+                GetReaderValue(reader, "VariableName", reader.GetString));
             var value = GetReaderValue(reader, "Value", reader.GetDouble);
             var symbol = GetReaderValue(reader, "Symbol", reader.GetString);
             var formula = GetReaderValue(reader, "Formula", reader.GetString);
             var isDesign = GetReaderValue(reader, "IsDesign", reader.GetInt16) == 1;
             var ordinal = GetReaderValue(reader, "Ordinal", reader.GetInt32);
-            var nCalc = GetReaderValue(reader, "NCalc", reader.GetString, null);
-            var valueType = GetReaderValue(reader, "ValueType", reader.GetString, null);
+            var nCalc = GetReaderValue(reader, "NCalc", reader.GetString);
+            var valueType = GetReaderValue(reader, "ValueType", reader.GetString);
             var calcMethod = GetReaderValue(reader, "CalcMethod", reader.GetString, "");
             var groupId = GetReaderValue(reader, "GroupId", reader.GetString, "");
             var gearPart = GetReaderValue(reader, "GearPart", reader.GetString, "");
-            
+
 
             builder.SetGearContext(context)
                 .SetVariableName(variableName)
@@ -69,24 +71,26 @@ public static class GearVariableLoader
                 .SetGearPart(gearPart);
 
             variables.Add(builder.Build());
-           // Console.Out.WriteLine(builder.Build());
         }
+
         connection.Close();
 
         return variables;
     }
-    
+
     // Introducing a helper method to abstract the repetitive reader.Get calls
-    private static T GetReaderValue<T>(DbDataReader reader, string columnName, Func<int, T> valueGetter, T defaultValue = default)
+    private static T GetReaderValue<T>(DbDataReader reader, string columnName, Func<int, T> valueGetter,
+        T defaultValue = default)
     {
         var ordinal = reader.GetOrdinal(columnName);
         return !reader.IsDBNull(ordinal) ? valueGetter(ordinal) : defaultValue;
     }
 
-    
+
     public class GroupedGearVariables
     {
         public List<GearVariable> Common { get; }
+
         // Map of gear name -> variables for that gear (supports 1..N named gears)
         public Dictionary<string, List<GearVariable>> PerGear { get; }
 
@@ -118,6 +122,7 @@ public static class GearVariableLoader
                     list = new List<GearVariable>();
                     perGear[gearPart] = list;
                 }
+
                 list.Add(v);
             }
             else
@@ -139,6 +144,7 @@ public static class GearVariableLoader
             var suffix = name.Substring(4);
             return suffix.Length > 0 && suffix.All(char.IsDigit);
         }
+
         return false;
     }
 }
