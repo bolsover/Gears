@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SQLite;
+using System.Linq;
 using Bolsover.Gears.Builder;
 using Bolsover.Gears.Model;
 
@@ -86,14 +87,13 @@ public static class GearVariableLoader
     public class GroupedGearVariables
     {
         public List<GearVariable> Common { get; }
-        public List<GearVariable> Gear1 { get; }
-        public List<GearVariable> Gear2 { get; }
+        // Map of gear name -> variables for that gear (supports 1..N named gears)
+        public Dictionary<string, List<GearVariable>> PerGear { get; }
 
-        public GroupedGearVariables(List<GearVariable> common, List<GearVariable> gear1, List<GearVariable> gear2)
+        public GroupedGearVariables(List<GearVariable> common, Dictionary<string, List<GearVariable>> perGear)
         {
             Common = common ?? new List<GearVariable>();
-            Gear1 = gear1 ?? new List<GearVariable>();
-            Gear2 = gear2 ?? new List<GearVariable>();
+            PerGear = perGear ?? new Dictionary<string, List<GearVariable>>(StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -106,26 +106,39 @@ public static class GearVariableLoader
     {
         var all = LoadGearVariables(ctx);
         var common = new List<GearVariable>();
-        var gear1 = new List<GearVariable>();
-        var gear2 = new List<GearVariable>();
+        var perGear = new Dictionary<string, List<GearVariable>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var v in all)
         {
-            var gearPart = v.GearPart;;
-            if (gearPart.Equals("Gear1"))
+            var gearPart = v.GearPart;
+            if (!string.IsNullOrWhiteSpace(gearPart) && IsIndexedGearName(gearPart))
             {
-                gear1.Add(v);
-            }
-            else if (gearPart.Equals("Gear2"))
-            {
-                gear2.Add(v);
+                if (!perGear.TryGetValue(gearPart, out var list))
+                {
+                    list = new List<GearVariable>();
+                    perGear[gearPart] = list;
+                }
+                list.Add(v);
             }
             else
             {
+                // Treat empty, null, or non-indexed names as common (backward compatible)
                 common.Add(v);
             }
         }
 
-        return new GroupedGearVariables(common, gear1, gear2);
+        return new GroupedGearVariables(common, perGear);
+    }
+
+    private static bool IsIndexedGearName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        if (name.StartsWith("Gear", StringComparison.OrdinalIgnoreCase))
+        {
+            // must be Gear + digits
+            var suffix = name.Substring(4);
+            return suffix.Length > 0 && suffix.All(char.IsDigit);
+        }
+        return false;
     }
 }

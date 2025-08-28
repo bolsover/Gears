@@ -40,6 +40,11 @@ namespace Bolsover.Gears.Data
             }
 
             var variables = gear.GearVariables.Values.ToList();
+            foreach (var v in gear.Gears)
+            {
+                variables.AddRange(v.GearVariables.Values.ToList());
+            }
+            
             return ToJson(variables, gearContext: GetContextString(gear), mode: gear.Mode.ToString());
         }
 

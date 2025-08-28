@@ -28,8 +28,8 @@ namespace Bolsover.Gears.Calculator.Strategies
             AddCircle(profile, origin, ToothFeatureKey.PitchCircle, pitchDiameter, true);
             AddCircle(profile, origin, ToothFeatureKey.OutsideCircle, outsideDiameter, true);
             // Add tooth flanks
-            AddToothFlank(profile, rRoot, rOutside);
-            AddMirrorToothFlank(profile, rRoot, rOutside);
+            // AddToothFlank(profile, rRoot, rOutside);
+            // AddMirrorToothFlank(profile, rRoot, rOutside);
             AddRhsInvolute(gear, profile, ToothFeatureKey.RhsInvolute,  false);
 
             return profile;

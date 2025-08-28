@@ -68,7 +68,7 @@ public class Gear : IVariableResolver
     {
         Mode = mode;
         Context = context;
-        // Load grouped variables from DB
+        // Load grouped variables from DB (now supports N named gears)
         var grouped = Data.GearVariableLoader.LoadGroupedGearVariables(context);
 
         // Add set-level variables
@@ -77,21 +77,35 @@ public class Gear : IVariableResolver
             AddVariable(v);
         }
 
-        // Create gears with deferred loading and add them to the set
-        var gear1 = new Gear(context, mode, false);
-        var gear2 = new Gear(context, mode, false);
-        AddGear(gear1);
-        AddGear(gear2);
-
         // Populate per-gear variables
-        foreach (var v in grouped.Gear1)
+        if (grouped.PerGear != null && grouped.PerGear.Count > 0)
         {
-            gear1.AddVariable(v);
-        }
-
-        foreach (var v in grouped.Gear2)
-        {
-            gear2.AddVariable(v);
+            if (grouped.PerGear.Count == 1)
+            {
+                // Backward-compatible: if there is only one named gear group, flatten into root
+                var only = grouped.PerGear.First();
+                foreach (var v in only.Value)
+                {
+                    AddVariable(v);
+                }
+            }
+            else
+            {
+                // Create named child gears and populate their variables
+                // Ensure deterministic order: Gear1, Gear2, Gear3... then by name
+                IEnumerable<KeyValuePair<string, List<GearVariable>>> ordered = grouped.PerGear
+                    .OrderBy(kvp => TryParseGearIndex(kvp.Key) ?? int.MaxValue)
+                    .ThenBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in ordered)
+                {
+                    var child = new Gear(context, mode, false) { Name = kvp.Key };
+                    AddGear(child);
+                    foreach (var v in kvp.Value)
+                    {
+                        child.AddVariable(v);
+                    }
+                }
+            }
         }
 
         VariableResolver = this;
@@ -416,5 +430,21 @@ public class Gear : IVariableResolver
     private static GearVariable SearchVariables(Gear gear, string symbol)
     {
         return gear?.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
+    }
+
+    private static int? TryParseGearIndex(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+        // Expect names like "Gear1", "Gear2", or plain numbers
+        int idx;
+        if (name.StartsWith("Gear", StringComparison.OrdinalIgnoreCase))
+        {
+            if (int.TryParse(name.Substring(4), out idx)) return idx;
+        }
+        else if (int.TryParse(name, out idx))
+        {
+            return idx;
+        }
+        return null;
     }
 }
