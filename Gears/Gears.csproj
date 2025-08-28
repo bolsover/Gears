@@ -162,7 +162,9 @@
         <Compile Include="Builder\GearVariableBuilder.cs" />
         <Compile Include="Calculator\ConversionUtils.cs" />
         <Compile Include="Calculator\CustomCalculations.cs" />
+        <Compile Include="Calculator\GearCalculator.cs" />
         <Compile Include="Calculator\Geometry.cs" />
+        <Compile Include="Calculator\IGearCalculator.cs" />
         <Compile Include="Calculator\IToothProfileComputation.cs" />
         <Compile Include="Calculator\LaTeXUtils.cs" />
         <Compile Include="Calculator\ToothProfileCalculator.cs" />
