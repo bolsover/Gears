@@ -26,8 +26,9 @@ public class Program
         // var form = new Form();
         //
         // form.Controls.Add(control);
-        GearVariableTestForm form = new GearVariableTestForm();
-        
+       // GearVariableTestForm form = new GearVariableTestForm();
+        // GearVariableForm form = new GearVariableForm();
+        GearControlForm form = new GearControlForm();
         Application.Run(form);
    
     }

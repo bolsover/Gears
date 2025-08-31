@@ -78,6 +78,27 @@ public static class GearVariableLoader
         return variables;
     }
 
+    public static List<string> GetGearContexts()
+    {
+        var contexts = new List<string>();
+        const string connectionString = @"Data Source=.\Data\Nexus.db";
+        using var connection = new SQLiteConnection(connectionString);
+        connection.Open();
+
+      
+        var query =
+            $"SELECT distinct Context FROM GearVariables ";
+        using var command = new SQLiteCommand(query, connection);
+        // Execute the query and read the results
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var ctx = GetReaderValue(reader, "Context", reader.GetString);
+            contexts.Add(ctx); 
+        }
+        return contexts;
+    }
+
     // Introducing a helper method to abstract the repetitive reader.Get calls
     private static T GetReaderValue<T>(DbDataReader reader, string columnName, Func<int, T> valueGetter,
         T defaultValue = default)

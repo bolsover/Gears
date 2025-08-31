@@ -44,6 +44,9 @@
     <Reference Include="ExtendedNumerics.BigDecimal, Version=3000.0.3.40, Culture=neutral, PublicKeyToken=65f1315a45ad8949, processorArchitecture=MSIL">
       <HintPath>..\packages\ExtendedNumerics.BigDecimal.3000.0.3.40\lib\net48\ExtendedNumerics.BigDecimal.dll</HintPath>
     </Reference>
+    <Reference Include="GearsUI">
+      <HintPath>bin\Debug\GearsUI.exe</HintPath>
+    </Reference>
     <Reference Include="MathNet.Numerics, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MathNet.Numerics.6.0.0-beta1\lib\net48\MathNet.Numerics.dll</HintPath>
     </Reference>
@@ -163,13 +166,35 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Gui\GearControlForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Gui\GearControlForm.Designer.cs">
+      <DependentUpon>GearControlForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Gui\GearControlPresenter.cs" />
+    <Compile Include="Gui\GearControlView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Gui\GearControlView.Designer.cs">
+      <DependentUpon>GearControlView.cs</DependentUpon>
+    </Compile>
     <Compile Include="Gui\GearVariableControl.cs" />
+    <Compile Include="Gui\GearVariableForm.cs" />
     <Compile Include="Gui\GearVariableJsonViewerControl.cs" />
     <Compile Include="Gui\GearVariableTestForm.cs" />
+    <Compile Include="Gui\GearVariableViewerControl.cs" />
+    <Compile Include="Gui\GearVariableViewerPresenter.cs" />
     <Compile Include="Gui\ToothProfileControl.cs" />
     <Compile Include="PointConverter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Gui\GearControlForm.resx">
+      <DependentUpon>GearControlForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Gui\GearControlView.resx">
+      <DependentUpon>GearControlView.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

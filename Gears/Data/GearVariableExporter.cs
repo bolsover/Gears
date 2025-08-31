@@ -94,7 +94,8 @@ namespace Bolsover.Gears.Data
                 formula = v.Formula,
                 ncalc = v.NCalc,
                 value = v.Value,
-                isDesign = v.IsDesign
+                isDesign = v.IsDesign,
+                gearPart = v.GearPart
             };
         }
 
