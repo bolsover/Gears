@@ -184,6 +184,7 @@
         <Compile Include="Model\GearPoint.cs" />
         <Compile Include="Model\GearPoint3D.cs" />
         <Compile Include="Model\GearVariable.cs" />
+        <Compile Include="Model\IToothProfileBuilder.cs" />
         <Compile Include="Model\IVariableResolver.cs" />
         <Compile Include="Model\Tooth.cs" />
         <Compile Include="Model\ToothProfile.cs" />

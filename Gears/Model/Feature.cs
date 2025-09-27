@@ -7,7 +7,7 @@ namespace Bolsover.Gears.Model;
 /// <summary>
 /// Represents a geometric feature that can be drawn, defined by a type, a set of points, and associated parameters.
 /// </summary>
-public class Feature
+public record Feature
 {
     /// <summary>
     /// The type of the feature (e.g., StraightLine, Arc, Spline).

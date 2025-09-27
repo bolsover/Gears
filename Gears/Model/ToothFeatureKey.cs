@@ -27,9 +27,8 @@
         LhsReliefToBase,
         RhsInvolute,
         LhsInvolute,
-        rhsTipRelief,
-        lhsTipRelief,
-        tip,
-        outsideCircle // note lowercase variant observed in tests
+        RhsTipRelief,
+        LhsTipRelief,
+        Tip
     }
 }

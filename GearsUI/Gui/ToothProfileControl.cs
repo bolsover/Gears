@@ -28,7 +28,7 @@ public class ToothProfileControl : UserControl
     /// <summary>
     /// Scale factor for zooming in/out.
     /// </summary>
-    public double Scale { get; set; } = 1.0;
+    public new double Scale { get; set; } = 1.0;
 
     /// <summary>
     /// Offset for panning the rendered profile.

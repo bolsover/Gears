@@ -18,7 +18,7 @@ namespace Bolsover.Gears.Model;
 /// </remarks>
 public sealed class GearVariable : INotifyPropertyChanged
 {
-   public GearContext Context { get; set; }
+    public GearContext Context { get; set; }
     public VariableNames Name { get; set; }
     public bool IsDesign { get; set; }
     public string Symbol { get; set; }
@@ -26,11 +26,11 @@ public sealed class GearVariable : INotifyPropertyChanged
     public string NCalc { get; set; }
     public string CalcMethod { get; set; }
     public string GroupId { get; set; }
- public int Ordinal { get; set; }
+    public int Ordinal { get; set; }
     public string GearPart { get; set; }
 
     private double _value;
-    
+
     public string ValueType { get; set; }
 
     public double Value
@@ -39,10 +39,9 @@ public sealed class GearVariable : INotifyPropertyChanged
         set => SetField(ref _value, value);
     }
 
-   
 
     public GearVariable(GearContext context, VariableNames name, double value, string symbol, string formula,
-        bool isDesign, string valueType,  string nCalc)
+        bool isDesign, string valueType, string nCalc)
     {
         Context = context;
         Name = name;
@@ -58,7 +57,7 @@ public sealed class GearVariable : INotifyPropertyChanged
     {
         return "GearVariable [Name=" + Name + ", Value=" + Value + ", Symbol=" + Symbol + ", Formula=" + Formula +
                ", IsDesign=" + IsDesign +
-               ", NCalc=" + NCalc+ "]";
+               ", NCalc=" + NCalc + "]";
     }
 
     public GearVariable()
