@@ -1,4 +1,5 @@
-﻿using Bolsover.Gears.Model;
+﻿using System;
+using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Builder;
 
@@ -84,5 +85,59 @@ public class GearVariableBuilder
         return this;
     }
     
-   
+    public GearVariableBuilder SetDisplayName(string displayName){
+        _gearVariable.DisplayName = displayName;
+        return this;
+    }
+    public GearVariableBuilder SetDisplayMetricValue(string displayMetricValue){
+        _gearVariable.DisplayMetricValue = displayMetricValue;
+        return this;
+    }
+    public GearVariableBuilder SetDisplayImperialValue(string displayImperialValue){
+        _gearVariable.DisplayImperialValue = displayImperialValue;
+        return this;
+    }
+    // public GearVariableBuilder SetDisplayImperialCalc(string displayImperialCalc){
+    //     _gearVariable.DisplayImperialCalc = displayImperialCalc;
+    //     return this;
+    // }
+    
+    public GearVariableBuilder SetDisplayImperialFormat(string displayImperialFormat){
+        _gearVariable.DisplayImperialFormat = displayImperialFormat;
+     return this;
+    }
+    
+    public GearVariableBuilder SetDisplayMetricCalc(string displayMetricCalc){
+        _gearVariable.DisplayMetricCalc = displayMetricCalc;
+        return this;
+    }
+    
+    public GearVariableBuilder SetDisplayMetricFormat(string displayMetricFormat){
+        _gearVariable.DisplayMetricFormat = displayMetricFormat;
+        return this;
+    }
+    public GearVariableBuilder SetDisplayNote1(string displayNote1){
+        _gearVariable.DisplayNote1 = displayNote1;
+        return this;
+    }
+    public GearVariableBuilder SetDisplayNote2(string displayNote2){
+        _gearVariable.DisplayNote2 = displayNote2;
+        return this;
+    }
+    public GearVariableBuilder SetIsError(bool isError){
+        _gearVariable.IsError = isError;
+        return this;
+    }
+
+    public GearVariableBuilder SetCovertImperial(ConvertImperial convertImperial)
+    {
+        _gearVariable.ConvertImperial = convertImperial;
+        return this;
+    }
+    
+    public GearVariableBuilder SetCovertMetric(ConvertMetric convertMetric)
+    {
+        _gearVariable.ConvertMetric = convertMetric;
+        return this;
+    }
 }

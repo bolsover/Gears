@@ -159,7 +159,11 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="Builder\DisplayDataBuilderProvider.cs" />
         <Compile Include="Builder\GearVariableBuilder.cs" />
+        <Compile Include="Builder\IDisplayDataBuilder.cs" />
+        <Compile Include="Builder\ProfileShiftedExternalInvolutePairDisplayBuilder.cs" />
+        <Compile Include="Builder\ProfileShiftedExternalNormalHelicalPairDisplayBuilder.cs" />
         <Compile Include="Calculator\ConversionUtils.cs" />
         <Compile Include="Calculator\CustomCalculations.cs" />
         <Compile Include="Calculator\GearCalculator.cs" />
@@ -177,14 +181,16 @@
         <Compile Include="Data\GearVariableExporter.cs" />
         <Compile Include="Data\GearVariableLoader.cs" />
         <Compile Include="Model\CalculationMode.cs" />
+        <Compile Include="Model\ConvertImperial.cs" />
+        <Compile Include="Model\ConvertMetric.cs" />
         <Compile Include="Model\Feature.cs" />
         <Compile Include="Model\FeatureType.cs" />
         <Compile Include="Model\Gear.cs" />
         <Compile Include="Model\GearContext.cs" />
+        <Compile Include="Model\DisplayData.cs" />
         <Compile Include="Model\GearPoint.cs" />
         <Compile Include="Model\GearPoint3D.cs" />
         <Compile Include="Model\GearVariable.cs" />
-        <Compile Include="Model\IToothProfileBuilder.cs" />
         <Compile Include="Model\IVariableResolver.cs" />
         <Compile Include="Model\Tooth.cs" />
         <Compile Include="Model\ToothProfile.cs" />

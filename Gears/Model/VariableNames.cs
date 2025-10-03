@@ -17,7 +17,8 @@ public enum VariableNames
     [System.ComponentModel.Description("Teeth"), Symbol("z")]
     Teeth,
 
-    
+    [System.ComponentModel.Description("Circulaar Backlash"), Symbol("jt")]
+    CircularBacklash,
 
     [System.ComponentModel.Description("Centre Distance"), Symbol("a")]
     StandardCentreDistance,
@@ -214,6 +215,18 @@ public enum VariableNames
     RootFilletDiameter,
     // [System.ComponentModel.Description("FaceWidth"), Symbol("b")]
     // FaceWidth,
+    [System.ComponentModel.Description("Root Fillet Factor"), Symbol("fr")]
+    RootFilletFactor,
+    [System.ComponentModel.Description("Tip Relief Factor"), Symbol("ft")]
+    TipReliefFactor,
+    [System.ComponentModel.Description("Phi"), Symbol("phi")]
+    Phi,
+    [System.ComponentModel.Description("Theta"), Symbol("theta")]
+    Theta,
+    [System.ComponentModel.Description("Kappa"), Symbol("kappa")]
+    Kappa,
+    [System.ComponentModel.Description("ProfileShiftModificationForBacklash"), Symbol("xmod")]
+    ProfileShiftModificationForBacklash
 }
 
 public class SymbolAttribute : Attribute

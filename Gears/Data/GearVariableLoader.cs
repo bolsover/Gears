@@ -33,7 +33,7 @@ public static class GearVariableLoader
         // Prepare the SQL query
         var contextKey = ctx.ToString();
         var query =
-            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType, CalcMethod, GroupId, GearPart FROM GearVariables where Context = '{contextKey}' order by Ordinal";
+            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType, CalcMethod, GearPart, DisplayName,  DisplayMetricFormat,  DisplayImperialFormat, ConvertImperial, ConvertMetric, DisplayNote1, DisplayNote2, IsError FROM GearVariables where Context = '{contextKey}' order by Ordinal";
         using var command = new SQLiteCommand(query, connection);
         // Execute the query and read the results
         using var reader = command.ExecuteReader();
@@ -53,8 +53,17 @@ public static class GearVariableLoader
             var nCalc = GetReaderValue(reader, "NCalc", reader.GetString);
             var valueType = GetReaderValue(reader, "ValueType", reader.GetString);
             var calcMethod = GetReaderValue(reader, "CalcMethod", reader.GetString, "");
-            var groupId = GetReaderValue(reader, "GroupId", reader.GetString, "");
             var gearPart = GetReaderValue(reader, "GearPart", reader.GetString, "");
+            var displayName = GetReaderValue(reader, "DisplayName", reader.GetString, "");
+            var displayMetricFormat = GetReaderValue(reader, "DisplayMetricFormat", reader.GetString, "");
+            var displayImperialFormat = GetReaderValue(reader, "DisplayImperialFormat", reader.GetString, "");
+            var convertImperial = (ConvertImperial)Enum.Parse(typeof(ConvertImperial),
+                GetReaderValue(reader, "ConvertImperial", reader.GetString, "None"));
+            var convertMetric = (ConvertMetric)Enum.Parse(typeof(ConvertMetric),
+                GetReaderValue(reader, "ConvertMetric", reader.GetString, "None"));
+            var displayNote1 = GetReaderValue(reader, "DisplayNote1", reader.GetString, "");
+            var displayNote2 = GetReaderValue(reader, "DisplayNote2", reader.GetString, "");
+            var isError = GetReaderValue(reader, "IsError", reader.GetInt16) == 0;
 
 
             builder.SetGearContext(context)
@@ -67,8 +76,16 @@ public static class GearVariableLoader
                 .SetNCalc(nCalc)
                 .SetValueType(valueType)
                 .SetCalcMethod(calcMethod)
-                .SetGroupId(groupId)
-                .SetGearPart(gearPart);
+                .SetGearPart(gearPart)
+                .SetDisplayName(displayName)
+                .SetDisplayMetricFormat(displayMetricFormat)
+                .SetCovertMetric(convertMetric)
+                .SetDisplayImperialFormat(displayImperialFormat)
+                .SetCovertImperial(convertImperial)
+                .SetDisplayNote1(displayNote1)
+                .SetDisplayNote2(displayNote2)
+                .SetIsError(isError);
+
 
             variables.Add(builder.Build());
         }
@@ -85,7 +102,7 @@ public static class GearVariableLoader
         using var connection = new SQLiteConnection(connectionString);
         connection.Open();
 
-      
+
         var query =
             $"SELECT distinct Context FROM GearVariables ";
         using var command = new SQLiteCommand(query, connection);
@@ -94,8 +111,9 @@ public static class GearVariableLoader
         while (reader.Read())
         {
             var ctx = GetReaderValue(reader, "Context", reader.GetString);
-            contexts.Add(ctx); 
+            contexts.Add(ctx);
         }
+
         return contexts;
     }
 

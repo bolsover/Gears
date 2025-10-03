@@ -5,7 +5,7 @@ namespace Bolsover.Gears.Calculator;
 
 using System;
 
-public class ConversionUtils
+public static class ConversionUtils
 {
     /// <summary>
     /// Formats a measurement in millimeters to a string with three decimal places and an "in" suffix.
@@ -70,6 +70,40 @@ public class ConversionUtils
     public static double Radians(double angle)
     {
         return angle * (Math.PI / 180.0);
+    }
+    
+    public static string DDtoDMS(double coordinate) {
+        // Set flag if number is negative
+        bool neg = coordinate < 0d;
+
+        // Work with a positive number
+        coordinate = Math.Abs(coordinate);
+
+        // Get d/m/s components
+        double d = Math.Floor(coordinate);
+        coordinate -= d;
+        coordinate *= 60;
+        double m = Math.Floor(coordinate);
+        coordinate -= m;
+        coordinate *= 60;
+        double s = Math.Round(coordinate);
+
+        // Create padding character
+        char pad;
+        char.TryParse("0", out pad);
+
+        // Create d/m/s strings
+        string dd = d.ToString();
+        string mm = m.ToString().PadLeft(2, pad);
+        string ss = s.ToString().PadLeft(2, pad);
+
+        // Append d/m/s
+        string dms = string.Format("{0}°{1}'{2}\"", dd, mm, ss);
+
+            
+
+        // Return formated string
+        return dms;
     }
 
     /// <summary>

@@ -16,11 +16,14 @@ namespace UnitTests
         [Test]
         public void TestGearVariables()
         {
-            var context = GearContext.ProfileShiftedExternalInvolutePair;
+            var context = GearContext.ProfileShiftedExternalNormalHelicalPair;
             var gear = new Gear(context, CalculationMode.Automatic);
             gear.Calculate();
-            var variables = gear.GearVariables;
-            using Form form = new TestFormulaVariablesForm(variables, context, gear);
+            var variables0 = gear.Gears[0].GearVariables;
+          //  var variables1 = gear.Gears[1].GearVariables;
+          // var variables = gear.GearVariables;
+         
+            using Form form = new TestFormulaVariablesForm(variables0, context, gear);
             Application.Run(form);
         }
     }
@@ -116,6 +119,7 @@ namespace UnitTests
 
                 row++;
             }
+           
         }
 
         private void AddNumericUpDown(TableLayoutPanel panel, GearVariable variable, int row)

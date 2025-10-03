@@ -154,6 +154,16 @@ public class Gear
     {
         return _calculator.CalculateVariable(this, name);
     }
+    
+    public string CalculateDisplayImperialValue(VariableNames name)
+    {
+        return _calculator.CalculateDisplayImperialValue(this, name);
+    }
+    
+    public string CalculateDisplayMetricValue(VariableNames name)
+    {
+        return _calculator.CalculateDisplayMetricValue(this, name);
+    }
 
 
     /// <summary>

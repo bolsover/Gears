@@ -34,6 +34,101 @@ namespace Bolsover.Gears.Calculator
             return variable.Value;
         }
 
+
+        public string CalculateDisplayImperialValue(Gear gear, VariableNames name)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+            var variable = gear.GearVariables.TryGetValue(name, out var v) ? v : null;
+            if (variable == null) return "";
+            variable.DisplayImperialValue = EvaluateDisplayImperialValue(variable);
+            return variable.DisplayImperialValue;
+        }
+
+        private string EvaluateDisplayImperialValue(GearVariable variable)
+        {
+            var returnValue = "";
+            switch (variable.ConvertImperial)
+            {
+                case ConvertImperial.None:
+                {
+                    returnValue = variable.Value.ToString(variable.DisplayImperialFormat);
+                    break;
+                }
+                case ConvertImperial.ToInches:
+                {
+                    var imperialValue = variable.Value / 25.4;
+                    returnValue = imperialValue.ToString(variable.DisplayImperialFormat);
+                    break;
+                }
+                case ConvertImperial.ToDms:
+                {
+                    var imperialValue = variable.Value * 180 / Math.PI;
+                    var dms = ConversionUtils.DDtoDMS(imperialValue);
+                    returnValue = dms;
+                    break;
+                }
+                default:
+                {
+                    returnValue = variable.Value.ToString();
+                    break;
+                }
+            }
+
+
+            return returnValue;
+        }
+
+
+        public string CalculateDisplayMetricValue(Gear gear, VariableNames name)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+            var variable = gear.GearVariables.TryGetValue(name, out var v) ? v : null;
+            if (variable == null) return "";
+            variable.DisplayMetricValue = EvaluateDisplayMetricValue(variable);
+            return variable.DisplayMetricValue;
+        }
+        
+        // private string EvaluateDisplayMetricValue(Gear gear, GearVariable variable)
+        // {
+        //     if (variable.DisplayMetricCalc != "")
+        //     {
+        //         var expression = new Expression(variable.DisplayMetricCalc);
+        //         AssignExpressionParameters(gear, expression, variable.DisplayMetricCalc);
+        //         var value = (double)expression.Evaluate()!;
+        //         variable.DisplayMetricValue = value.ToString(variable.DisplayMetricFormat);
+        //     }
+        //
+        //     return variable.DisplayMetricValue;
+        // }
+        
+        private string EvaluateDisplayMetricValue(GearVariable variable)
+        {
+            var returnValue = "";
+            switch (variable.ConvertMetric)
+            {
+                case ConvertMetric.None:
+                {
+                    returnValue = variable.Value.ToString(variable.DisplayMetricFormat);
+                    break;
+                }
+                case ConvertMetric.ToDegrees:
+                {
+                    var metricValue = variable.Value * (180.0 / Math.PI);
+                    returnValue = metricValue.ToString(variable.DisplayMetricFormat);
+                    break;
+                }
+               
+                default:
+                {
+                    returnValue = variable.Value.ToString();
+                    break;
+                }
+            }
+
+
+            return returnValue;
+        }
+
         private static Gear GetRoot(Gear gear)
         {
             var current = gear ?? throw new ArgumentNullException(nameof(gear));
@@ -56,6 +151,8 @@ namespace Bolsover.Gears.Calculator
             foreach (var variable in gear.GearVariables.Values)
             {
                 CalculateVariable(gear, variable.Name);
+                CalculateDisplayImperialValue(gear, variable.Name);
+                CalculateDisplayMetricValue(gear, variable.Name);
             }
 
             if (gear.Gears == null) return;
@@ -86,6 +183,9 @@ namespace Bolsover.Gears.Calculator
             return variable.Value;
         }
 
+
+       
+
         private void EvaluateNCalcExpression(Gear gear, GearVariable variable)
         {
             var expression = new Expression(variable.NCalc);
@@ -101,6 +201,7 @@ namespace Bolsover.Gears.Calculator
                 throw;
             }
         }
+
 
         private void AssignExpressionParameters(Gear gear, Expression expression, string nCalc)
         {

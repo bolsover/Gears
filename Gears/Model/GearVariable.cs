@@ -28,6 +28,17 @@ public sealed class GearVariable : INotifyPropertyChanged
     public string GroupId { get; set; }
     public int Ordinal { get; set; }
     public string GearPart { get; set; }
+    public string DisplayName { get; set; }
+    public string DisplayMetricValue { get; set; }
+    public string DisplayMetricCalc { get; set; }
+    public string DisplayMetricFormat { get; set; }
+    public string DisplayImperialValue { get; set; }
+    public ConvertImperial ConvertImperial { get; set; }
+    public ConvertMetric ConvertMetric { get; set; }
+    public string DisplayImperialFormat { get; set; }
+    public string DisplayNote1 { get; set; }
+    public string DisplayNote2 { get; set; }
+    public bool IsError { get; set; }
 
     private double _value;
 

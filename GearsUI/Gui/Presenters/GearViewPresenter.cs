@@ -1,8 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using Bolsover.Gears.Builder;
+using Bolsover.Gears.Calculator;
 using Bolsover.Gears.Gui.Views;
+using Bolsover.Gears.Model;
 using BrightIdeasSoftware;
+using static Bolsover.Gears.Calculator.LaTeXUtils;
+
 
 namespace Bolsover.Gears.Gui.Presenters
 {
@@ -13,14 +19,72 @@ namespace Bolsover.Gears.Gui.Presenters
         // private GearPairDesignOutputParams _gearPairDesignOutputParams;
         // private IToothPointsBuilder _toothPointsBuilder;
         private readonly GearView _view;
+        private Gear _gear;
         // public GearPairDesignInputParams Model;
-        
+
         public GearViewPresenter(GearView view)
         {
             _view = view;
             Initialise();
         }
-        
+
+        public void InitialiseGear(Gear gear)
+        {
+            _gear = gear;
+            gear.Calculate();
+            var pinion = gear.Gears[0];
+            var wheel = gear.Gears[1];
+            var normalModule = gear.GetVariable(VariableNames.NormalModule);
+            var pressureAngle = gear.GetVariable(VariableNames.NormalPressureAngle);
+            var helixAngle = gear.GetVariable(VariableNames.HelixAngle);
+            var wheelTeeth = wheel.GetVariable(VariableNames.Teeth);
+            var pinionTeeth = pinion.GetVariable(VariableNames.Teeth);
+            var circularBacklash = gear.GetVariable(VariableNames.CircularBacklash);
+            var rootFilletFactor = gear.GetVariable(VariableNames.RootFilletFactor);
+            var tipReliefFactor = gear.GetVariable(VariableNames.TipReliefFactor);
+            var standardCentreDistance = gear.GetVariable(VariableNames.StandardCentreDistance);
+            var pinionProfileShift = gear.Gears[0].GetVariable(VariableNames.NormalCoefficientOfProfileShift);
+            var wheelProfileShift = gear.Gears[1].GetVariable(VariableNames.NormalCoefficientOfProfileShift);
+            var sumProfileShift = gear.GetVariable(VariableNames.SumNormalCoefficientOfProfileShift);
+
+            _view.moduleNumericUpDown.Value = (decimal)normalModule.Value;
+            _view.pressureAngleNumericUpDown.Value = (decimal)ConversionUtils.Degrees(pressureAngle.Value);
+            _view.helixAngleNumericUpDown.Value = (decimal)ConversionUtils.Degrees(helixAngle.Value);
+            _view.gearTeethNumericUpDown.Value = (decimal)wheelTeeth.Value;
+            _view.pinionTeethNumericUpDown.Value = (decimal)pinionTeeth.Value;
+            _view.rootFilletFactorNumericUpDown.Value = (decimal)rootFilletFactor.Value;
+            _view.addendumFilletFactorNumericUpDown.Value = (decimal)tipReliefFactor.Value;
+            _view.operatingCentreDistanceNumericUpDown.Value = (decimal)standardCentreDistance.Value;
+            _view.normalBacklashNumericUpDown.Value = (decimal)circularBacklash.Value;
+            _view.pinionProfileShiftNumericUpDown.Value = (decimal)pinionProfileShift.Value;
+            _view.gearProfileShiftNumericUpDown.Value = (decimal)wheelProfileShift.Value;
+            _view.totalNormalProfileShiftTextBox.Text = sumProfileShift.Value.ToString();
+
+            _view.normalModuleSymbolLabel.Image = CreateImageFromLatex(normalModule.Symbol);
+            _view.normalPressureAngleSymbolLabel.Image = CreateImageFromLatex(pressureAngle.Symbol);
+            _view.helixAngleSymbolLabel.Image = CreateImageFromLatex(helixAngle.Symbol);
+            _view.teethLabel.Image = CreateImageFromLatex(pinionTeeth.Symbol + "," + wheelTeeth.Symbol);
+
+            _view.circularBacklashSymbolLabel.Image = CreateImageFromLatex(circularBacklash.Symbol);
+            _view.rootFilletFactorSymbolLabel.Image = CreateImageFromLatex(rootFilletFactor.Symbol);
+            _view.tipReliefFactorSymbolLabel.Image = CreateImageFromLatex(tipReliefFactor.Symbol);
+            _view.operatingCentreSymbolLabel.Image = CreateImageFromLatex(standardCentreDistance.Symbol);
+            _view.totalProfileShiftSymbolLabel.Image = CreateImageFromLatex(sumProfileShift.Symbol);
+            _view.profileShiftSymbolLabel.Image =
+                CreateImageFromLatex(pinionProfileShift.Symbol + "," + wheelProfileShift.Symbol);
+
+           var rowdata = GetDisplayData();
+            
+            
+            _view.objectListView1.SetObjects(rowdata);
+            SetupObjectListView();
+        }
+
+        private IEnumerable<DisplayData> GetDisplayData()
+        {
+          return  DisplayDataBuilderProvider.Get(_gear).BuildDisplayData(_gear);
+        }
+
         private void Initialise()
         {
             // Model = new GearPairDesignInputParams();
@@ -39,7 +103,7 @@ namespace Bolsover.Gears.Gui.Presenters
             SetupObjectListView();
             Recalculate();
         }
-        
+
         private void SetupViewDefaults()
         {
             // _view.operatingCentreDistanceNumericUpDown.Enabled = !Model.Auto;
@@ -47,7 +111,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // _view.gearProfileShiftNumericUpDown.Enabled = !Model.Auto;
             // _view.normalBacklashNumericUpDown.Enabled = !Model.Auto;
         }
-        
+
         private void InitGearPair()
         {
             // var gear = new GearDesignInputParams();
@@ -62,7 +126,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // _gearPairDesignOutputParams.PinionDesignOutput.GearDesignInputParams = pinion;
             // _gearPairDesignOutputParams.GearDesignOutput.GearDesignInputParams = gear;
         }
-        
+
         private void SetupDefaults()
         {
             // _view.gearTeethNumericUpDown.Value = (decimal) Model.Gear.Teeth;
@@ -71,7 +135,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // _view.pressureAngleNumericUpDown.Value = (decimal) Model.Gear.PressureAngle;
             // _view.helixAngleNumericUpDown.Value = (decimal) Model.Gear.HelixAngle;
         }
-        
+
         private void SetupLabelLatexImages()
         {
             // _view.normalModuleSymbolLabel.Image = CreateImageFromLatex(NormalModuleSymbol);
@@ -85,9 +149,9 @@ namespace Bolsover.Gears.Gui.Presenters
             // _view.totalProfileShiftSymbolLabel.Image = CreateImageFromLatex(TotalProfileShiftSymbol);
             // _view.profileShiftSymbolLabel.Image = CreateImageFromLatex(ProfileShiftSymbol);
         }
-        
+
         private void ClearLabelText()
-        
+
         {
             _view.normalModuleSymbolLabel.Text = "";
             _view.normalPressureAngleSymbolLabel.Text = "";
@@ -101,26 +165,26 @@ namespace Bolsover.Gears.Gui.Presenters
             _view.profileShiftSymbolLabel.Text = "";
             _view.noteLabel.Text = "";
         }
-        
+
         private void SetupEventListeners()
         {
-            _view.EditGearNumberOfTeethEvent += ViewOnEditGearNumberOfTeethEvent;
-            _view.EditPinionNumberOfTeethEvent += ViewOnEditPinionNumberOfTeethEvent;
-            _view.EditModuleEvent += ViewOnEditModuleEvent;
-            _view.EditHelixAngleEvent += ViewOnEditHelixAngleEvent;
-            _view.CancelEvent += ViewOnCancelEvent;
-            _view.BuildGearEvent += ViewOnBuildWheelEvent;
-            _view.BuildPinionEvent += ViewOnBuildPinionEvent;
-            _view.EditPressureAngleEvent += ViewOnEditPressureAngleEvent;
-            _view.EditGearHeightEvent += ViewOnEditGearHeightEvent;
-            _view.AutoManualEvent += ViewOnAutoManualEvent;
-            _view.EditCentreDistanceEvent += ViewOnEditCentreDistanceEvent;
-            _view.EditPinionProfileShiftEvent += ViewOnEditPinionProfileShiftEvent;
-            _view.EditGearProfileShiftEvent += ViewOnEditGearProfileShiftEvent;
-            _view.EditNormalBacklashEvent += ViewOnEditCircularBacklashEvent;
-            _view.EditGearStyleEvent += ViewOnEditGearStyleEvent;
-            _view.EditRootFilletFactorEvent += ViewOnEditRootFilletFactorEvent;
-            _view.EditAddendumFilletFactorEvent += ViewOnEditAddendumFilletFactorEvent;
+            // _view.EditGearNumberOfTeethEvent += ViewOnEditGearNumberOfTeethEvent;
+            // _view.EditPinionNumberOfTeethEvent += ViewOnEditPinionNumberOfTeethEvent;
+             _view.EditModuleEvent += ViewOnEditModuleEvent;
+            // _view.EditHelixAngleEvent += ViewOnEditHelixAngleEvent;
+            // _view.CancelEvent += ViewOnCancelEvent;
+            // _view.BuildGearEvent += ViewOnBuildWheelEvent;
+            // _view.BuildPinionEvent += ViewOnBuildPinionEvent;
+            // _view.EditPressureAngleEvent += ViewOnEditPressureAngleEvent;
+            // _view.EditGearHeightEvent += ViewOnEditGearHeightEvent;
+            // _view.AutoManualEvent += ViewOnAutoManualEvent;
+             _view.EditCentreDistanceEvent += ViewOnEditCentreDistanceEvent;
+            // _view.EditPinionProfileShiftEvent += ViewOnEditPinionProfileShiftEvent;
+            // _view.EditGearProfileShiftEvent += ViewOnEditGearProfileShiftEvent;
+            // _view.EditNormalBacklashEvent += ViewOnEditCircularBacklashEvent;
+            // _view.EditGearStyleEvent += ViewOnEditGearStyleEvent;
+            // _view.EditRootFilletFactorEvent += ViewOnEditRootFilletFactorEvent;
+            // _view.EditAddendumFilletFactorEvent += ViewOnEditAddendumFilletFactorEvent;
             // ((GearDesignOutputParams) _gearPairDesignOutputParams.GearDesignOutput).GearChanged +=
             //     GearDesignOutputOnGearChanged;
             // ((GearDesignOutputParams) _gearPairDesignOutputParams.PinionDesignOutput).GearChanged +=
@@ -130,19 +194,19 @@ namespace Bolsover.Gears.Gui.Presenters
             // Model.GearChanged += GearDesignInputParamsOnGearChanged;
             // _view.objectListView1.FormatRow += delegate(object sender1, FormatRowEventArgs e)
             // {
-            //     var data = (GearData) e.Model;
+            //     var data = (DisplayData) e.Model;
             //     if (data.IsError) e.Item.BackColor = Color.Red;
             // };
         }
-        
+
         private void SetupObjectListView()
         {
-            // _view.olvColumn1.AspectGetter = rowObject => ((GearData) rowObject).Item;
-            // _view.olvColumn2.AspectGetter = rowObject => ((GearData) rowObject).MetricValue;
-            // _view.olvColumn3.AspectGetter = rowObject => ((GearData) rowObject).ImperialValue;
-            // _view.olvColumn4.AspectGetter = rowObject => ((GearData) rowObject).Note;
+            _view.olvColumn1.AspectGetter = rowObject => ((DisplayData) rowObject).Item;
+            _view.olvColumn2.AspectGetter = rowObject => ((DisplayData) rowObject).MetricValue;
+            _view.olvColumn3.AspectGetter = rowObject => ((DisplayData) rowObject).ImperialValue;
+            _view.olvColumn4.AspectGetter = rowObject => ((DisplayData) rowObject).Note;
         }
-        
+
         // private void GearDesignInputParamsOnGearChanged(object sender, GearChangeEventArgs args)
         // {
         //     // var geardata = _gearCalculator.BuildGearData(Model, _gearPairDesignOutputParams);
@@ -165,11 +229,11 @@ namespace Bolsover.Gears.Gui.Presenters
         // private void GearDesignOutputOnGearChanged(object sender, GearChangeEventArgs e)
         // {
         // }
-        
+
         private void Recalculate()
         {
             Calculate();
-            
+
             // _view.xModTextBox.Text = _gearCalculator.CalculateProfileShiftModificationForBacklash(Model).ToString("F4");
             // var sumx = _gearPairDesignOutputParams.GearPairDesignInputParams.Gear.CoefficientOfProfileShift +
             //            _gearPairDesignOutputParams.GearPairDesignInputParams.Pinion.CoefficientOfProfileShift;
@@ -194,7 +258,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // _view.pinionProfileShiftNumericUpDown.Value = 0.0M;
             // _view.gearProfileShiftNumericUpDown.Value = 0.0M;
         }
-        
+
         private void ViewOnEditAddendumFilletFactorEvent(object sender, EventArgs e)
         {
             // if (sender is NumericUpDown numericUpDown)
@@ -203,10 +267,10 @@ namespace Bolsover.Gears.Gui.Presenters
             //     Model.Gear.AddendumFilletFactor = newValue;
             //     Model.Pinion.AddendumFilletFactor = newValue;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditRootFilletFactorEvent(object sender, EventArgs e)
         {
             // if (sender is NumericUpDown numericUpDown)
@@ -215,10 +279,10 @@ namespace Bolsover.Gears.Gui.Presenters
             //     Model.Gear.RootFilletFactor = newValue;
             //     Model.Pinion.RootFilletFactor = newValue;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditGearStyleEvent(object sender, EventArgs e)
         {
             // if (!Model.Auto)
@@ -256,15 +320,15 @@ namespace Bolsover.Gears.Gui.Presenters
             //         }
             //     }
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnCancelEvent(object sender, EventArgs e)
         {
             _view.FindForm()!.Close();
         }
-        
+
         private void ViewOnEditHelixAngleEvent(object sender, EventArgs e)
         {
             // if (!Model.Auto)
@@ -292,27 +356,26 @@ namespace Bolsover.Gears.Gui.Presenters
             //         Model.Pinion.Style |= Spur;
             //     }
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditModuleEvent(object sender, EventArgs e)
         {
-            // if (!Model.Auto)
-            // {
-            //     ViewOnAutoManualEvent(null, null);
-            // }
-            //
-            // if (sender is NumericUpDown numericUpDown)
-            // {
-            //     var newValue = (double) numericUpDown.Value;
-            //     Model.Gear.Module = newValue;
-            //     Model.Pinion.Module = newValue;
-            // }
+           
+            if (sender is NumericUpDown numericUpDown)
+            {
+                var newValue = (double) numericUpDown.Value;
+                var module = _gear.GetVariable(VariableNames.NormalModule);
+                module.Value = newValue;
+            }
+            var rowdata = GetDisplayData();
             
+            
+            _view.objectListView1.SetObjects(rowdata);
             Recalculate();
         }
-        
+
         private void ViewOnEditGearNumberOfTeethEvent(object sender, EventArgs e)
         {
             // if (!Model.Auto)
@@ -333,10 +396,10 @@ namespace Bolsover.Gears.Gui.Presenters
             //     Model.Gear.Teeth = Model.Pinion.Teeth;
             //     _view.gearTeethNumericUpDown.Value = (decimal) Model.Gear.Teeth;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditPinionNumberOfTeethEvent(object sender, EventArgs e)
         {
             // if (!Model.Auto)
@@ -357,10 +420,10 @@ namespace Bolsover.Gears.Gui.Presenters
             //     Model.Pinion.Teeth = Model.Gear.Teeth;
             //     _view.pinionTeethNumericUpDown.Value = (decimal) Model.Pinion.Teeth;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditCircularBacklashEvent(object sender, EventArgs e)
         {
             // if (sender is NumericUpDown numericUpDown)
@@ -369,10 +432,10 @@ namespace Bolsover.Gears.Gui.Presenters
             //     Model.Gear.CircularBacklash = newValue;
             //     Model.Pinion.CircularBacklash = newValue;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditGearProfileShiftEvent(object sender, EventArgs e)
         {
             // if (sender is NumericUpDown numericUpDown)
@@ -380,10 +443,10 @@ namespace Bolsover.Gears.Gui.Presenters
             //     var newValue = (double) numericUpDown.Value;
             //     Model.Gear.CoefficientOfProfileShift = newValue;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditPinionProfileShiftEvent(object sender, EventArgs e)
         {
             // if (sender is NumericUpDown numericUpDown)
@@ -391,24 +454,25 @@ namespace Bolsover.Gears.Gui.Presenters
             //     var newValue = (double) numericUpDown.Value;
             //     Model.Pinion.CoefficientOfProfileShift = newValue;
             // }
-            
+
             Recalculate();
         }
-        
+
         private void ViewOnEditCentreDistanceEvent(object sender, EventArgs e)
         {
-            // if (!Model.Auto)
-            // {
-            //     if (sender is NumericUpDown numericUpDown)
-            //     {
-            //         var newValue = (double) numericUpDown.Value;
-            //         Model.WorkingCentreDistance = newValue;
-            //     }
-            // }
+            if (sender is NumericUpDown numericUpDown)
+            {
+                var newValue = (double) numericUpDown.Value;
+                var ax = _gear.GetVariable(VariableNames.WorkingCentreDistanceax);
+                ax.Value = newValue;
+            }
+            var rowdata = GetDisplayData();
             
+            
+            _view.objectListView1.SetObjects(rowdata);
             Recalculate();
         }
-        
+
         private void ViewOnAutoManualEvent(object sender, EventArgs e)
         {
             // Model.Auto = !Model.Auto;
@@ -423,7 +487,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // if (Model.Auto) _view.normalBacklashNumericUpDown.Value = 0.0M;
             Recalculate();
         }
-        
+
         private void ViewOnEditGearHeightEvent(object sender, EventArgs e)
         {
             // if (sender is NumericUpDown numericUpDown)
@@ -435,7 +499,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //
             Recalculate();
         }
-        
+
         private void ViewOnEditPressureAngleEvent(object sender, EventArgs e)
         {
             // if (!Model.Auto)
@@ -452,7 +516,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //
             Recalculate();
         }
-        
+
         private void ViewOnBuildPinionEvent(object sender, EventArgs e)
         {
             Recalculate();
@@ -463,7 +527,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // _alibreToothBuilder.Build(tooth, gearDetails.SaveFile, gearDetails.Template,
             //     _gearPairDesignOutputParams.PinionDesignOutput);
         }
-        
+
         private void SetupBuilderForGearType(bool isGear)
         {
             // if (!isGear) // this is a pinion
@@ -489,7 +553,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //         : new InternalSpurHelicalToothBuilder();
             // }
         }
-        
+
         private void ViewOnBuildWheelEvent(object sender, EventArgs e)
         {
             Recalculate();
@@ -500,7 +564,7 @@ namespace Bolsover.Gears.Gui.Presenters
             // _alibreToothBuilder.Build(tooth, gearDetails.SaveFile, gearDetails.Template,
             //     _gearPairDesignOutputParams.GearDesignOutput);
         }
-        
+
         private (string SaveFile, string Template) GetGearDetails()
         {
             //var isHelical = Model.Gear.Style.HasFlag(Helical);
@@ -508,14 +572,14 @@ namespace Bolsover.Gears.Gui.Presenters
             var saveFile = isHelical
                 ? "HelicalWheelPleaseSaveAs.AD_PRT"
                 : "WheelPleaseSaveAs.AD_PRT";
-            
+
             var template = isHelical
                 ? "HelicalWheelTemplate.AD_PRT"
                 : "WheelTemplate.AD_PRT";
-            
+
             return (saveFile, template);
         }
-        
+
         private (string SaveFile, string Template) GetPinionDetails()
         {
             // var isHelical = Model.Pinion.Style.HasFlag(Helical);
@@ -523,14 +587,14 @@ namespace Bolsover.Gears.Gui.Presenters
             var saveFile = isHelical
                 ? "HelicalPinionPleaseSaveAs.AD_PRT"
                 : "PinionPleaseSaveAs.AD_PRT";
-            
+
             var template = isHelical
                 ? "HelicalPinionTemplate.AD_PRT"
                 : "PinionTemplate.AD_PRT";
-            
+
             return (saveFile, template);
         }
-        
+
         private void Calculate()
         {
             // if (Model.Gear.Style.HasFlag(External) && Model.Gear.Style.HasFlag(Spur))
@@ -548,19 +612,19 @@ namespace Bolsover.Gears.Gui.Presenters
             // else
             //     throw new ArgumentException("Gear style not recognised");
         }
-        
+
         #region GearStyles
-        
+
         private static void CalculateHelicalRackGear()
         {
             throw new NotImplementedException();
         }
-        
+
         private static void CalculateStraightRackGear()
         {
             throw new NotImplementedException();
         }
-        
+
         private void CalculatePositiveShiftedIntExtHelicalGear()
         {
             // if (_gearCalculator is not ProfileShiftedIntExtHelicalGearCalculator)
@@ -570,7 +634,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //
             // _gearCalculator.Calculate();
         }
-        
+
         private void CalculatePositiveShiftedIntExtSpurGear()
         {
             // if (_gearCalculator is not ProfileShiftedIntExtSpurGearCalculator)
@@ -580,7 +644,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //
             // _gearCalculator.Calculate();
         }
-        
+
         private void CalculatePositiveShiftedExternalHelicalGear()
         {
             // if (_gearCalculator is not ProfileShiftedExternalHelicalGearCalculator)
@@ -590,7 +654,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //
             // _gearCalculator.Calculate();
         }
-        
+
         private void CalculatePositiveShiftedExternalSpurGear()
         {
             // if (_gearCalculator is not ProfileShiftedExternalSpurGearCalculator)
@@ -600,7 +664,7 @@ namespace Bolsover.Gears.Gui.Presenters
             //
             // _gearCalculator.Calculate();
         }
-        
+
         #endregion
     }
 }
