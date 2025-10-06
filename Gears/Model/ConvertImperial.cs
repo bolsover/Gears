@@ -2,5 +2,5 @@
 
 public enum ConvertImperial
 {
-    None, ToInches, ToDms
+    None, ToInches, ToDms, ToLr
 }

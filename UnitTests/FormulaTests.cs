@@ -19,11 +19,11 @@ namespace UnitTests
             var context = GearContext.ProfileShiftedExternalNormalHelicalPair;
             var gear = new Gear(context, CalculationMode.Automatic);
             gear.Calculate();
-            var variables0 = gear.Gears[0].GearVariables;
-          //  var variables1 = gear.Gears[1].GearVariables;
-          // var variables = gear.GearVariables;
+            //var variables = gear.Gears[0].GearVariables;
+          //  var variables = gear.Gears[1].GearVariables;
+           var variables = gear.GearVariables;
          
-            using Form form = new TestFormulaVariablesForm(variables0, context, gear);
+            using Form form = new TestFormulaVariablesForm(variables, context, gear);
             Application.Run(form);
         }
     }

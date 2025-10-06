@@ -1,29 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Bolsover.Gears.Model;
-using static Bolsover.Gears.Calculator.ConversionUtils;
-
+using static Bolsover.Gears.Calculator.LaTeXUtils;
 namespace Bolsover.Gears.Builder;
 
 public class ProfileShiftedExternalNormalHelicalPairDisplayBuilder : IDisplayDataBuilder
 {
-
     private DisplayData DataForVariable(GearVariable variable)
     {
-        return new DisplayData(variable.Name.ToString(),  variable.DisplayMetricValue, variable.DisplayImperialValue,"",
-            false);
+        var name = variable.Name.ToString();
+        var metricValue = variable.DisplayMetricValue;
+        var imperialValue = variable.DisplayImperialValue;
+        var note = "";
+        var isError = false;
+        var symbol = CreateImageFromLatex(variable.Symbol);
+        var formula = CreateImageFromLatex(variable.Formula);
+        
+        return new DisplayData(name, metricValue, imperialValue, note, isError, symbol, formula);
     }
-    
+
     public IEnumerable<DisplayData> BuildDisplayData(Gear gear)
     {
         var gearData = new List<DisplayData>();
-        
+
 
         gearData.Add(new DisplayData("Pinion: ", null, null, null, false));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalModule)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialModule)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalPressureAngle)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.HelixAngle)));
+        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Hand)));
         gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Teeth)));
         gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.PitchDiameter)));
         gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.BaseDiameter)));
@@ -34,7 +39,8 @@ public class ProfileShiftedExternalNormalHelicalPairDisplayBuilder : IDisplayDat
         gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.NormalCoefficientOfProfileShift)));
         gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Phi)));
         gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Theta)));
-        
+        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Kappa)));
+
         gearData.Add(new DisplayData("", null, null, null, false));
 
         gearData.Add(new DisplayData("Gear: ", null, null, null, false));
@@ -42,6 +48,7 @@ public class ProfileShiftedExternalNormalHelicalPairDisplayBuilder : IDisplayDat
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialModule)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalPressureAngle)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.HelixAngle)));
+        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Hand)));
         gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Teeth)));
         gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.PitchDiameter)));
         gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.BaseDiameter)));
@@ -52,10 +59,12 @@ public class ProfileShiftedExternalNormalHelicalPairDisplayBuilder : IDisplayDat
         gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.NormalCoefficientOfProfileShift)));
         gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Phi)));
         gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Theta)));
-        
+        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Kappa)));
+
         gearData.Add(new DisplayData("", null, null, null, false));
-        
+
         gearData.Add(new DisplayData("Pair: ", null, null, null, false));
+        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.HeightOfGear)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.StandardCentreDistance)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.WorkingCentreDistanceax)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.CentreDistanceIncrementFactor)));
@@ -68,7 +77,12 @@ public class ProfileShiftedExternalNormalHelicalPairDisplayBuilder : IDisplayDat
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialWorkingPressureAngle)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.SumNormalCoefficientOfProfileShift)));
         gearData.Add(DataForVariable(gear.GetVariable(VariableNames.ProfileShiftModificationForBacklash)));
+        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialContactRatio)));
+        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.AxialContactRatio)));
+        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.ContactRatio)));
         
+        
+
         return gearData;
     }
 }

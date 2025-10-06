@@ -31,44 +31,44 @@ namespace Bolsover.Gears.Gui.Views
         /// </summary>
         private void InitializeComponent()
         {
-            this.menuStrip = new System.Windows.Forms.MenuStrip();
+            this.panel1 = new System.Windows.Forms.Panel();
             this.gearsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cycloidalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.involuteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.standardToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.gleasonToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.menuStrip.SuspendLayout();
+            this.miniToolStrip = new System.Windows.Forms.MenuStrip();
+            this.miniToolStrip.SuspendLayout();
             this.SuspendLayout();
             // 
-            // menuStrip
+            // panel1
             // 
-            this.menuStrip.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.gearsToolStripMenuItem });
-            this.menuStrip.Location = new System.Drawing.Point(0, 0);
-            this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(1634, 28);
-            this.menuStrip.TabIndex = 2;
-            this.menuStrip.Text = "menuStrip";
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
+            this.panel1.Location = new System.Drawing.Point(0, 24);
+            this.panel1.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(1682, 929);
+            this.panel1.TabIndex = 4;
             // 
             // gearsToolStripMenuItem
             // 
             this.gearsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.cycloidalToolStripMenuItem, this.involuteToolStripMenuItem, this.bevelToolStripMenuItem });
             this.gearsToolStripMenuItem.Name = "gearsToolStripMenuItem";
-            this.gearsToolStripMenuItem.Size = new System.Drawing.Size(58, 24);
+            this.gearsToolStripMenuItem.Size = new System.Drawing.Size(56, 22);
             this.gearsToolStripMenuItem.Text = "Gears";
             // 
             // cycloidalToolStripMenuItem
             // 
             this.cycloidalToolStripMenuItem.Name = "cycloidalToolStripMenuItem";
-            this.cycloidalToolStripMenuItem.Size = new System.Drawing.Size(139, 24);
+            this.cycloidalToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
             this.cycloidalToolStripMenuItem.Text = "Cycloidal";
             // 
             // involuteToolStripMenuItem
             // 
             this.involuteToolStripMenuItem.Name = "involuteToolStripMenuItem";
-            this.involuteToolStripMenuItem.Size = new System.Drawing.Size(139, 24);
+            this.involuteToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
             this.involuteToolStripMenuItem.Text = "Involute";
             this.involuteToolStripMenuItem.Click += new System.EventHandler(this.involuteToolStripMenuItem_Click);
             // 
@@ -76,45 +76,45 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.bevelToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.standardToolStripMenuItem, this.gleasonToolStripMenuItem });
             this.bevelToolStripMenuItem.Name = "bevelToolStripMenuItem";
-            this.bevelToolStripMenuItem.Size = new System.Drawing.Size(139, 24);
+            this.bevelToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
             this.bevelToolStripMenuItem.Text = "Bevel";
             // 
             // standardToolStripMenuItem
             // 
             this.standardToolStripMenuItem.Name = "standardToolStripMenuItem";
-            this.standardToolStripMenuItem.Size = new System.Drawing.Size(138, 24);
+            this.standardToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
             this.standardToolStripMenuItem.Text = "Standard";
             // 
             // gleasonToolStripMenuItem
             // 
             this.gleasonToolStripMenuItem.Name = "gleasonToolStripMenuItem";
-            this.gleasonToolStripMenuItem.Size = new System.Drawing.Size(138, 24);
+            this.gleasonToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
             this.gleasonToolStripMenuItem.Text = "Gleason";
             // 
-            // panel1
+            // miniToolStrip
             // 
-            this.panel1.AutoSize = true;
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel1.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.panel1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.panel1.Location = new System.Drawing.Point(0, 28);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1634, 953);
-            this.panel1.TabIndex = 4;
+            this.miniToolStrip.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.8F);
+            this.miniToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.gearsToolStripMenuItem });
+            this.miniToolStrip.Location = new System.Drawing.Point(0, 0);
+            this.miniToolStrip.Name = "miniToolStrip";
+            this.miniToolStrip.Padding = new System.Windows.Forms.Padding(4, 1, 0, 1);
+            this.miniToolStrip.Size = new System.Drawing.Size(1682, 24);
+            this.miniToolStrip.TabIndex = 2;
+            this.miniToolStrip.Text = "menuStrip";
             // 
             // GearForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1634, 953);
+            this.ClientSize = new System.Drawing.Size(1682, 953);
             this.Controls.Add(this.panel1);
-            this.Controls.Add(this.menuStrip);
-            this.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MainMenuStrip = this.menuStrip;
+            this.Controls.Add(this.miniToolStrip);
+            this.MainMenuStrip = this.miniToolStrip;
+            this.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
             this.Name = "GearForm";
             this.Text = "Involute Spur & Helical Gears";
-            this.menuStrip.ResumeLayout(false);
-            this.menuStrip.PerformLayout();
+            this.miniToolStrip.ResumeLayout(false);
+            this.miniToolStrip.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
@@ -130,7 +130,7 @@ namespace Bolsover.Gears.Gui.Views
         private System.Windows.Forms.ToolStripMenuItem standardToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem gleasonToolStripMenuItem;
 
-        private System.Windows.Forms.MenuStrip menuStrip;
+        private System.Windows.Forms.MenuStrip miniToolStrip;
 
         //   private BrightIdeasSoftware.OLVColumn olvColumn1;
 
