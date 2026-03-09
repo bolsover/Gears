@@ -67,11 +67,6 @@ namespace Bolsover.Gears.Calculator
                     returnValue = dms;
                     break;
                 }
-                case ConvertImperial.ToLr:
-                {
-                    returnValue = variable.Value.ToString("0") == "1" ? "Right" : "Left";
-                    break;
-                }
                 default:
                 {
                     returnValue = variable.Value.ToString();
@@ -93,7 +88,20 @@ namespace Bolsover.Gears.Calculator
             return variable.DisplayMetricValue;
         }
         
-    private string EvaluateDisplayMetricValue(GearVariable variable)
+        // private string EvaluateDisplayMetricValue(Gear gear, GearVariable variable)
+        // {
+        //     if (variable.DisplayMetricCalc != "")
+        //     {
+        //         var expression = new Expression(variable.DisplayMetricCalc);
+        //         AssignExpressionParameters(gear, expression, variable.DisplayMetricCalc);
+        //         var value = (double)expression.Evaluate()!;
+        //         variable.DisplayMetricValue = value.ToString(variable.DisplayMetricFormat);
+        //     }
+        //
+        //     return variable.DisplayMetricValue;
+        // }
+        
+        private string EvaluateDisplayMetricValue(GearVariable variable)
         {
             var returnValue = "";
             switch (variable.ConvertMetric)
@@ -107,12 +115,6 @@ namespace Bolsover.Gears.Calculator
                 {
                     var metricValue = variable.Value * (180.0 / Math.PI);
                     returnValue = metricValue.ToString(variable.DisplayMetricFormat);
-                    break;
-                }
-                
-                case ConvertMetric.ToLr:
-                {
-                    returnValue = variable.Value.ToString("0") == "1" ? "Right" : "Left";
                     break;
                 }
                

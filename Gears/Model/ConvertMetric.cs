@@ -2,5 +2,5 @@
 
 public enum ConvertMetric
 {
-    None, ToDegrees, ToLr
+    None, ToDegrees
 }

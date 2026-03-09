@@ -88,15 +88,12 @@ namespace Bolsover.Gears.Gui.Views
             this.assignedTotalProfileShiftSymbol = new System.Windows.Forms.Label();
             this.assignedTotalNormalProfileShiftTextBox = new System.Windows.Forms.TextBox();
             this.xModTextBox = new System.Windows.Forms.TextBox();
-            this.heightSymbol = new System.Windows.Forms.Label();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.objectListView1 = new BrightIdeasSoftware.ObjectListView();
             this.olvColumn1 = new BrightIdeasSoftware.OLVColumn();
             this.olvColumn2 = new BrightIdeasSoftware.OLVColumn();
             this.olvColumn3 = new BrightIdeasSoftware.OLVColumn();
             this.olvColumn4 = new BrightIdeasSoftware.OLVColumn();
-            this.olvColumn5 = new BrightIdeasSoftware.OLVColumn();
-            this.olvColumn6 = new BrightIdeasSoftware.OLVColumn();
             this.panel1 = new System.Windows.Forms.Panel();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.moduleNumericUpDown)).BeginInit();
@@ -176,7 +173,6 @@ namespace Bolsover.Gears.Gui.Views
             this.tableLayoutPanel1.Controls.Add(this.assignedTotalProfileShiftSymbol, 1, 16);
             this.tableLayoutPanel1.Controls.Add(this.assignedTotalNormalProfileShiftTextBox, 2, 16);
             this.tableLayoutPanel1.Controls.Add(this.xModTextBox, 3, 13);
-            this.tableLayoutPanel1.Controls.Add(this.heightSymbol, 1, 20);
             this.tableLayoutPanel1.Cursor = System.Windows.Forms.Cursors.Default;
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Left;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
@@ -289,6 +285,7 @@ namespace Bolsover.Gears.Gui.Views
             // gearLabel
             // 
             this.gearLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.gearLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gearLabel.Location = new System.Drawing.Point(595, 5);
             this.gearLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.gearLabel.Name = "gearLabel";
@@ -351,6 +348,7 @@ namespace Bolsover.Gears.Gui.Views
             // pionLabel
             // 
             this.pionLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.pionLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.pionLabel.Location = new System.Drawing.Point(449, 5);
             this.pionLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.pionLabel.Name = "pionLabel";
@@ -395,6 +393,7 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.tableLayoutPanel1.SetColumnSpan(this.adjustmentsLabel, 4);
             this.adjustmentsLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.adjustmentsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.adjustmentsLabel.Location = new System.Drawing.Point(9, 412);
             this.adjustmentsLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.adjustmentsLabel.Name = "adjustmentsLabel";
@@ -494,6 +493,7 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.tableLayoutPanel1.SetColumnSpan(this.label3, 4);
             this.label3.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label3.Location = new System.Drawing.Point(9, 301);
             this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label3.Name = "label3";
@@ -505,6 +505,7 @@ namespace Bolsover.Gears.Gui.Views
             // itemLabel
             // 
             this.itemLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.itemLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.itemLabel.Location = new System.Drawing.Point(9, 5);
             this.itemLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.itemLabel.Name = "itemLabel";
@@ -516,6 +517,7 @@ namespace Bolsover.Gears.Gui.Views
             // label5
             // 
             this.label5.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.Location = new System.Drawing.Point(229, 5);
             this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label5.Name = "label5";
@@ -528,6 +530,7 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.tableLayoutPanel1.SetColumnSpan(this.standardSettingLabel, 4);
             this.standardSettingLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.standardSettingLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.standardSettingLabel.Location = new System.Drawing.Point(9, 42);
             this.standardSettingLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.standardSettingLabel.Name = "standardSettingLabel";
@@ -640,6 +643,7 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.tableLayoutPanel1.SetColumnSpan(this.alibreSettingLabel, 4);
             this.alibreSettingLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            // this.alibreSettingLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.alibreSettingLabel.Location = new System.Drawing.Point(9, 708);
             this.alibreSettingLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.alibreSettingLabel.Name = "alibreSettingLabel";
@@ -855,15 +859,6 @@ namespace Bolsover.Gears.Gui.Views
             this.xModTextBox.Size = new System.Drawing.Size(142, 22);
             this.xModTextBox.TabIndex = 75;
             // 
-            // heightSymbol
-            // 
-            this.heightSymbol.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.heightSymbol.Location = new System.Drawing.Point(228, 745);
-            this.heightSymbol.Name = "heightSymbol";
-            this.heightSymbol.Size = new System.Drawing.Size(214, 37);
-            this.heightSymbol.TabIndex = 76;
-            this.heightSymbol.Text = "Height Symbol";
-            // 
             // objectListView1
             // 
             this.objectListView1.AllColumns.Add(this.olvColumn1);
@@ -881,13 +876,12 @@ namespace Bolsover.Gears.Gui.Views
             this.objectListView1.Location = new System.Drawing.Point(5, 5);
             this.objectListView1.Margin = new System.Windows.Forms.Padding(5);
             this.objectListView1.Name = "objectListView1";
-            this.objectListView1.RowHeight = -1;
             this.objectListView1.ShowGroups = false;
             this.objectListView1.ShowHeaderInAllViews = false;
             this.objectListView1.ShowItemToolTips = true;
             this.objectListView1.Size = new System.Drawing.Size(882, 932);
             this.objectListView1.SortGroupItemsByPrimaryColumn = false;
-            this.objectListView1.TabIndex = 5;
+            this.objectListView1.TabIndex = 66;
             this.objectListView1.UseAlternatingBackColors = true;
             this.objectListView1.UseCompatibleStateImageBehavior = false;
             this.objectListView1.View = System.Windows.Forms.View.Details;
@@ -895,31 +889,22 @@ namespace Bolsover.Gears.Gui.Views
             // olvColumn1
             // 
             this.olvColumn1.Text = "Item";
-            this.olvColumn1.Width = 250;
+            this.olvColumn1.Width = 252;
             // 
             // olvColumn2
             // 
             this.olvColumn2.Text = "Metric";
-            this.olvColumn2.Width = 150;
+            this.olvColumn2.Width = 167;
             // 
             // olvColumn3
             // 
             this.olvColumn3.Text = "Imperial";
-            this.olvColumn3.Width = 150;
+            this.olvColumn3.Width = 207;
             // 
             // olvColumn4
             // 
             this.olvColumn4.Text = "Note";
-            this.olvColumn4.Width = 150;
-            // 
-            // olvColumn5
-            // 
-            this.olvColumn5.Text = "Symbol";
-            // 
-            // olvColumn6
-            // 
-            this.olvColumn6.Text = "Formula";
-            this.olvColumn6.Width = 500;
+            this.olvColumn4.Width = 178;
             // 
             // panel1
             // 
@@ -934,6 +919,8 @@ namespace Bolsover.Gears.Gui.Views
             // 
             // GearView
             // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            // this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.tableLayoutPanel1);
@@ -960,10 +947,6 @@ namespace Bolsover.Gears.Gui.Views
             this.ResumeLayout(false);
         }
 
-        
-
-        public System.Windows.Forms.Label heightSymbol;
-
         private System.Windows.Forms.Panel panel1;
 
 
@@ -971,8 +954,6 @@ namespace Bolsover.Gears.Gui.Views
         public BrightIdeasSoftware.OLVColumn olvColumn2;
         public BrightIdeasSoftware.OLVColumn olvColumn3;
         public BrightIdeasSoftware.OLVColumn olvColumn4;
-        public BrightIdeasSoftware.OLVColumn olvColumn5;
-        public BrightIdeasSoftware.OLVColumn olvColumn6;
 
         public BrightIdeasSoftware.ObjectListView objectListView1;
 

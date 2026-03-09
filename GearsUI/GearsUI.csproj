@@ -173,21 +173,12 @@
     <Compile Include="Gui\GearControlProvider.cs" />
     <Compile Include="Gui\Presenters\GearViewPresenter.cs" />
     <Compile Include="Gui\ToothProfileControl.cs" />
-    <Compile Include="Gui\Views\EmptyView.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Gui\Views\EmptyView.Designer.cs">
-      <DependentUpon>EmptyView.cs</DependentUpon>
-    </Compile>
     <Compile Include="Gui\Views\GearView.cs" />
     <Compile Include="Gui\Views\GearView.Designer.cs" />
     <Compile Include="Gui\Views\GearForm.cs" />
     <Compile Include="Gui\Views\GearForm.Designer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="Gui\Views\EmptyView.resx">
-      <DependentUpon>EmptyView.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Gui\Views\GearView.resx" />
     <EmbeddedResource Include="Gui\Views\GearForm.resx" />
     <EmbeddedResource Include="Properties\Resources.resx">
