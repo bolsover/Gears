@@ -72,35 +72,44 @@ namespace Bolsover.Gears.Calculator
         /// <param name="numPoints">Points per segment: [involute, trochoid, addendum, dedendum]. Defaults to [10,10,5,5].</param>
         /// <param name="clearance">Bottom clearance (mm). Defaults to 0.25 * m if null.</param>
         /// <param name="backlash">Circular backlash / flank clearance (mm). Defaults to 0.0 if null.</param>
+        /// <param name="helixAngle">Helix angle in degrees. Defaults to 0.0 if null.</param>
         public static AlibreGearProfile GenerateExternalToothProfile(
             int z, double m, double alphaDeg,
             double profileShift = 0.0,
             bool undercutAutoSuppress = false,
             int[] numPoints = null,
             double? clearance = null,
-            double? backlash = null)
+            double? backlash = null,
+            double? helixAngle = null)
         {
             numPoints = numPoints ?? new[] { 10, 10, 5, 5 };
             var c = clearance ?? (0.25 * m);
             var jt = backlash ?? 0.0;
+            var betaDeg = helixAngle ?? 0.0;
 
             var alpha = Radians(alphaDeg);
+            var beta = Radians(betaDeg);
+            var cosB = Math.Cos(beta);
+            if (cosB < 1e-6) cosB = 1e-6;
+
+            var mt = m / cosB;
+            var alphaT = Math.Atan(Math.Tan(alpha) / cosB);
 
             // Standard radii calculations
-            var pitchRadius = m * z / 2.0;
-            var baseRadius = pitchRadius * Math.Cos(alpha);
+            var pitchRadiusStd = mt * z / 2.0;
+            var baseRadius = pitchRadiusStd * Math.Cos(alphaT);
 
             // Undercut auto suppress
             if (undercutAutoSuppress)
             {
-                if (baseRadius > pitchRadius - m) // Check for undercut
+                if (baseRadius > pitchRadiusStd - m) // Check for undercut
                 {
-                    profileShift = baseRadius - (pitchRadius - m);
+                    profileShift = baseRadius - (pitchRadiusStd - m);
                 }
             }
 
             // Apply profile shift
-            pitchRadius += profileShift;
+            var pitchRadius = pitchRadiusStd + profileShift;
             var addendumRadius = pitchRadius + m;
             var dedendumRadius = Math.Max(pitchRadius - m - c, 0.01);
 
@@ -160,6 +169,8 @@ namespace Bolsover.Gears.Calculator
                 profile.Involute1.Add(new GearPoint(xInv, -yInv));
             }
 
+            profile.Involute2.Reverse();
+
             // === Trochoid curves ===
             double betaTrochoid = 0;
             if (baseRadius > dedendumRadius)
@@ -200,7 +211,6 @@ namespace Bolsover.Gears.Calculator
                     profile.Trochoid2.Add(new GearPoint(x2, y2));
                 }
 
-                profile.Trochoid1.Reverse();
                 profile.Trochoid2.Reverse();
             }
 
@@ -220,16 +230,17 @@ namespace Bolsover.Gears.Calculator
             }
 
             // Lower arc (dedendum)
+            var pitchAngle = 2.0 * Math.PI / z;
             double startAngleLower, endAngleLower;
             if (baseRadius > dedendumRadius)
             {
                 startAngleLower = toothAngle - betaTrochoid;
-                endAngleLower = -angularToothWidth * 2 + betaTrochoid;
+                endAngleLower = -pitchAngle + betaTrochoid;
             }
             else
             {
                 startAngleLower = toothAngle + InvoluteFunction(dedendumInvoluteAngle);
-                endAngleLower = -angularToothWidth * 2 - InvoluteFunction(dedendumInvoluteAngle);
+                endAngleLower = -pitchAngle - InvoluteFunction(dedendumInvoluteAngle);
             }
 
             for (var i = 0; i < numPoints[3]; i++)
@@ -248,7 +259,7 @@ namespace Bolsover.Gears.Calculator
             profile.Trochoid2 = GearPoint.Rotated(profile.Trochoid2, rotationAngle);
             profile.LowerArc = GearPoint.Rotated(profile.LowerArc, rotationAngle);
 
-            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt);
+            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt, betaDeg);
             return profile;
         }
 
@@ -265,33 +276,43 @@ namespace Bolsover.Gears.Calculator
         /// <param name="numPoints">Points per segment: [involute, addendum, dedendum, external]. Defaults to [10,5,5,10].</param>
         /// <param name="clearance">Bottom clearance (mm). Defaults to 0.25 * m if null.</param>
         /// <param name="backlash">Circular backlash / flank clearance (mm). Defaults to 0.0 if null.</param>
+        /// <param name="helixAngle">Helix angle in degrees. Defaults to 0.0 if null.</param>
         public static AlibreGearProfile GenerateInternalToothProfile(
             int z, double m, double alphaDeg, double thickness,
             double profileShift = 0.0,
             bool undercutAutoSuppress = false,
             int[] numPoints = null,
             double? clearance = null,
-            double? backlash = null)
+            double? backlash = null,
+            double? helixAngle = null)
         {
             numPoints ??= new[] { 10, 5, 5, 10 };
             var c = clearance ?? (0.25 * m);
             var jt = backlash ?? 0.0;
+            var betaDeg = helixAngle ?? 0.0;
 
             var alpha = Radians(alphaDeg);
+            var beta = Radians(betaDeg);
+            var cosB = Math.Cos(beta);
+            if (cosB < 1e-6) cosB = 1e-6;
 
-            var pitchRadius = m * z / 2.0;
-            var baseRadius = pitchRadius * Math.Cos(alpha);
+            var mt = m / cosB;
+            var alphaT = Math.Atan(Math.Tan(alpha) / cosB);
+
+            var pitchRadiusStd = mt * z / 2.0;
+            var baseRadius = pitchRadiusStd * Math.Cos(alphaT);
 
             if (undercutAutoSuppress)
             {
-                if (baseRadius > pitchRadius - m)
+                if (baseRadius > pitchRadiusStd - m)
                 {
-                    profileShift = baseRadius - (pitchRadius - m);
+                    profileShift = baseRadius - (pitchRadiusStd - m);
                 }
             }
 
             // Apply profile shift (note: addendum is inside, dedendum outside for internal gears)
-            pitchRadius += profileShift;
+            pitchRadiusStd += profileShift;
+            var pitchRadius = pitchRadiusStd;
             var addendumRadius = pitchRadius - m;
             var dedendumRadius = Math.Max(pitchRadius + m + c, 0.01);
 
@@ -357,8 +378,9 @@ namespace Bolsover.Gears.Calculator
             }
 
             // Lower arc (dedendum) - doubled on each side to avoid overly sharp corners
+            var pitchAngle = 2.0 * Math.PI / z;
             var startAngleLower = toothAngle + InvoluteFunction(addendumInvoluteAngle);
-            var endAngleLower = -angularToothWidth * 2 - InvoluteFunction(addendumInvoluteAngle);
+            var endAngleLower = -pitchAngle - InvoluteFunction(addendumInvoluteAngle);
             var angularWidthLower = endAngleLower - startAngleLower;
 
             var lowerRadius = Math.Max(addendumRadius, baseRadius);
@@ -377,6 +399,9 @@ namespace Bolsover.Gears.Calculator
                 var thetaArc = -InvoluteFunction(addendumInvoluteAngle) - t * angularWidthLower / 2;
                 profile.LowerArc2.Add(new GearPoint(lowerRadius * Math.Cos(thetaArc), lowerRadius * Math.Sin(thetaArc)));
             }
+
+            profile.Involute2.Reverse();
+            profile.LowerArc2.Reverse();
 
             // External arc
             var startAngleExternal = -InvoluteFunction(addendumInvoluteAngle) - angularWidthLower / 2;
@@ -398,7 +423,7 @@ namespace Bolsover.Gears.Calculator
             profile.LowerArc2 = GearPoint.Rotated(profile.LowerArc2, rotationAngle);
             profile.ExternalArc = GearPoint.Rotated(profile.ExternalArc, rotationAngle);
 
-            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt);
+            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt, betaDeg);
             return profile;
         }
 
@@ -414,52 +439,20 @@ namespace Bolsover.Gears.Calculator
 
             if (internalGear)
             {
-                // 1. Line from lower_arc_1 start to external arc start
-                if (p.LowerArc1.Count > 0 && p.ExternalArc.Count > 0)
-                {
-             //       segments.Add(new List<GearPoint> { Last(p.LowerArc1), Last(p.ExternalArc) });
-                }
-
-                // 2. External arc
-                AddIfAny(segments, p.ExternalArc);
-
-                // 3. Line from external arc end to lower arc 2 end
-                if (p.ExternalArc.Count > 0 && p.LowerArc2.Count > 0)
-                {
-              //      segments.Add(new List<GearPoint> { First(p.ExternalArc), Last(p.LowerArc2) });
-                }
-
-                // 4. Lower dedendum arcs
-                AddIfAny(segments, p.LowerArc1);
                 AddIfAny(segments, p.LowerArc2);
-
-                // 5. Involute_2, 6. Upper arc, 7. Involute_1
-                AddIfAny(segments, p.Involute2);
-                AddIfAny(segments, p.UpperArc);
                 AddIfAny(segments, p.Involute1);
+                AddIfAny(segments, p.UpperArc);
+                AddIfAny(segments, p.Involute2);
+                AddIfAny(segments, p.LowerArc1);
             }
             else
             {
-                // 1. Line from centre (0,0) to start of trochoid_1 (or involute_1 start if no trochoid)
-                var trochoidStart = p.Trochoid1.Count == 0 ? First(p.Involute1) : Last(p.Trochoid1);
-                if (trochoidStart != null)
-                {
-               //     segments.Add(new List<GearPoint> { new GearPoint(0, 0), trochoidStart });
-                }
-
-                // 2-7. Splines and arcs
                 AddIfAny(segments, p.Trochoid1);
                 AddIfAny(segments, p.Involute1);
                 AddIfAny(segments, p.UpperArc);
                 AddIfAny(segments, p.Involute2);
                 AddIfAny(segments, p.Trochoid2);
                 AddIfAny(segments, p.LowerArc);
-
-                // 8. Line from end of lower arc back to centre
-                if (p.LowerArc.Count > 0)
-                {
-               //     segments.Add(new List<GearPoint> { Last(p.LowerArc), new GearPoint(0, 0) });
-                }
             }
 
             return segments;
@@ -477,7 +470,7 @@ namespace Bolsover.Gears.Calculator
             var pitch = 2 * Math.PI / z;
             for (var k = 0; k < z; k++)
             {
-                var angle = k * pitch;
+                var angle = -k * pitch;
                 foreach (var segment in toothOutline)
                 {
                     result.Add(GearPoint.Rotated(segment, angle));
@@ -492,17 +485,16 @@ namespace Bolsover.Gears.Calculator
             if (points is { Count: > 0 }) segments.Add(points);
         }
 
-        private static GearPoint First(List<GearPoint> points) => points is { Count: > 0 } ? points[0] : null;
-        private static GearPoint Last(List<GearPoint> points) => points is { Count: > 0 } ? points[points.Count - 1] : null;
-
         private static double Radians(double degrees) => degrees * Math.PI / 180.0;
 
         private static void PopulateParameters(AlibreGearProfile profile, int z, double m, double alphaDeg,
-            double profileShift, double pitchRadius, double baseRadius, double addendumRadius, double dedendumRadius, double clearance = 0.0, double backlash = 0.0)
+            double profileShift, double pitchRadius, double baseRadius, double addendumRadius, double dedendumRadius,
+            double clearance = 0.0, double backlash = 0.0, double helixAngle = 0.0)
         {
             profile.Parameters["z"] = z;
             profile.Parameters["m"] = m;
             profile.Parameters["alphaDeg"] = alphaDeg;
+            profile.Parameters["helixAngle"] = helixAngle;
             profile.Parameters["profileShift"] = profileShift;
             profile.Parameters["clearance"] = clearance;
             profile.Parameters["backlash"] = backlash;

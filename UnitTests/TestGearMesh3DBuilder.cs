@@ -323,5 +323,187 @@ namespace UnitTests
             Assert.Greater(mesh.Vertices.Count, 0);
             Assert.Greater(mesh.TriangleIndices.Count, 0);
         }
+
+        [Test]
+        public void TestGenerateExternalToothProfile_WithHelixAngle()
+        {
+            var z = 20;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var betaDeg = 25.0;
+
+            var profile = AlibreGearGenerator.GenerateExternalToothProfile(
+                z, m, alphaDeg, 0.0, false, null, null, null, betaDeg);
+
+            Assert.IsNotNull(profile);
+            Assert.AreEqual(betaDeg, profile.Parameters["helixAngle"], 1e-6);
+
+            var cosBeta = System.Math.Cos(betaDeg * System.Math.PI / 180.0);
+            var expectedPitchRadius = (m / cosBeta) * z / 2.0;
+            Assert.AreEqual(expectedPitchRadius, profile.Parameters["pitchRadius"], 1e-6);
+
+            var mesh = GearMesh3DBuilder.BuildGearMesh(
+                profile, z, 20.0, isInternal: false, isFullGear: true, helixAngleDeg: betaDeg, helicalDirection: "R");
+
+            Assert.IsNotNull(mesh);
+            Assert.Greater(mesh.Vertices.Count, 0);
+            Assert.Greater(mesh.TriangleIndices.Count, 0);
+            Assert.AreEqual(mesh.Vertices.Count, mesh.Normals.Count);
+        }
+
+        [Test]
+        public void TestGenerateInternalToothProfile_WithHelixAngle()
+        {
+            var z = 30;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var betaDeg = 20.0;
+            var rimThickness = 5.0;
+
+            var profile = AlibreGearGenerator.GenerateInternalToothProfile(
+                z, m, alphaDeg, rimThickness, 0.0, false, null, null, null, betaDeg);
+
+            Assert.IsNotNull(profile);
+            Assert.AreEqual(betaDeg, profile.Parameters["helixAngle"], 1e-6);
+
+            var cosBeta = System.Math.Cos(betaDeg * System.Math.PI / 180.0);
+            var expectedPitchRadius = (m / cosBeta) * z / 2.0;
+            Assert.AreEqual(expectedPitchRadius, profile.Parameters["pitchRadius"], 1e-6);
+
+            var mesh = GearMesh3DBuilder.BuildGearMesh(
+                profile, z, 20.0, isInternal: true, isFullGear: true, rimThickness: rimThickness, helixAngleDeg: betaDeg, helicalDirection: "L");
+
+            Assert.IsNotNull(mesh);
+            Assert.Greater(mesh.Vertices.Count, 0);
+            Assert.Greater(mesh.TriangleIndices.Count, 0);
+            Assert.AreEqual(mesh.Vertices.Count, mesh.Normals.Count);
+        }
+
+        [Test]
+        public void TestToothProfile_48ToothHelicalWithBacklash_EachSegmentStartsAtPriorEndAndPerimeterCloses()
+        {
+            var z = 48;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var helixAngle = 30.0;
+            var backlash = 1.0;
+
+            var profile = AlibreGearGenerator.GenerateExternalToothProfile(
+                z, m, alphaDeg, 0.0, false, null, null, backlash, helixAngle);
+
+            Assert.IsNotNull(profile);
+
+            // 1. Verify single tooth segment continuity: each segment starts where the prior segment ends
+            var toothOutline = AlibreGearGenerator.BuildToothOutline(profile, false);
+            Assert.Greater(toothOutline.Count, 1, "Tooth outline must contain multiple segments (involutes, arcs, trochoids).");
+
+            for (var i = 0; i < toothOutline.Count - 1; i++)
+            {
+                var currentSegment = toothOutline[i];
+                var nextSegment = toothOutline[i + 1];
+
+                Assert.Greater(currentSegment.Count, 0);
+                Assert.Greater(nextSegment.Count, 0);
+
+                var endPt = currentSegment[currentSegment.Count - 1];
+                var startPt = nextSegment[0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Segment {i} end X must match segment {i + 1} start X");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Segment {i} end Y must match segment {i + 1} start Y");
+            }
+
+            // 2. Verify full gear continuity and seamless closure around the entire perimeter
+            var fullGear = AlibreGearGenerator.BuildFullGear(z, toothOutline);
+            Assert.AreEqual(z * toothOutline.Count, fullGear.Count);
+
+            for (var i = 0; i < fullGear.Count - 1; i++)
+            {
+                var currentSegment = fullGear[i];
+                var nextSegment = fullGear[i + 1];
+
+                var endPt = currentSegment[currentSegment.Count - 1];
+                var startPt = nextSegment[0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Full gear segment {i} end X must match segment {i + 1} start X");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Full gear segment {i} end Y must match segment {i + 1} start Y");
+            }
+
+            // Verify perimeter loop closure between final segment end and initial segment start
+            var firstPt = fullGear[0][0];
+            var lastPt = fullGear[fullGear.Count - 1][fullGear[fullGear.Count - 1].Count - 1];
+            Assert.AreEqual(firstPt.X, lastPt.X, 1e-4, "Full gear perimeter must close seamlessly (first X vs last X)");
+            Assert.AreEqual(firstPt.Y, lastPt.Y, 1e-4, "Full gear perimeter must close seamlessly (first Y vs last Y)");
+        }
+
+        [Test]
+        public void TestToothProfile_StandardSpurGear_EachSegmentStartsAtPriorEndAndPerimeterCloses()
+        {
+            var z = 20;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+
+            var profile = AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, 0.0, false);
+            var toothOutline = AlibreGearGenerator.BuildToothOutline(profile, false);
+
+            for (var i = 0; i < toothOutline.Count - 1; i++)
+            {
+                var endPt = toothOutline[i][toothOutline[i].Count - 1];
+                var startPt = toothOutline[i + 1][0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Segment {i} end must match segment {i + 1} start");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Segment {i} end must match segment {i + 1} start");
+            }
+
+            var fullGear = AlibreGearGenerator.BuildFullGear(z, toothOutline);
+            for (var i = 0; i < fullGear.Count - 1; i++)
+            {
+                var endPt = fullGear[i][fullGear[i].Count - 1];
+                var startPt = fullGear[i + 1][0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Full gear segment {i} end must match segment {i + 1} start");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Full gear segment {i} end must match segment {i + 1} start");
+            }
+
+            var firstPt = fullGear[0][0];
+            var lastPt = fullGear[fullGear.Count - 1][fullGear[fullGear.Count - 1].Count - 1];
+            Assert.AreEqual(firstPt.X, lastPt.X, 1e-4, "Full gear perimeter must close seamlessly");
+            Assert.AreEqual(firstPt.Y, lastPt.Y, 1e-4, "Full gear perimeter must close seamlessly");
+        }
+
+        [Test]
+        public void TestToothProfile_InternalGear_EachSegmentStartsAtPriorEndAndPerimeterCloses()
+        {
+            var z = 30;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var thickness = 5.0;
+
+            var profile = AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, thickness, 0.0, false);
+            var toothOutline = AlibreGearGenerator.BuildToothOutline(profile, true);
+
+            for (var i = 0; i < toothOutline.Count - 1; i++)
+            {
+                var endPt = toothOutline[i][toothOutline[i].Count - 1];
+                var startPt = toothOutline[i + 1][0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Internal segment {i} end must match segment {i + 1} start");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Internal segment {i} end must match segment {i + 1} start");
+            }
+
+            var fullGear = AlibreGearGenerator.BuildFullGear(z, toothOutline);
+            for (var i = 0; i < fullGear.Count - 1; i++)
+            {
+                var endPt = fullGear[i][fullGear[i].Count - 1];
+                var startPt = fullGear[i + 1][0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Internal full gear segment {i} end must match segment {i + 1} start");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Internal full gear segment {i} end must match segment {i + 1} start");
+            }
+
+            var firstPt = fullGear[0][0];
+            var lastPt = fullGear[fullGear.Count - 1][fullGear[fullGear.Count - 1].Count - 1];
+            Assert.AreEqual(firstPt.X, lastPt.X, 1e-4, "Internal full gear perimeter must close seamlessly");
+            Assert.AreEqual(firstPt.Y, lastPt.Y, 1e-4, "Internal full gear perimeter must close seamlessly");
+        }
     }
 }

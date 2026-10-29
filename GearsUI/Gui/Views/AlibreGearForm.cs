@@ -23,6 +23,8 @@ namespace Bolsover.Gears.Gui.Views
 
         private bool _hasMeshedGear = false;
         private int _meshedTeeth = 24;
+        private double _meshedHelixAngle = 0.0;
+        private string _meshedHelicalDirection = "L";
         private double _meshedClearance = 0.5;
         private double _meshedBacklash = 0.0;
         private double _meshedProfileShift = 0.0;
@@ -43,6 +45,11 @@ namespace Bolsover.Gears.Gui.Views
                 // Resources may be unavailable outside an install; keep default icon.
             }
 
+            if (cboHelicalDirection.SelectedIndex < 0)
+            {
+                cboHelicalDirection.SelectedIndex = 0; // Default "R (Right)"
+            }
+
             // Parameter change listeners
             numTeeth.ValueChanged += (s, e) => ExecuteCalculation();
             numModule.ValueChanged += (s, e) =>
@@ -52,6 +59,8 @@ namespace Bolsover.Gears.Gui.Views
                 ExecuteCalculation();
             };
             numPressureAngle.ValueChanged += (s, e) => ExecuteCalculation();
+            numHelixAngle.ValueChanged += (s, e) => ExecuteCalculation();
+            cboHelicalDirection.SelectedIndexChanged += (s, e) => ExecuteCalculation();
             numClearance.ValueChanged += (s, e) => ExecuteCalculation();
             numBacklash.ValueChanged += (s, e) => ExecuteCalculation();
             numFaceWidth.ValueChanged += (s, e) => ExecuteCalculation();
@@ -122,12 +131,16 @@ namespace Bolsover.Gears.Gui.Views
                 (double)numModule.Value,
                 (double)numPressureAngle.Value,
                 _meshedClearance,
-                _meshedBacklash);
+                _meshedBacklash,
+                _meshedHelixAngle,
+                _meshedHelicalDirection);
 
             if (dialog.ShowDialog(this) == DialogResult.OK)
             {
                 _hasMeshedGear = true;
                 _meshedTeeth = dialog.Teeth;
+                _meshedHelixAngle = dialog.HelixAngle;
+                _meshedHelicalDirection = dialog.HelicalDirection;
                 _meshedClearance = dialog.Clearance;
                 _meshedBacklash = dialog.Backlash;
                 _meshedProfileShift = dialog.ProfileShift;
@@ -174,6 +187,8 @@ namespace Bolsover.Gears.Gui.Views
             var z = (int)numTeeth.Value;
             var m = (double)numModule.Value;
             var alphaDeg = (double)numPressureAngle.Value;
+            var helixAngle = (double)numHelixAngle.Value;
+            var helicalDirection = cboHelicalDirection.SelectedItem?.ToString().StartsWith("L", StringComparison.OrdinalIgnoreCase) == true ? "L" : "R";
             var clearance = (double)numClearance.Value;
             var backlash = (double)numBacklash.Value;
             var faceWidth = (double)numFaceWidth.Value;
@@ -194,14 +209,16 @@ namespace Bolsover.Gears.Gui.Views
                         z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness,
                         _meshedTeeth, _meshedFaceWidth, _meshedProfileShift, _meshedIsInternal, _meshedRimThickness,
                         clearance, _meshedClearance,
-                        backlash, _meshedBacklash);
+                        backlash, _meshedBacklash,
+                        helixAngle, _meshedHelixAngle,
+                        helicalDirection, _meshedHelicalDirection);
 
                     UpdateProgress(40, "Generating involute profile curves...");
 
                     // 2. Generate 2D tooth and gear profile for Gear 1
                     var profile1 = internalGear
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash);
+                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash, helixAngle)
+                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash, helixAngle);
 
                     var tooth1 = AlibreGearGenerator.BuildToothOutline(profile1, internalGear);
                     var polylines1 = chkFullGear.Checked
@@ -210,8 +227,8 @@ namespace Bolsover.Gears.Gui.Views
 
                     // Generate 2D tooth and gear profile for Gear 2
                     var profile2 = _meshedIsInternal
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedRimThickness, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash);
+                        ? AlibreGearGenerator.GenerateInternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedRimThickness, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash, _meshedHelixAngle)
+                        : AlibreGearGenerator.GenerateExternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash, _meshedHelixAngle);
 
                     var tooth2 = AlibreGearGenerator.BuildToothOutline(profile2, _meshedIsInternal);
                     var polylines2 = chkFullGear.Checked
@@ -248,8 +265,8 @@ namespace Bolsover.Gears.Gui.Views
                     UpdateProgress(65, "Constructing 3D extruded solid mesh...");
 
                     // 3. Generate 3D extruded meshes and combine
-                    var mesh1 = GearMesh3DBuilder.BuildGearMesh(profile1, z, faceWidth, internalGear, chkFullGear.Checked, rimThickness);
-                    var mesh2 = GearMesh3DBuilder.BuildGearMesh(profile2, _meshedTeeth, _meshedFaceWidth, _meshedIsInternal, chkFullGear.Checked, _meshedRimThickness);
+                    var mesh1 = GearMesh3DBuilder.BuildGearMesh(profile1, z, faceWidth, internalGear, chkFullGear.Checked, rimThickness, helixAngle, helicalDirection);
+                    var mesh2 = GearMesh3DBuilder.BuildGearMesh(profile2, _meshedTeeth, _meshedFaceWidth, _meshedIsInternal, chkFullGear.Checked, _meshedRimThickness, _meshedHelixAngle, _meshedHelicalDirection);
                     var transformedMesh2 = GearMesh3DBuilder.Transform(mesh2, aw, 0.0, 0.0, meshRotationAngle);
                     _currentMesh = GearMesh3DBuilder.Combine(mesh1, transformedMesh2);
 
@@ -286,14 +303,14 @@ namespace Bolsover.Gears.Gui.Views
                 {
                     // 1. Calculate metric gear parameters
                     var calcData = GearParameterCalculator.Calculate(
-                        z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness, clearance, backlash);
+                        z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness, clearance, backlash, helixAngle, helicalDirection);
 
                     UpdateProgress(40, "Generating involute profile curves...");
 
                     // 2. Generate 2D tooth and gear profile
                     var profile = internalGear
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash);
+                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash, helixAngle)
+                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash, helixAngle);
 
                     var tooth = AlibreGearGenerator.BuildToothOutline(profile, internalGear);
                     _currentPolylines = chkFullGear.Checked
@@ -303,7 +320,7 @@ namespace Bolsover.Gears.Gui.Views
                     UpdateProgress(65, "Constructing 3D extruded solid mesh...");
 
                     // 3. Generate 3D extruded mesh
-                    _currentMesh = GearMesh3DBuilder.BuildGearMesh(profile, z, faceWidth, internalGear, chkFullGear.Checked, rimThickness);
+                    _currentMesh = GearMesh3DBuilder.BuildGearMesh(profile, z, faceWidth, internalGear, chkFullGear.Checked, rimThickness, helixAngle, helicalDirection);
 
                     UpdateProgress(85, "Rendering visual models and LaTeX tables...");
 
@@ -376,6 +393,9 @@ namespace Bolsover.Gears.Gui.Views
             lblDedendum.Text = "Root (df): " + Fmt(calcData.RootDiameter);
             lblClearanceVal.Text = "Clearance (c): " + Fmt(calcData.Clearance);
             lblBacklashVal.Text = "Backlash (jt): " + Fmt(calcData.Backlash);
+            lblHelixVal.Text = calcData.HelixAngleDeg > 1e-6
+                ? $"Helix (β): {calcData.HelixAngleDeg:0.##}° ({calcData.HelicalDirection})"
+                : "Helix (β): Spur (0°)";
         }
 
         private void UpdateResultLabelsForPair(CalculatedGearPairData pairData)
@@ -386,6 +406,7 @@ namespace Bolsover.Gears.Gui.Views
             lblDedendum.Text = $"Centre Dist (aw): {Fmt(pairData.WorkingCentreDistance)}";
             lblClearanceVal.Text = $"Clearance: c₁={Fmt(pairData.Gear1Clearance)}, c₂={Fmt(pairData.Gear2Clearance)}";
             lblBacklashVal.Text = $"Backlash: jt₁={Fmt(pairData.Gear1Backlash)}, jt₂={Fmt(pairData.Gear2Backlash)}, jn={Fmt(pairData.NormalBacklash)}";
+            lblHelixVal.Text = $"Helix: β₁={pairData.Gear1HelixAngle:0.##}° ({pairData.Gear1HelicalDirection}), β₂={pairData.Gear2HelixAngle:0.##}° ({pairData.Gear2HelicalDirection})";
         }
 
         private void ClearResultLabels()
@@ -396,6 +417,7 @@ namespace Bolsover.Gears.Gui.Views
             lblDedendum.Text = "Dedendum: –";
             lblClearanceVal.Text = "Clearance: –";
             lblBacklashVal.Text = "Backlash: –";
+            lblHelixVal.Text = "Helix: –";
         }
 
         private void PopulateParameterTable(IEnumerable<GearParameterRow> parameterRows)

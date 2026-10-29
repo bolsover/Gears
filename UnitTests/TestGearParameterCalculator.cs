@@ -325,5 +325,79 @@ namespace UnitTests
             Assert.AreEqual("m(\\frac{\\pi}{2} + 2 x_2 \\tan\\alpha) - j_{t2}", s2Row.FormulaLatex);
             Assert.AreEqual(Math.PI - 0.07, s2Row.Value, 1e-6);
         }
+
+        [Test]
+        public void TestHelicalGearCalculation_SingleGear()
+        {
+            var z = 20;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var faceWidth = 20.0;
+            var x = 0.0;
+            var betaDeg = 25.0;
+            var direction = "R";
+
+            var result = GearParameterCalculator.Calculate(
+                z, m, alphaDeg, faceWidth, x, false, 10.0, null, null, betaDeg, direction);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.IsHelical);
+            Assert.AreEqual(betaDeg, result.HelixAngleDeg, 1e-6);
+            Assert.AreEqual(betaDeg * Math.PI / 180.0, result.HelixAngleRad, 1e-6);
+            Assert.AreEqual("R", result.HelicalDirection);
+
+            var cosBeta = Math.Cos(betaDeg * Math.PI / 180.0);
+            var expectedMt = m / cosBeta;
+            var expectedAlphaT = Math.Atan(Math.Tan(alphaDeg * Math.PI / 180.0) / cosBeta) * 180.0 / Math.PI;
+
+            Assert.AreEqual(expectedMt, result.RadialModule, 1e-6);
+            Assert.AreEqual(expectedAlphaT, result.RadialPressureAngleDeg, 1e-6);
+            Assert.AreEqual(expectedMt * z, result.PitchDiameter, 1e-6);
+            Assert.AreEqual(result.PitchDiameter * Math.Cos(result.RadialPressureAngleRad), result.BaseDiameter, 1e-6);
+            Assert.AreEqual(Math.PI * m / Math.Sin(result.HelixAngleRad), result.AxialPitch, 1e-6);
+            Assert.AreEqual(z * result.AxialPitch, result.Lead, 1e-6);
+
+            var helixRow = result.ParameterRows.Find(r => r.ParameterName == "Helix Angle");
+            Assert.IsNotNull(helixRow);
+            Assert.AreEqual("\\beta", helixRow.SymbolLatex);
+            Assert.AreEqual(25.0, helixRow.Value, 1e-6);
+
+            var dirRow = result.ParameterRows.Find(r => r.ParameterName == "Helical Direction");
+            Assert.IsNotNull(dirRow);
+            Assert.AreEqual("R", dirRow.Unit);
+        }
+
+        [Test]
+        public void TestHelicalGearPairCalculation()
+        {
+            var pair = GearParameterCalculator.CalculatePair(
+                z1: 20, m: 2.0, alphaDeg: 20.0, faceWidth1: 25.0, x1: 0.0, isInternal1: false, rimThickness1: 10.0,
+                z2: 40, faceWidth2: 25.0, x2: 0.0, isInternal2: false, rimThickness2: 10.0,
+                clearance1: null, clearance2: null,
+                backlash1: null, backlash2: null,
+                helixAngle1: 20.0, helixAngle2: 20.0,
+                helicalDirection1: "R", helicalDirection2: "L");
+
+            Assert.IsNotNull(pair);
+            Assert.AreEqual(20.0, pair.Gear1HelixAngle, 1e-6);
+            Assert.AreEqual(20.0, pair.Gear2HelixAngle, 1e-6);
+            Assert.AreEqual("R", pair.Gear1HelicalDirection);
+            Assert.AreEqual("L", pair.Gear2HelicalDirection);
+
+            var cosBeta = Math.Cos(20.0 * Math.PI / 180.0);
+            var expectedMt = 2.0 / cosBeta;
+            Assert.AreEqual(expectedMt * (20 + 40) / 2.0, pair.StandardCentreDistance, 1e-6);
+            Assert.AreEqual(pair.StandardCentreDistance, pair.WorkingCentreDistance, 1e-6);
+            Assert.Greater(pair.AxialContactRatio, 1.0);
+            Assert.Greater(pair.ContactRatio, 2.0);
+
+            var beta1Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 1 Helix Angle");
+            Assert.IsNotNull(beta1Row);
+            Assert.AreEqual(20.0, beta1Row.Value, 1e-6);
+
+            var totalCrRow = pair.ParameterRows.Find(r => r.ParameterName == "Total Contact Ratio");
+            Assert.IsNotNull(totalCrRow);
+            Assert.AreEqual(pair.ContactRatio, totalCrRow.Value, 1e-6);
+        }
     }
 }

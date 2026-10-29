@@ -217,6 +217,8 @@
         <Compile Include="Model\Variable\BottomClearance.cs" />
         <Compile Include="Model\Variable\CircularBacklash.cs" />
         <Compile Include="Model\Variable\Dedendum.cs" />
+        <Compile Include="Model\Variable\Hand.cs" />
+        <Compile Include="Model\Variable\HelixAngle.cs" />
         <Compile Include="Model\Variable\IVariable.cs" />
         <Compile Include="Model\Variable\Module.cs" />
         <Compile Include="Model\Variable\OutsideDiameter.cs" />

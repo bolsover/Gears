@@ -141,6 +141,7 @@ namespace Bolsover.Gears.Calculator
 
         /// <summary>
         /// Builds a 3D solid mesh for external or internal gears.
+        /// Supports helical twisting along the face width when helixAngleDeg > 0.
         /// For internal gears, the interior cavity is completely open/transparent (annular ring between inner teeth and outer rim).
         /// </summary>
         public static Mesh3D BuildGearMesh(
@@ -149,17 +150,29 @@ namespace Bolsover.Gears.Calculator
             double faceWidth,
             bool isInternal,
             bool isFullGear,
-            double rimThickness = 0.0)
+            double rimThickness = 0.0,
+            double helixAngleDeg = 0.0,
+            string helicalDirection = "R")
         {
             if (profile == null || z <= 0 || faceWidth <= 0) return new Mesh3D();
+
+            var pitchRadius = 0.0;
+            if (profile.Parameters.TryGetValue("pitchRadius", out var pr))
+            {
+                pitchRadius = pr;
+            }
+            if (Math.Abs(helixAngleDeg) < 1e-6 && profile.Parameters.TryGetValue("helixAngle", out var ha))
+            {
+                helixAngleDeg = ha;
+            }
 
             if (isInternal)
             {
                 var singleInner = new List<GearPoint>();
-                for (var i = profile.LowerArc2.Count - 1; i >= 0; i--) singleInner.Add(profile.LowerArc2[i]);
+                foreach (var pt in profile.LowerArc2) singleInner.Add(pt);
                 foreach (var pt in profile.Involute1) singleInner.Add(pt);
                 foreach (var pt in profile.UpperArc) singleInner.Add(pt);
-                for (var i = profile.Involute2.Count - 1; i >= 0; i--) singleInner.Add(profile.Involute2[i]);
+                foreach (var pt in profile.Involute2) singleInner.Add(pt);
                 foreach (var pt in profile.LowerArc1) singleInner.Add(pt);
 
                 singleInner = RemoveConsecutiveDuplicates(singleInner);
@@ -171,7 +184,7 @@ namespace Bolsover.Gears.Calculator
                     var pitch = 2.0 * Math.PI / z;
                     for (var k = 0; k < z; k++)
                     {
-                        var angle = k * pitch;
+                        var angle = -k * pitch;
                         innerLoop.AddRange(GearPoint.Rotated(singleInner, angle));
                     }
                 }
@@ -198,15 +211,15 @@ namespace Bolsover.Gears.Calculator
                     rimRadius = maxR + Math.Max(rimThickness, 1.0);
                 }
 
-                return BuildInternalGearMesh(innerLoop, rimRadius, faceWidth, isFullGear);
+                return BuildInternalGearMesh(innerLoop, rimRadius, faceWidth, isFullGear, helixAngleDeg, helicalDirection, pitchRadius);
             }
             else
             {
                 var singleOuter = new List<GearPoint>();
-                for (var i = profile.Trochoid1.Count - 1; i >= 0; i--) singleOuter.Add(profile.Trochoid1[i]);
+                foreach (var pt in profile.Trochoid1) singleOuter.Add(pt);
                 foreach (var pt in profile.Involute1) singleOuter.Add(pt);
                 foreach (var pt in profile.UpperArc) singleOuter.Add(pt);
-                for (var i = profile.Involute2.Count - 1; i >= 0; i--) singleOuter.Add(profile.Involute2[i]);
+                foreach (var pt in profile.Involute2) singleOuter.Add(pt);
                 foreach (var pt in profile.Trochoid2) singleOuter.Add(pt);
                 foreach (var pt in profile.LowerArc) singleOuter.Add(pt);
 
@@ -219,7 +232,7 @@ namespace Bolsover.Gears.Calculator
                     var pitch = 2.0 * Math.PI / z;
                     for (var k = 0; k < z; k++)
                     {
-                        var angle = k * pitch;
+                        var angle = -k * pitch;
                         outerLoop.AddRange(GearPoint.Rotated(singleOuter, angle));
                     }
                 }
@@ -230,19 +243,23 @@ namespace Bolsover.Gears.Calculator
 
                 outerLoop = RemoveConsecutiveDuplicates(outerLoop);
 
-                return BuildExternalGearMesh(outerLoop, faceWidth, isFullGear);
+                return BuildExternalGearMesh(outerLoop, faceWidth, isFullGear, helixAngleDeg, helicalDirection, pitchRadius);
             }
         }
 
         /// <summary>
         /// Builds an extruded 3D mesh for an internal gear (annular ring with internal teeth and outer rim).
+        /// Supports helical twisting along the face width when helixAngleDeg > 0.
         /// The central bore is completely empty/transparent.
         /// </summary>
         public static Mesh3D BuildInternalGearMesh(
             IReadOnlyList<GearPoint> innerProfile,
             double rimRadius,
             double faceWidth,
-            bool isClosedLoop)
+            bool isClosedLoop,
+            double helixAngleDeg = 0.0,
+            string helicalDirection = "R",
+            double pitchRadius = 0.0)
         {
             var mesh = new Mesh3D();
             if (innerProfile == null || innerProfile.Count < 3 || faceWidth <= 0) return mesh;
@@ -252,6 +269,12 @@ namespace Bolsover.Gears.Calculator
 
             var n = inner.Count;
             var halfWidth = faceWidth / 2.0;
+
+            var betaRad = Math.Abs(helixAngleDeg) * Math.PI / 180.0;
+            var isHelical = betaRad > 1e-6 && pitchRadius > 1e-6;
+            var isRightHand = string.IsNullOrWhiteSpace(helicalDirection) ||
+                              helicalDirection.Trim().StartsWith("R", StringComparison.OrdinalIgnoreCase);
+            var sign = isRightHand ? 1.0 : -1.0;
 
             // Compute outer rim points corresponding to each inner point
             var outer = new List<GearPoint>(n);
@@ -264,33 +287,85 @@ namespace Bolsover.Gears.Calculator
                 outer.Add(new GearPoint(p.X / mag * effectiveRim, p.Y / mag * effectiveRim));
             }
 
-            // Vertices layout:
-            // 0 .. n-1:       Front Inner (z = +halfWidth)
-            // n .. 2n-1:      Front Outer (z = +halfWidth)
-            // 2n .. 3n-1:     Back Inner  (z = -halfWidth)
-            // 3n .. 4n-1:     Back Outer  (z = -halfWidth)
-            for (var i = 0; i < n; i++) mesh.Vertices.Add(new GearPoint3D(inner[i].X, inner[i].Y, halfWidth));
-            for (var i = 0; i < n; i++) mesh.Vertices.Add(new GearPoint3D(outer[i].X, outer[i].Y, halfWidth));
-            for (var i = 0; i < n; i++) mesh.Vertices.Add(new GearPoint3D(inner[i].X, inner[i].Y, -halfWidth));
-            for (var i = 0; i < n; i++) mesh.Vertices.Add(new GearPoint3D(outer[i].X, outer[i].Y, -halfWidth));
+            var slices = isHelical ? Math.Max(8, Math.Min(32, (int)Math.Ceiling(faceWidth / 1.5))) : 1;
+            var dz = faceWidth / slices;
+            var stride = 2 * n;
+
+            // Generate vertices: each slice k has [inner_0..inner_n-1, outer_0..outer_n-1]
+            for (var k = 0; k <= slices; k++)
+            {
+                var z = halfWidth - k * dz;
+                var theta = isHelical ? (sign * Math.Tan(betaRad) / pitchRadius * z) : 0.0;
+                var cosT = Math.Cos(theta);
+                var sinT = Math.Sin(theta);
+
+                for (var i = 0; i < n; i++)
+                {
+                    var p = inner[i];
+                    var xRot = p.X * cosT - p.Y * sinT;
+                    var yRot = p.X * sinT + p.Y * cosT;
+                    mesh.Vertices.Add(new GearPoint3D(xRot, yRot, z));
+                }
+
+                for (var i = 0; i < n; i++)
+                {
+                    var p = outer[i];
+                    var xRot = p.X * cosT - p.Y * sinT;
+                    var yRot = p.X * sinT + p.Y * cosT;
+                    mesh.Vertices.Add(new GearPoint3D(xRot, yRot, z));
+                }
+            }
 
             var segmentCount = isClosedLoop ? n : n - 1;
 
+            for (var k = 0; k < slices; k++)
+            {
+                var base0 = k * stride;
+                var base1 = (k + 1) * stride;
+
+                for (var i = 0; i < segmentCount; i++)
+                {
+                    var next = (i + 1) % n;
+
+                    // Inner side walls (facing inward towards hollow center cavity)
+                    var fi0 = base0 + i;
+                    var fi1 = base0 + next;
+                    var bi0 = base1 + i;
+                    var bi1 = base1 + next;
+
+                    mesh.TriangleIndices.Add(fi0);
+                    mesh.TriangleIndices.Add(bi0);
+                    mesh.TriangleIndices.Add(bi1);
+
+                    mesh.TriangleIndices.Add(fi0);
+                    mesh.TriangleIndices.Add(bi1);
+                    mesh.TriangleIndices.Add(fi1);
+
+                    // Outer side walls (facing outward into space)
+                    var fo0 = base0 + n + i;
+                    var fo1 = base0 + n + next;
+                    var bo0 = base1 + n + i;
+                    var bo1 = base1 + n + next;
+
+                    mesh.TriangleIndices.Add(fo0);
+                    mesh.TriangleIndices.Add(fo1);
+                    mesh.TriangleIndices.Add(bo1);
+
+                    mesh.TriangleIndices.Add(fo0);
+                    mesh.TriangleIndices.Add(bo1);
+                    mesh.TriangleIndices.Add(bo0);
+                }
+            }
+
+            // Front Annular Cap (k = 0, z = +halfWidth, +Z normal)
             for (var i = 0; i < segmentCount; i++)
             {
                 var next = (i + 1) % n;
-
                 var fi0 = i;
                 var fi1 = next;
                 var fo0 = n + i;
                 var fo1 = n + next;
 
-                var bi0 = 2 * n + i;
-                var bi1 = 2 * n + next;
-                var bo0 = 3 * n + i;
-                var bo1 = 3 * n + next;
-
-                // 1. Front Annular Cap (+Z normal)
                 mesh.TriangleIndices.Add(fi0);
                 mesh.TriangleIndices.Add(fo0);
                 mesh.TriangleIndices.Add(fo1);
@@ -298,55 +373,63 @@ namespace Bolsover.Gears.Calculator
                 mesh.TriangleIndices.Add(fi0);
                 mesh.TriangleIndices.Add(fo1);
                 mesh.TriangleIndices.Add(fi1);
-
-                // 2. Back Annular Cap (-Z normal)
-                mesh.TriangleIndices.Add(bi0);
-                mesh.TriangleIndices.Add(bo1);
-                mesh.TriangleIndices.Add(bo0);
-
-                mesh.TriangleIndices.Add(bi0);
-                mesh.TriangleIndices.Add(bi1);
-                mesh.TriangleIndices.Add(bo1);
-
-                // 3. Inner Side Walls (facing inward towards hollow center cavity)
-                mesh.TriangleIndices.Add(fi0);
-                mesh.TriangleIndices.Add(bi0);
-                mesh.TriangleIndices.Add(bi1);
-
-                mesh.TriangleIndices.Add(fi0);
-                mesh.TriangleIndices.Add(bi1);
-                mesh.TriangleIndices.Add(fi1);
-
-                // 4. Outer Side Walls (facing outward into space)
-                mesh.TriangleIndices.Add(fo0);
-                mesh.TriangleIndices.Add(fo1);
-                mesh.TriangleIndices.Add(bo1);
-
-                mesh.TriangleIndices.Add(fo0);
-                mesh.TriangleIndices.Add(bo1);
-                mesh.TriangleIndices.Add(bo0);
             }
 
-            // If not a closed loop (single tooth sector), cap the radial ends
+            // Back Annular Cap (k = slices, z = -halfWidth, -Z normal)
+            var backOffset = slices * stride;
+            for (var i = 0; i < segmentCount; i++)
+            {
+                var next = (i + 1) % n;
+                var bi0 = backOffset + i;
+                var bi1 = backOffset + next;
+                var bo0 = backOffset + n + i;
+                var bo1 = backOffset + n + next;
+
+                mesh.TriangleIndices.Add(bi0);
+                mesh.TriangleIndices.Add(bo1);
+                mesh.TriangleIndices.Add(bo0);
+
+                mesh.TriangleIndices.Add(bi0);
+                mesh.TriangleIndices.Add(bi1);
+                mesh.TriangleIndices.Add(bo1);
+            }
+
+            // Radial side walls if not a closed loop (single tooth sector)
             if (!isClosedLoop && n >= 2)
             {
-                // Start radial wall (i = 0)
-                mesh.TriangleIndices.Add(0);
-                mesh.TriangleIndices.Add(n);
-                mesh.TriangleIndices.Add(3 * n);
+                for (var k = 0; k < slices; k++)
+                {
+                    var base0 = k * stride;
+                    var base1 = (k + 1) * stride;
 
-                mesh.TriangleIndices.Add(0);
-                mesh.TriangleIndices.Add(3 * n);
-                mesh.TriangleIndices.Add(2 * n);
+                    // Start radial wall (i = 0)
+                    var in0 = base0;
+                    var out0 = base0 + n;
+                    var in1 = base1;
+                    var out1 = base1 + n;
 
-                // End radial wall (i = n - 1)
-                mesh.TriangleIndices.Add(n - 1);
-                mesh.TriangleIndices.Add(3 * n - 1);
-                mesh.TriangleIndices.Add(4 * n - 1);
+                    mesh.TriangleIndices.Add(in0);
+                    mesh.TriangleIndices.Add(out0);
+                    mesh.TriangleIndices.Add(out1);
 
-                mesh.TriangleIndices.Add(n - 1);
-                mesh.TriangleIndices.Add(4 * n - 1);
-                mesh.TriangleIndices.Add(2 * n - 1);
+                    mesh.TriangleIndices.Add(in0);
+                    mesh.TriangleIndices.Add(out1);
+                    mesh.TriangleIndices.Add(in1);
+
+                    // End radial wall (i = n - 1)
+                    var in0_end = base0 + n - 1;
+                    var out0_end = base0 + 2 * n - 1;
+                    var in1_end = base1 + n - 1;
+                    var out1_end = base1 + 2 * n - 1;
+
+                    mesh.TriangleIndices.Add(in0_end);
+                    mesh.TriangleIndices.Add(in1_end);
+                    mesh.TriangleIndices.Add(out1_end);
+
+                    mesh.TriangleIndices.Add(in0_end);
+                    mesh.TriangleIndices.Add(out1_end);
+                    mesh.TriangleIndices.Add(out0_end);
+                }
             }
 
             mesh.CalculateNormals();
@@ -355,11 +438,15 @@ namespace Bolsover.Gears.Calculator
 
         /// <summary>
         /// Builds an extruded 3D mesh for an external gear (solid body with external teeth).
+        /// Supports helical twisting along the face width when helixAngleDeg > 0.
         /// </summary>
         public static Mesh3D BuildExternalGearMesh(
             IReadOnlyList<GearPoint> outerProfile,
             double faceWidth,
-            bool isClosedLoop)
+            bool isClosedLoop,
+            double helixAngleDeg = 0.0,
+            string helicalDirection = "R",
+            double pitchRadius = 0.0)
         {
             var mesh = new Mesh3D();
             if (outerProfile == null || outerProfile.Count < 3 || faceWidth <= 0) return mesh;
@@ -370,66 +457,120 @@ namespace Bolsover.Gears.Calculator
             var n = outer.Count;
             var halfWidth = faceWidth / 2.0;
 
-            // 0 .. n-1:       Front (z = +halfWidth)
-            // n .. 2n-1:      Back  (z = -halfWidth)
-            for (var i = 0; i < n; i++) mesh.Vertices.Add(new GearPoint3D(outer[i].X, outer[i].Y, halfWidth));
-            for (var i = 0; i < n; i++) mesh.Vertices.Add(new GearPoint3D(outer[i].X, outer[i].Y, -halfWidth));
+            var betaRad = Math.Abs(helixAngleDeg) * Math.PI / 180.0;
+            var isHelical = betaRad > 1e-6 && pitchRadius > 1e-6;
+            var isRightHand = string.IsNullOrWhiteSpace(helicalDirection) ||
+                              helicalDirection.Trim().StartsWith("R", StringComparison.OrdinalIgnoreCase);
+            var sign = isRightHand ? 1.0 : -1.0;
 
-            var centerFrontIdx = mesh.Vertices.Count;
-            mesh.Vertices.Add(new GearPoint3D(0, 0, halfWidth));
-            var centerBackIdx = mesh.Vertices.Count;
-            mesh.Vertices.Add(new GearPoint3D(0, 0, -halfWidth));
+            var slices = isHelical ? Math.Max(8, Math.Min(32, (int)Math.Ceiling(faceWidth / 1.5))) : 1;
+            var dz = faceWidth / slices;
+
+            // Generate vertices for each slice layer: k = 0 (z = +halfWidth) to k = slices (z = -halfWidth)
+            for (var k = 0; k <= slices; k++)
+            {
+                var z = halfWidth - k * dz;
+                var theta = isHelical ? (sign * Math.Tan(betaRad) / pitchRadius * z) : 0.0;
+                var cosT = Math.Cos(theta);
+                var sinT = Math.Sin(theta);
+
+                for (var i = 0; i < n; i++)
+                {
+                    var p = outer[i];
+                    var xRot = p.X * cosT - p.Y * sinT;
+                    var yRot = p.X * sinT + p.Y * cosT;
+                    mesh.Vertices.Add(new GearPoint3D(xRot, yRot, z));
+                }
+            }
 
             var segmentCount = isClosedLoop ? n : n - 1;
 
+            // Side wall quads between slice k and slice k+1
+            for (var k = 0; k < slices; k++)
+            {
+                var layerBase0 = k * n;
+                var layerBase1 = (k + 1) * n;
+
+                for (var i = 0; i < segmentCount; i++)
+                {
+                    var next = (i + 1) % n;
+
+                    var v0 = layerBase0 + i;
+                    var v1 = layerBase0 + next;
+                    var v2 = layerBase1 + next;
+                    var v3 = layerBase1 + i;
+
+                    // Two triangles for each quad (outward facing)
+                    mesh.TriangleIndices.Add(v0);
+                    mesh.TriangleIndices.Add(v1);
+                    mesh.TriangleIndices.Add(v2);
+
+                    mesh.TriangleIndices.Add(v0);
+                    mesh.TriangleIndices.Add(v2);
+                    mesh.TriangleIndices.Add(v3);
+                }
+            }
+
+            // Front Cap (k = 0, z = +halfWidth, normal +Z)
+            var centerFrontIdx = mesh.Vertices.Count;
+            mesh.Vertices.Add(new GearPoint3D(0, 0, halfWidth));
             for (var i = 0; i < segmentCount; i++)
             {
                 var next = (i + 1) % n;
-
-                var f0 = i;
-                var f1 = next;
-                var b0 = n + i;
-                var b1 = n + next;
-
-                // Side Walls (facing outward)
-                mesh.TriangleIndices.Add(f0);
-                mesh.TriangleIndices.Add(f1);
-                mesh.TriangleIndices.Add(b1);
-
-                mesh.TriangleIndices.Add(f0);
-                mesh.TriangleIndices.Add(b1);
-                mesh.TriangleIndices.Add(b0);
-
-                // Front Cap (+Z normal)
                 mesh.TriangleIndices.Add(centerFrontIdx);
-                mesh.TriangleIndices.Add(f0);
-                mesh.TriangleIndices.Add(f1);
-
-                // Back Cap (-Z normal)
-                mesh.TriangleIndices.Add(centerBackIdx);
-                mesh.TriangleIndices.Add(b1);
-                mesh.TriangleIndices.Add(b0);
+                mesh.TriangleIndices.Add(i);
+                mesh.TriangleIndices.Add(next);
             }
 
+            // Back Cap (k = slices, z = -halfWidth, normal -Z)
+            var backBase = slices * n;
+            var centerBackIdx = mesh.Vertices.Count;
+            mesh.Vertices.Add(new GearPoint3D(0, 0, -halfWidth));
+            for (var i = 0; i < segmentCount; i++)
+            {
+                var next = (i + 1) % n;
+                mesh.TriangleIndices.Add(centerBackIdx);
+                mesh.TriangleIndices.Add(backBase + next);
+                mesh.TriangleIndices.Add(backBase + i);
+            }
+
+            // Radial side walls if not a closed loop (single tooth sector)
             if (!isClosedLoop && n >= 2)
             {
-                // Start radial wall (from (0,0) to outer[0])
-                mesh.TriangleIndices.Add(centerFrontIdx);
-                mesh.TriangleIndices.Add(centerBackIdx);
-                mesh.TriangleIndices.Add(n);
+                for (var k = 0; k < slices; k++)
+                {
+                    var z0 = halfWidth - k * dz;
+                    var z1 = halfWidth - (k + 1) * dz;
 
-                mesh.TriangleIndices.Add(centerFrontIdx);
-                mesh.TriangleIndices.Add(n);
-                mesh.TriangleIndices.Add(0);
+                    var c0Idx = mesh.Vertices.Count;
+                    mesh.Vertices.Add(new GearPoint3D(0, 0, z0));
+                    var c1Idx = mesh.Vertices.Count;
+                    mesh.Vertices.Add(new GearPoint3D(0, 0, z1));
 
-                // End radial wall (from outer[n-1] to (0,0))
-                mesh.TriangleIndices.Add(centerFrontIdx);
-                mesh.TriangleIndices.Add(n - 1);
-                mesh.TriangleIndices.Add(2 * n - 1);
+                    var v0_start = k * n;
+                    var v1_start = (k + 1) * n;
 
-                mesh.TriangleIndices.Add(centerFrontIdx);
-                mesh.TriangleIndices.Add(2 * n - 1);
-                mesh.TriangleIndices.Add(centerBackIdx);
+                    // Start radial wall (from (0,0) to outer[0])
+                    mesh.TriangleIndices.Add(c0Idx);
+                    mesh.TriangleIndices.Add(c1Idx);
+                    mesh.TriangleIndices.Add(v1_start);
+
+                    mesh.TriangleIndices.Add(c0Idx);
+                    mesh.TriangleIndices.Add(v1_start);
+                    mesh.TriangleIndices.Add(v0_start);
+
+                    var v0_end = k * n + (n - 1);
+                    var v1_end = (k + 1) * n + (n - 1);
+
+                    // End radial wall (from outer[n-1] to (0,0))
+                    mesh.TriangleIndices.Add(c0Idx);
+                    mesh.TriangleIndices.Add(v0_end);
+                    mesh.TriangleIndices.Add(v1_end);
+
+                    mesh.TriangleIndices.Add(c0Idx);
+                    mesh.TriangleIndices.Add(v1_end);
+                    mesh.TriangleIndices.Add(c1Idx);
+                }
             }
 
             mesh.CalculateNormals();

@@ -10,6 +10,8 @@ namespace Bolsover.Gears.Gui.Views
     public partial class AddMeshedGearDialog : Form
     {
         public int Teeth => (int)numTeeth.Value;
+        public double HelixAngle => (double)numHelixAngle.Value;
+        public string HelicalDirection => cboHelicalDirection.SelectedItem?.ToString().StartsWith("R", StringComparison.OrdinalIgnoreCase) == true ? "R" : "L";
         public double Clearance => (double)numClearance.Value;
         public double Backlash => (double)numBacklash.Value;
         public double ProfileShift => (double)numProfileShift.Value;
@@ -28,6 +30,11 @@ namespace Bolsover.Gears.Gui.Views
             catch
             {
                 // Resources may be unavailable outside an install; keep default icon.
+            }
+
+            if (cboHelicalDirection.SelectedIndex < 0)
+            {
+                cboHelicalDirection.SelectedIndex = 0; // Default "L (Left)"
             }
 
             chkInternal.CheckedChanged += (s, e) => UpdateInternalControls();
@@ -51,9 +58,13 @@ namespace Bolsover.Gears.Gui.Views
             double sharedModule,
             double sharedPressureAngle,
             double clearance = 0.5,
-            double backlash = 0.0)
+            double backlash = 0.0,
+            double helixAngle = 0.0,
+            string helicalDirection = "L")
         {
             numTeeth.Value = Math.Max(numTeeth.Minimum, Math.Min(numTeeth.Maximum, teeth));
+            numHelixAngle.Value = Math.Max(numHelixAngle.Minimum, Math.Min(numHelixAngle.Maximum, (decimal)helixAngle));
+            cboHelicalDirection.SelectedIndex = string.Equals(helicalDirection, "R", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
             numClearance.Value = Math.Max(numClearance.Minimum, Math.Min(numClearance.Maximum, (decimal)clearance));
             numBacklash.Value = Math.Max(numBacklash.Minimum, Math.Min(numBacklash.Maximum, (decimal)backlash));
             numProfileShift.Value = Math.Max(numProfileShift.Minimum, Math.Min(numProfileShift.Maximum, (decimal)profileShift));
