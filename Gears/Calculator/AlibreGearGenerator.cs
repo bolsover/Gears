@@ -71,15 +71,18 @@ namespace Bolsover.Gears.Calculator
         /// <param name="undercutAutoSuppress">Automatic undercut suppression.</param>
         /// <param name="numPoints">Points per segment: [involute, trochoid, addendum, dedendum]. Defaults to [10,10,5,5].</param>
         /// <param name="clearance">Bottom clearance (mm). Defaults to 0.25 * m if null.</param>
+        /// <param name="backlash">Circular backlash / flank clearance (mm). Defaults to 0.0 if null.</param>
         public static AlibreGearProfile GenerateExternalToothProfile(
             int z, double m, double alphaDeg,
             double profileShift = 0.0,
             bool undercutAutoSuppress = false,
             int[] numPoints = null,
-            double? clearance = null)
+            double? clearance = null,
+            double? backlash = null)
         {
             numPoints = numPoints ?? new[] { 10, 10, 5, 5 };
             var c = clearance ?? (0.25 * m);
+            var jt = backlash ?? 0.0;
 
             var alpha = Radians(alphaDeg);
 
@@ -112,8 +115,8 @@ namespace Bolsover.Gears.Calculator
             // Involute angle at pitch circle
             var phi = InvoluteFunction(offsetAngle);
 
-            // Angular dimensions
-            var angularToothWidth = Math.PI / z;
+            // Angular dimensions with circular backlash / flank clearance reduction
+            var angularToothWidth = Math.Max(1e-6, (Math.PI * m / 2.0 - jt) / (m * z / 2.0));
 
             // Involute parameters
             var addendumInvoluteAngle = Math.Acos(baseRadius / addendumRadius);
@@ -245,7 +248,7 @@ namespace Bolsover.Gears.Calculator
             profile.Trochoid2 = GearPoint.Rotated(profile.Trochoid2, rotationAngle);
             profile.LowerArc = GearPoint.Rotated(profile.LowerArc, rotationAngle);
 
-            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c);
+            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt);
             return profile;
         }
 
@@ -261,15 +264,18 @@ namespace Bolsover.Gears.Calculator
         /// <param name="undercutAutoSuppress">Automatic undercut suppression.</param>
         /// <param name="numPoints">Points per segment: [involute, addendum, dedendum, external]. Defaults to [10,5,5,10].</param>
         /// <param name="clearance">Bottom clearance (mm). Defaults to 0.25 * m if null.</param>
+        /// <param name="backlash">Circular backlash / flank clearance (mm). Defaults to 0.0 if null.</param>
         public static AlibreGearProfile GenerateInternalToothProfile(
             int z, double m, double alphaDeg, double thickness,
             double profileShift = 0.0,
             bool undercutAutoSuppress = false,
             int[] numPoints = null,
-            double? clearance = null)
+            double? clearance = null,
+            double? backlash = null)
         {
             numPoints ??= new[] { 10, 5, 5, 10 };
             var c = clearance ?? (0.25 * m);
+            var jt = backlash ?? 0.0;
 
             var alpha = Radians(alphaDeg);
 
@@ -297,7 +303,7 @@ namespace Bolsover.Gears.Calculator
 
             var offsetAngle = Math.Acos(baseRadius / pitchRadius);
             var phi = InvoluteFunction(offsetAngle);
-            var angularToothWidth = Math.PI / z;
+            var angularToothWidth = Math.Max(1e-6, (Math.PI * m / 2.0 - jt) / (m * z / 2.0));
 
             var dedendumInvoluteAngle = Math.Acos(baseRadius / dedendumRadius);
 
@@ -392,7 +398,7 @@ namespace Bolsover.Gears.Calculator
             profile.LowerArc2 = GearPoint.Rotated(profile.LowerArc2, rotationAngle);
             profile.ExternalArc = GearPoint.Rotated(profile.ExternalArc, rotationAngle);
 
-            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c);
+            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt);
             return profile;
         }
 
@@ -492,13 +498,14 @@ namespace Bolsover.Gears.Calculator
         private static double Radians(double degrees) => degrees * Math.PI / 180.0;
 
         private static void PopulateParameters(AlibreGearProfile profile, int z, double m, double alphaDeg,
-            double profileShift, double pitchRadius, double baseRadius, double addendumRadius, double dedendumRadius, double clearance = 0.0)
+            double profileShift, double pitchRadius, double baseRadius, double addendumRadius, double dedendumRadius, double clearance = 0.0, double backlash = 0.0)
         {
             profile.Parameters["z"] = z;
             profile.Parameters["m"] = m;
             profile.Parameters["alphaDeg"] = alphaDeg;
             profile.Parameters["profileShift"] = profileShift;
             profile.Parameters["clearance"] = clearance;
+            profile.Parameters["backlash"] = backlash;
             profile.Parameters["pitchRadius"] = pitchRadius;
             profile.Parameters["baseRadius"] = baseRadius;
             profile.Parameters["addendumRadius"] = addendumRadius;

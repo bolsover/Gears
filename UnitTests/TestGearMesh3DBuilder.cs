@@ -280,5 +280,48 @@ namespace UnitTests
             Assert.Greater(mesh.Vertices.Count, 0);
             Assert.Greater(mesh.TriangleIndices.Count, 0);
         }
+
+        [Test]
+        public void TestGenerateExternalToothProfile_WithBacklash()
+        {
+            var z = 20;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var backlash = 0.08;
+
+            var profile = AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, 0.0, false, null, null, backlash);
+
+            Assert.IsNotNull(profile);
+            Assert.AreEqual(backlash, profile.Parameters["backlash"], 1e-6);
+
+            var toothOutline = AlibreGearGenerator.BuildToothOutline(profile, false);
+            var fullGear = AlibreGearGenerator.BuildFullGear(z, toothOutline);
+            var mesh = GearMesh3DBuilder.BuildGearMesh(profile, z, 15.0, isInternal: false, isFullGear: true);
+
+            Assert.Greater(mesh.Vertices.Count, 0);
+            Assert.Greater(mesh.TriangleIndices.Count, 0);
+        }
+
+        [Test]
+        public void TestGenerateInternalToothProfile_WithBacklash()
+        {
+            var z = 30;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var backlash = 0.06;
+            var rimThickness = 5.0;
+
+            var profile = AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, 0.0, false, null, null, backlash);
+
+            Assert.IsNotNull(profile);
+            Assert.AreEqual(backlash, profile.Parameters["backlash"], 1e-6);
+
+            var toothOutline = AlibreGearGenerator.BuildToothOutline(profile, true);
+            var fullGear = AlibreGearGenerator.BuildFullGear(z, toothOutline);
+            var mesh = GearMesh3DBuilder.BuildGearMesh(profile, z, 15.0, isInternal: true, isFullGear: true, rimThickness: rimThickness);
+
+            Assert.Greater(mesh.Vertices.Count, 0);
+            Assert.Greater(mesh.TriangleIndices.Count, 0);
+        }
     }
 }

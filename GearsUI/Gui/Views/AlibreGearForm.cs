@@ -24,6 +24,7 @@ namespace Bolsover.Gears.Gui.Views
         private bool _hasMeshedGear = false;
         private int _meshedTeeth = 24;
         private double _meshedClearance = 0.5;
+        private double _meshedBacklash = 0.0;
         private double _meshedProfileShift = 0.0;
         private double _meshedFaceWidth = 15.0;
         private bool _meshedIsInternal = false;
@@ -52,6 +53,7 @@ namespace Bolsover.Gears.Gui.Views
             };
             numPressureAngle.ValueChanged += (s, e) => ExecuteCalculation();
             numClearance.ValueChanged += (s, e) => ExecuteCalculation();
+            numBacklash.ValueChanged += (s, e) => ExecuteCalculation();
             numFaceWidth.ValueChanged += (s, e) => ExecuteCalculation();
             numProfileShift.ValueChanged += (s, e) => ExecuteCalculation();
             numRimThickness.ValueChanged += (s, e) => ExecuteCalculation();
@@ -119,13 +121,15 @@ namespace Bolsover.Gears.Gui.Views
                 _meshedOptimalShift,
                 (double)numModule.Value,
                 (double)numPressureAngle.Value,
-                _meshedClearance);
+                _meshedClearance,
+                _meshedBacklash);
 
             if (dialog.ShowDialog(this) == DialogResult.OK)
             {
                 _hasMeshedGear = true;
                 _meshedTeeth = dialog.Teeth;
                 _meshedClearance = dialog.Clearance;
+                _meshedBacklash = dialog.Backlash;
                 _meshedProfileShift = dialog.ProfileShift;
                 _meshedFaceWidth = dialog.FaceWidth;
                 _meshedIsInternal = dialog.IsInternal;
@@ -171,6 +175,7 @@ namespace Bolsover.Gears.Gui.Views
             var m = (double)numModule.Value;
             var alphaDeg = (double)numPressureAngle.Value;
             var clearance = (double)numClearance.Value;
+            var backlash = (double)numBacklash.Value;
             var faceWidth = (double)numFaceWidth.Value;
             var profileShift = (double)numProfileShift.Value;
             var optimalShift = chkOptimalShift.Checked;
@@ -188,14 +193,15 @@ namespace Bolsover.Gears.Gui.Views
                     var pairData = GearParameterCalculator.CalculatePair(
                         z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness,
                         _meshedTeeth, _meshedFaceWidth, _meshedProfileShift, _meshedIsInternal, _meshedRimThickness,
-                        clearance, _meshedClearance);
+                        clearance, _meshedClearance,
+                        backlash, _meshedBacklash);
 
                     UpdateProgress(40, "Generating involute profile curves...");
 
                     // 2. Generate 2D tooth and gear profile for Gear 1
                     var profile1 = internalGear
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance);
+                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash)
+                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash);
 
                     var tooth1 = AlibreGearGenerator.BuildToothOutline(profile1, internalGear);
                     var polylines1 = chkFullGear.Checked
@@ -204,8 +210,8 @@ namespace Bolsover.Gears.Gui.Views
 
                     // Generate 2D tooth and gear profile for Gear 2
                     var profile2 = _meshedIsInternal
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedRimThickness, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance);
+                        ? AlibreGearGenerator.GenerateInternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedRimThickness, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash)
+                        : AlibreGearGenerator.GenerateExternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash);
 
                     var tooth2 = AlibreGearGenerator.BuildToothOutline(profile2, _meshedIsInternal);
                     var polylines2 = chkFullGear.Checked
@@ -280,14 +286,14 @@ namespace Bolsover.Gears.Gui.Views
                 {
                     // 1. Calculate metric gear parameters
                     var calcData = GearParameterCalculator.Calculate(
-                        z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness, clearance);
+                        z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness, clearance, backlash);
 
                     UpdateProgress(40, "Generating involute profile curves...");
 
                     // 2. Generate 2D tooth and gear profile
                     var profile = internalGear
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance);
+                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash)
+                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash);
 
                     var tooth = AlibreGearGenerator.BuildToothOutline(profile, internalGear);
                     _currentPolylines = chkFullGear.Checked
@@ -369,6 +375,7 @@ namespace Bolsover.Gears.Gui.Views
             lblAddendum.Text = "Tip (da): " + Fmt(calcData.TipDiameter);
             lblDedendum.Text = "Root (df): " + Fmt(calcData.RootDiameter);
             lblClearanceVal.Text = "Clearance (c): " + Fmt(calcData.Clearance);
+            lblBacklashVal.Text = "Backlash (jt): " + Fmt(calcData.Backlash);
         }
 
         private void UpdateResultLabelsForPair(CalculatedGearPairData pairData)
@@ -378,6 +385,7 @@ namespace Bolsover.Gears.Gui.Views
             lblAddendum.Text = $"Tip: da₁={Fmt(pairData.Gear1.TipDiameter)}, da₂={Fmt(pairData.Gear2.TipDiameter)}";
             lblDedendum.Text = $"Centre Dist (aw): {Fmt(pairData.WorkingCentreDistance)}";
             lblClearanceVal.Text = $"Clearance: c₁={Fmt(pairData.Gear1Clearance)}, c₂={Fmt(pairData.Gear2Clearance)}";
+            lblBacklashVal.Text = $"Backlash: jt₁={Fmt(pairData.Gear1Backlash)}, jt₂={Fmt(pairData.Gear2Backlash)}, jn={Fmt(pairData.NormalBacklash)}";
         }
 
         private void ClearResultLabels()
@@ -387,6 +395,7 @@ namespace Bolsover.Gears.Gui.Views
             lblAddendum.Text = "Tip: –";
             lblDedendum.Text = "Dedendum: –";
             lblClearanceVal.Text = "Clearance: –";
+            lblBacklashVal.Text = "Backlash: –";
         }
 
         private void PopulateParameterTable(IEnumerable<GearParameterRow> parameterRows)

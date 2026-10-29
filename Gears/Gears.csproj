@@ -215,6 +215,7 @@
         <Compile Include="Model\Variable\Addendum.cs" />
         <Compile Include="Model\Variable\BaseDiameter.cs" />
         <Compile Include="Model\Variable\BottomClearance.cs" />
+        <Compile Include="Model\Variable\CircularBacklash.cs" />
         <Compile Include="Model\Variable\Dedendum.cs" />
         <Compile Include="Model\Variable\IVariable.cs" />
         <Compile Include="Model\Variable\Module.cs" />

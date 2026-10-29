@@ -29,6 +29,7 @@ namespace Bolsover.Gears.Calculator
         public double BasePitch { get; set; }
         public double InvoluteFunction { get; set; }
         public double Clearance { get; set; }
+        public double Backlash { get; set; }
 
         public List<GearParameterRow> ParameterRows { get; } = new List<GearParameterRow>();
     }
@@ -55,6 +56,10 @@ namespace Bolsover.Gears.Calculator
         public double Gear2Clearance => Gear2?.Clearance ?? 0.0;
         public double BottomClearance1 { get; set; }
         public double BottomClearance2 { get; set; }
+        public double Gear1Backlash => Gear1?.Backlash ?? 0.0;
+        public double Gear2Backlash => Gear2?.Backlash ?? 0.0;
+        public double TotalBacklash => Gear1Backlash + Gear2Backlash;
+        public double NormalBacklash { get; set; }
 
         public List<GearParameterRow> ParameterRows { get; } = new List<GearParameterRow>();
     }
@@ -75,9 +80,11 @@ namespace Bolsover.Gears.Calculator
             double x,
             bool isInternal,
             double rimThickness = 10.0,
-            double? clearance = null)
+            double? clearance = null,
+            double? backlash = null)
         {
             var c = clearance ?? (0.25 * m);
+            var jt = backlash ?? 0.0;
             var data = new CalculatedGearData
             {
                 Teeth = z,
@@ -87,7 +94,8 @@ namespace Bolsover.Gears.Calculator
                 ProfileShift = x,
                 IsInternal = isInternal,
                 RimThickness = rimThickness,
-                Clearance = c
+                Clearance = c,
+                Backlash = jt
             };
 
             var alphaRad = alphaDeg * Math.PI / 180.0;
@@ -115,7 +123,7 @@ namespace Bolsover.Gears.Calculator
             }
 
             data.CircularPitch = Math.PI * m;
-            data.ToothThickness = m * (Math.PI / 2.0 + 2.0 * x * Math.Tan(alphaRad));
+            data.ToothThickness = m * (Math.PI / 2.0 + 2.0 * x * Math.Tan(alphaRad)) - jt;
             data.BasePitch = Math.PI * m * Math.Cos(alphaRad);
 
             // Populate tabular rows with LaTeX formatted symbols and formulas
@@ -125,6 +133,7 @@ namespace Bolsover.Gears.Calculator
             data.ParameterRows.Add(new GearParameterRow("Profile Shift Coefficient", "x", "x", x, "-"));
             data.ParameterRows.Add(new GearParameterRow("Face Width (Thickness)", "b", "b", faceWidth, "mm"));
             data.ParameterRows.Add(new GearParameterRow("Bottom Clearance", "c", "c", data.Clearance, "mm"));
+            data.ParameterRows.Add(new GearParameterRow("Backlash (Flank Clearance)", "j_t", "j_t", data.Backlash, "mm"));
             data.ParameterRows.Add(new GearParameterRow("Involute Function", "\\text{inv}(\\alpha)", "\\tan\\alpha - \\alpha", data.InvoluteFunction, "rad"));
             data.ParameterRows.Add(new GearParameterRow("Pitch Diameter", "d", "m \\cdot z", data.PitchDiameter, "mm"));
             data.ParameterRows.Add(new GearParameterRow("Base Diameter", "d_b", "d \\cdot \\cos\\alpha", data.BaseDiameter, "mm"));
@@ -148,7 +157,7 @@ namespace Bolsover.Gears.Calculator
             }
 
             data.ParameterRows.Add(new GearParameterRow("Circular Pitch", "p", "\\pi \\cdot m", data.CircularPitch, "mm"));
-            data.ParameterRows.Add(new GearParameterRow("Circular Tooth Thickness", "s", "m(\\frac{\\pi}{2} + 2 x \\tan\\alpha)", data.ToothThickness, "mm"));
+            data.ParameterRows.Add(new GearParameterRow("Circular Tooth Thickness", "s", "m(\\frac{\\pi}{2} + 2 x \\tan\\alpha) - j_t", data.ToothThickness, "mm"));
             data.ParameterRows.Add(new GearParameterRow("Base Pitch", "p_b", "\\pi m \\cos\\alpha", data.BasePitch, "mm"));
 
             return data;
@@ -160,10 +169,11 @@ namespace Bolsover.Gears.Calculator
         public static CalculatedGearPairData CalculatePair(
             int z1, double m, double alphaDeg, double faceWidth1, double x1, bool isInternal1, double rimThickness1,
             int z2, double faceWidth2, double x2, bool isInternal2, double rimThickness2,
-            double? clearance1 = null, double? clearance2 = null)
+            double? clearance1 = null, double? clearance2 = null,
+            double? backlash1 = null, double? backlash2 = null)
         {
-            var gear1 = Calculate(z1, m, alphaDeg, faceWidth1, x1, isInternal1, rimThickness1, clearance1);
-            var gear2 = Calculate(z2, m, alphaDeg, faceWidth2, x2, isInternal2, rimThickness2, clearance2 ?? clearance1);
+            var gear1 = Calculate(z1, m, alphaDeg, faceWidth1, x1, isInternal1, rimThickness1, clearance1, backlash1);
+            var gear2 = Calculate(z2, m, alphaDeg, faceWidth2, x2, isInternal2, rimThickness2, clearance2 ?? clearance1, backlash2 ?? backlash1);
 
             var pairData = new CalculatedGearPairData
             {
@@ -261,6 +271,7 @@ namespace Bolsover.Gears.Calculator
             }
             pairData.ContactRatio = contactRatio;
             pairData.GearRatio = z1 > 0 ? (double)z2 / z1 : 0.0;
+            pairData.NormalBacklash = pairData.TotalBacklash * Math.Cos(alphaWRad);
 
             // Populate pair tabular rows
             pairData.ParameterRows.Add(new GearParameterRow("Module", "m", "m", m, "mm"));
@@ -271,6 +282,10 @@ namespace Bolsover.Gears.Calculator
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Profile Shift", "x_2", "x_2", x2, "-"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Clearance", "c_1", "c_1", gear1.Clearance, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Clearance", "c_2", "c_2", gear2.Clearance, "mm"));
+            pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Backlash", "j_{t1}", "j_{t1}", gear1.Backlash, "mm"));
+            pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Backlash", "j_{t2}", "j_{t2}", gear2.Backlash, "mm"));
+            pairData.ParameterRows.Add(new GearParameterRow("Total Circular Backlash", "j_t", "j_{t1} + j_{t2}", pairData.TotalBacklash, "mm"));
+            pairData.ParameterRows.Add(new GearParameterRow("Normal Backlash", "j_n", "j_t \\cos\\alpha_w", pairData.NormalBacklash, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Face Width", "b_1", "b_1", faceWidth1, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Face Width", "b_2", "b_2", faceWidth2, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Pitch Diameter", "d_1", "m \\cdot z_1", gear1.PitchDiameter, "mm"));
@@ -289,8 +304,8 @@ namespace Bolsover.Gears.Calculator
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Tip Diameter", "d_{a2}", isInternal2 ? "d_2 - 2 h_{a2}" : "d_2 + 2 h_{a2}", gear2.TipDiameter, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Root Diameter", "d_{f1}", isInternal1 ? "d_1 + 2 h_{f1}" : "d_1 - 2 h_{f1}", gear1.RootDiameter, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Root Diameter", "d_{f2}", isInternal2 ? "d_2 + 2 h_{f2}" : "d_2 - 2 h_{f2}", gear2.RootDiameter, "mm"));
-            pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Tooth Thickness", "s_1", "m(\\frac{\\pi}{2} + 2 x_1 \\tan\\alpha)", gear1.ToothThickness, "mm"));
-            pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Tooth Thickness", "s_2", "m(\\frac{\\pi}{2} + 2 x_2 \\tan\\alpha)", gear2.ToothThickness, "mm"));
+            pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Tooth Thickness", "s_1", "m(\\frac{\\pi}{2} + 2 x_1 \\tan\\alpha) - j_{t1}", gear1.ToothThickness, "mm"));
+            pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Tooth Thickness", "s_2", "m(\\frac{\\pi}{2} + 2 x_2 \\tan\\alpha) - j_{t2}", gear2.ToothThickness, "mm"));
             if (isInternal1) pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Rim Thickness", "s_{rim1}", "s_{rim1}", rimThickness1, "mm"));
             if (isInternal2) pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Rim Thickness", "s_{rim2}", "s_{rim2}", rimThickness2, "mm"));
 

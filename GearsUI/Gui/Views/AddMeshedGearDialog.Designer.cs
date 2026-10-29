@@ -32,6 +32,8 @@ namespace Bolsover.Gears.Gui.Views
             this.numTeeth = new System.Windows.Forms.NumericUpDown();
             this.lblClearance = new System.Windows.Forms.Label();
             this.numClearance = new System.Windows.Forms.NumericUpDown();
+            this.lblBacklash = new System.Windows.Forms.Label();
+            this.numBacklash = new System.Windows.Forms.NumericUpDown();
             this.lblProfileShift = new System.Windows.Forms.Label();
             this.numProfileShift = new System.Windows.Forms.NumericUpDown();
             this.lblFaceWidth = new System.Windows.Forms.Label();
@@ -46,6 +48,7 @@ namespace Bolsover.Gears.Gui.Views
             this.grpGear2Params.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numTeeth)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numClearance)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numBacklash)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numProfileShift)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numFaceWidth)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRimThickness)).BeginInit();
@@ -111,6 +114,8 @@ namespace Bolsover.Gears.Gui.Views
             this.grpGear2Params.Controls.Add(this.numTeeth);
             this.grpGear2Params.Controls.Add(this.lblClearance);
             this.grpGear2Params.Controls.Add(this.numClearance);
+            this.grpGear2Params.Controls.Add(this.lblBacklash);
+            this.grpGear2Params.Controls.Add(this.numBacklash);
             this.grpGear2Params.Controls.Add(this.lblProfileShift);
             this.grpGear2Params.Controls.Add(this.numProfileShift);
             this.grpGear2Params.Controls.Add(this.lblFaceWidth);
@@ -122,7 +127,7 @@ namespace Bolsover.Gears.Gui.Views
             this.grpGear2Params.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
             this.grpGear2Params.Location = new System.Drawing.Point(12, 95);
             this.grpGear2Params.Name = "grpGear2Params";
-            this.grpGear2Params.Size = new System.Drawing.Size(326, 265);
+            this.grpGear2Params.Size = new System.Drawing.Size(326, 295);
             this.grpGear2Params.TabIndex = 1;
             this.grpGear2Params.TabStop = false;
             this.grpGear2Params.Text = "Second Meshed Gear Details";
@@ -171,14 +176,37 @@ namespace Bolsover.Gears.Gui.Views
             this.numClearance.TabIndex = 3;
             this.numClearance.Value = new decimal(new int[] { 5, 0, 0, 65536 });
             // 
+            // lblBacklash
+            // 
+            this.lblBacklash.AutoSize = true;
+            this.lblBacklash.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblBacklash.Location = new System.Drawing.Point(12, 90);
+            this.lblBacklash.Name = "lblBacklash";
+            this.lblBacklash.Size = new System.Drawing.Size(147, 19);
+            this.lblBacklash.TabIndex = 4;
+            this.lblBacklash.Text = "Backlash j_{t2} (mm)";
+            // 
+            // numBacklash
+            // 
+            this.numBacklash.DecimalPlaces = 3;
+            this.numBacklash.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.numBacklash.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
+            this.numBacklash.Location = new System.Drawing.Point(190, 88);
+            this.numBacklash.Maximum = new decimal(new int[] { 50, 0, 0, 0 });
+            this.numBacklash.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
+            this.numBacklash.Name = "numBacklash";
+            this.numBacklash.Size = new System.Drawing.Size(120, 26);
+            this.numBacklash.TabIndex = 5;
+            this.numBacklash.Value = new decimal(new int[] { 0, 0, 0, 0 });
+            // 
             // lblProfileShift
             // 
             this.lblProfileShift.AutoSize = true;
             this.lblProfileShift.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblProfileShift.Location = new System.Drawing.Point(12, 90);
+            this.lblProfileShift.Location = new System.Drawing.Point(12, 122);
             this.lblProfileShift.Name = "lblProfileShift";
             this.lblProfileShift.Size = new System.Drawing.Size(157, 19);
-            this.lblProfileShift.TabIndex = 4;
+            this.lblProfileShift.TabIndex = 6;
             this.lblProfileShift.Text = "Profile shift coeff. (x₂)";
             // 
             // numProfileShift
@@ -186,43 +214,43 @@ namespace Bolsover.Gears.Gui.Views
             this.numProfileShift.DecimalPlaces = 3;
             this.numProfileShift.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.numProfileShift.Increment = new decimal(new int[] { 5, 0, 0, 131072 });
-            this.numProfileShift.Location = new System.Drawing.Point(190, 88);
+            this.numProfileShift.Location = new System.Drawing.Point(190, 120);
             this.numProfileShift.Maximum = new decimal(new int[] { 5, 0, 0, 0 });
             this.numProfileShift.Minimum = new decimal(new int[] { 5, 0, 0, -2147483648 });
             this.numProfileShift.Name = "numProfileShift";
             this.numProfileShift.Size = new System.Drawing.Size(120, 26);
-            this.numProfileShift.TabIndex = 5;
+            this.numProfileShift.TabIndex = 7;
             // 
             // lblFaceWidth
             // 
             this.lblFaceWidth.AutoSize = true;
             this.lblFaceWidth.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblFaceWidth.Location = new System.Drawing.Point(12, 122);
+            this.lblFaceWidth.Location = new System.Drawing.Point(12, 154);
             this.lblFaceWidth.Name = "lblFaceWidth";
             this.lblFaceWidth.Size = new System.Drawing.Size(147, 19);
-            this.lblFaceWidth.TabIndex = 6;
+            this.lblFaceWidth.TabIndex = 8;
             this.lblFaceWidth.Text = "Face width b₂ (mm)";
             // 
             // numFaceWidth
             // 
             this.numFaceWidth.DecimalPlaces = 2;
             this.numFaceWidth.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.numFaceWidth.Location = new System.Drawing.Point(190, 120);
+            this.numFaceWidth.Location = new System.Drawing.Point(190, 152);
             this.numFaceWidth.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             this.numFaceWidth.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             this.numFaceWidth.Name = "numFaceWidth";
             this.numFaceWidth.Size = new System.Drawing.Size(120, 26);
-            this.numFaceWidth.TabIndex = 7;
+            this.numFaceWidth.TabIndex = 9;
             this.numFaceWidth.Value = new decimal(new int[] { 15, 0, 0, 0 });
             // 
             // chkInternal
             // 
             this.chkInternal.AutoSize = true;
             this.chkInternal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.chkInternal.Location = new System.Drawing.Point(15, 154);
+            this.chkInternal.Location = new System.Drawing.Point(15, 186);
             this.chkInternal.Name = "chkInternal";
             this.chkInternal.Size = new System.Drawing.Size(111, 23);
-            this.chkInternal.TabIndex = 8;
+            this.chkInternal.TabIndex = 10;
             this.chkInternal.Text = "Internal gear";
             this.chkInternal.UseVisualStyleBackColor = true;
             // 
@@ -231,10 +259,10 @@ namespace Bolsover.Gears.Gui.Views
             this.lblRimThickness.AutoSize = true;
             this.lblRimThickness.Enabled = false;
             this.lblRimThickness.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblRimThickness.Location = new System.Drawing.Point(12, 184);
+            this.lblRimThickness.Location = new System.Drawing.Point(12, 216);
             this.lblRimThickness.Name = "lblRimThickness";
             this.lblRimThickness.Size = new System.Drawing.Size(155, 19);
-            this.lblRimThickness.TabIndex = 9;
+            this.lblRimThickness.TabIndex = 11;
             this.lblRimThickness.Text = "Rim thickness (mm)";
             // 
             // numRimThickness
@@ -242,22 +270,22 @@ namespace Bolsover.Gears.Gui.Views
             this.numRimThickness.DecimalPlaces = 2;
             this.numRimThickness.Enabled = false;
             this.numRimThickness.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.numRimThickness.Location = new System.Drawing.Point(190, 182);
+            this.numRimThickness.Location = new System.Drawing.Point(190, 214);
             this.numRimThickness.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             this.numRimThickness.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             this.numRimThickness.Name = "numRimThickness";
             this.numRimThickness.Size = new System.Drawing.Size(120, 26);
-            this.numRimThickness.TabIndex = 10;
+            this.numRimThickness.TabIndex = 12;
             this.numRimThickness.Value = new decimal(new int[] { 10, 0, 0, 0 });
             // 
             // chkOptimalShift
             // 
             this.chkOptimalShift.AutoSize = true;
             this.chkOptimalShift.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.chkOptimalShift.Location = new System.Drawing.Point(15, 219);
+            this.chkOptimalShift.Location = new System.Drawing.Point(15, 251);
             this.chkOptimalShift.Name = "chkOptimalShift";
             this.chkOptimalShift.Size = new System.Drawing.Size(217, 23);
-            this.chkOptimalShift.TabIndex = 11;
+            this.chkOptimalShift.TabIndex = 13;
             this.chkOptimalShift.Text = "Optimal shift (anti-undercut)";
             this.chkOptimalShift.UseVisualStyleBackColor = true;
             // 
@@ -268,7 +296,7 @@ namespace Bolsover.Gears.Gui.Views
             this.btnOK.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnOK.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnOK.ForeColor = System.Drawing.Color.White;
-            this.btnOK.Location = new System.Drawing.Point(128, 372);
+            this.btnOK.Location = new System.Drawing.Point(128, 402);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(100, 32);
             this.btnOK.TabIndex = 2;
@@ -279,7 +307,7 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
             this.btnCancel.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.btnCancel.Location = new System.Drawing.Point(238, 372);
+            this.btnCancel.Location = new System.Drawing.Point(238, 402);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(100, 32);
             this.btnCancel.TabIndex = 3;
@@ -292,7 +320,7 @@ namespace Bolsover.Gears.Gui.Views
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 19F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(350, 416);
+            this.ClientSize = new System.Drawing.Size(350, 446);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.grpGear2Params);
@@ -311,6 +339,7 @@ namespace Bolsover.Gears.Gui.Views
             this.grpGear2Params.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numTeeth)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numClearance)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numBacklash)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numProfileShift)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numFaceWidth)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRimThickness)).EndInit();
@@ -330,6 +359,8 @@ namespace Bolsover.Gears.Gui.Views
         private NumericUpDown numTeeth;
         private Label lblClearance;
         private NumericUpDown numClearance;
+        private Label lblBacklash;
+        private NumericUpDown numBacklash;
         private Label lblProfileShift;
         private NumericUpDown numProfileShift;
         private Label lblFaceWidth;

@@ -11,6 +11,7 @@ namespace Bolsover.Gears.Gui.Views
     {
         public int Teeth => (int)numTeeth.Value;
         public double Clearance => (double)numClearance.Value;
+        public double Backlash => (double)numBacklash.Value;
         public double ProfileShift => (double)numProfileShift.Value;
         public double FaceWidth => (double)numFaceWidth.Value;
         public bool IsInternal => chkInternal.Checked;
@@ -49,10 +50,12 @@ namespace Bolsover.Gears.Gui.Views
             bool optimalShift,
             double sharedModule,
             double sharedPressureAngle,
-            double clearance = 0.5)
+            double clearance = 0.5,
+            double backlash = 0.0)
         {
             numTeeth.Value = Math.Max(numTeeth.Minimum, Math.Min(numTeeth.Maximum, teeth));
             numClearance.Value = Math.Max(numClearance.Minimum, Math.Min(numClearance.Maximum, (decimal)clearance));
+            numBacklash.Value = Math.Max(numBacklash.Minimum, Math.Min(numBacklash.Maximum, (decimal)backlash));
             numProfileShift.Value = Math.Max(numProfileShift.Minimum, Math.Min(numProfileShift.Maximum, (decimal)profileShift));
             numFaceWidth.Value = Math.Max(numFaceWidth.Minimum, Math.Min(numFaceWidth.Maximum, (decimal)faceWidth));
             chkInternal.Checked = isInternal;

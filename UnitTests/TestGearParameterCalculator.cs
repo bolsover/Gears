@@ -245,5 +245,85 @@ namespace UnitTests
             Assert.AreEqual("m(1 - x_2) + c_2", hf2Row.FormulaLatex);
             Assert.AreEqual(2.7, hf2Row.Value, 1e-6);
         }
+
+        [Test]
+        public void TestBacklashCalculation_SingleGear()
+        {
+            var z = 20;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var faceWidth = 15.0;
+            var x = 0.0;
+            var backlash = 0.08;
+
+            var result = GearParameterCalculator.Calculate(z, m, alphaDeg, faceWidth, x, false, 10.0, null, backlash);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(backlash, result.Backlash, 1e-6);
+            // s = m * (pi / 2 + 2 * x * tan(alpha)) - jt = 2 * (pi / 2) - 0.08 = pi - 0.08
+            Assert.AreEqual(Math.PI - backlash, result.ToothThickness, 1e-6);
+
+            var backlashRow = result.ParameterRows.Find(r => r.ParameterName == "Backlash (Flank Clearance)");
+            Assert.IsNotNull(backlashRow);
+            Assert.AreEqual("j_t", backlashRow.SymbolLatex);
+            Assert.AreEqual("j_t", backlashRow.FormulaLatex);
+            Assert.AreEqual(backlash, backlashRow.Value, 1e-6);
+            Assert.AreEqual("mm", backlashRow.Unit);
+
+            var thicknessRow = result.ParameterRows.Find(r => r.ParameterName == "Circular Tooth Thickness");
+            Assert.IsNotNull(thicknessRow);
+            Assert.AreEqual("m(\\frac{\\pi}{2} + 2 x \\tan\\alpha) - j_t", thicknessRow.FormulaLatex);
+            Assert.AreEqual(Math.PI - backlash, thicknessRow.Value, 1e-6);
+        }
+
+        [Test]
+        public void TestBacklashCalculation_GearPair()
+        {
+            var pair = GearParameterCalculator.CalculatePair(
+                z1: 20, m: 2.0, alphaDeg: 20.0, faceWidth1: 15.0, x1: 0.0, isInternal1: false, rimThickness1: 10.0,
+                z2: 30, faceWidth2: 15.0, x2: 0.0, isInternal2: false, rimThickness2: 10.0,
+                clearance1: null, clearance2: null,
+                backlash1: 0.05, backlash2: 0.07);
+
+            Assert.IsNotNull(pair);
+            Assert.AreEqual(0.05, pair.Gear1.Backlash, 1e-6);
+            Assert.AreEqual(0.07, pair.Gear2.Backlash, 1e-6);
+            Assert.AreEqual(0.05, pair.Gear1Backlash, 1e-6);
+            Assert.AreEqual(0.07, pair.Gear2Backlash, 1e-6);
+            Assert.AreEqual(0.12, pair.TotalBacklash, 1e-6);
+            Assert.AreEqual(0.12 * Math.Cos(pair.WorkingPressureAngleRad), pair.NormalBacklash, 1e-6);
+
+            var jt1Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 1 Backlash");
+            Assert.IsNotNull(jt1Row);
+            Assert.AreEqual("j_{t1}", jt1Row.SymbolLatex);
+            Assert.AreEqual(0.05, jt1Row.Value, 1e-6);
+
+            var jt2Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 2 Backlash");
+            Assert.IsNotNull(jt2Row);
+            Assert.AreEqual("j_{t2}", jt2Row.SymbolLatex);
+            Assert.AreEqual(0.07, jt2Row.Value, 1e-6);
+
+            var totalJtRow = pair.ParameterRows.Find(r => r.ParameterName == "Total Circular Backlash");
+            Assert.IsNotNull(totalJtRow);
+            Assert.AreEqual("j_t", totalJtRow.SymbolLatex);
+            Assert.AreEqual("j_{t1} + j_{t2}", totalJtRow.FormulaLatex);
+            Assert.AreEqual(0.12, totalJtRow.Value, 1e-6);
+
+            var jnRow = pair.ParameterRows.Find(r => r.ParameterName == "Normal Backlash");
+            Assert.IsNotNull(jnRow);
+            Assert.AreEqual("j_n", jnRow.SymbolLatex);
+            Assert.AreEqual("j_t \\cos\\alpha_w", jnRow.FormulaLatex);
+            Assert.AreEqual(pair.NormalBacklash, jnRow.Value, 1e-6);
+
+            var s1Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 1 Tooth Thickness");
+            Assert.IsNotNull(s1Row);
+            Assert.AreEqual("m(\\frac{\\pi}{2} + 2 x_1 \\tan\\alpha) - j_{t1}", s1Row.FormulaLatex);
+            Assert.AreEqual(Math.PI - 0.05, s1Row.Value, 1e-6);
+
+            var s2Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 2 Tooth Thickness");
+            Assert.IsNotNull(s2Row);
+            Assert.AreEqual("m(\\frac{\\pi}{2} + 2 x_2 \\tan\\alpha) - j_{t2}", s2Row.FormulaLatex);
+            Assert.AreEqual(Math.PI - 0.07, s2Row.Value, 1e-6);
+        }
     }
 }

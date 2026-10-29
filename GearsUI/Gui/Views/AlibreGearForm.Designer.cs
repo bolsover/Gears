@@ -33,6 +33,8 @@ namespace Bolsover.Gears.Gui.Views
             this.numPressureAngle = new System.Windows.Forms.NumericUpDown();
             this.lblClearance = new System.Windows.Forms.Label();
             this.numClearance = new System.Windows.Forms.NumericUpDown();
+            this.lblBacklash = new System.Windows.Forms.Label();
+            this.numBacklash = new System.Windows.Forms.NumericUpDown();
             this.lblFaceWidth = new System.Windows.Forms.Label();
             this.numFaceWidth = new System.Windows.Forms.NumericUpDown();
             this.lblProfileShift = new System.Windows.Forms.Label();
@@ -61,6 +63,7 @@ namespace Bolsover.Gears.Gui.Views
             this.lblAddendum = new System.Windows.Forms.Label();
             this.lblDedendum = new System.Windows.Forms.Label();
             this.lblClearanceVal = new System.Windows.Forms.Label();
+            this.lblBacklashVal = new System.Windows.Forms.Label();
             this.lblError = new System.Windows.Forms.Label();
             this.splitContainerMain = new System.Windows.Forms.SplitContainer();
             this.preview = new Bolsover.Gears.Gui.AlibreGearPreviewControl();
@@ -77,6 +80,7 @@ namespace Bolsover.Gears.Gui.Views
             ((System.ComponentModel.ISupportInitialize)(this.numModule)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numPressureAngle)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numClearance)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numBacklash)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numFaceWidth)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numProfileShift)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRimThickness)).BeginInit();
@@ -101,6 +105,8 @@ namespace Bolsover.Gears.Gui.Views
             this.panelInputs.Controls.Add(this.numPressureAngle);
             this.panelInputs.Controls.Add(this.lblClearance);
             this.panelInputs.Controls.Add(this.numClearance);
+            this.panelInputs.Controls.Add(this.lblBacklash);
+            this.panelInputs.Controls.Add(this.numBacklash);
             this.panelInputs.Controls.Add(this.lblFaceWidth);
             this.panelInputs.Controls.Add(this.numFaceWidth);
             this.panelInputs.Controls.Add(this.lblProfileShift);
@@ -126,6 +132,7 @@ namespace Bolsover.Gears.Gui.Views
             this.panelInputs.Controls.Add(this.lblAddendum);
             this.panelInputs.Controls.Add(this.lblDedendum);
             this.panelInputs.Controls.Add(this.lblClearanceVal);
+            this.panelInputs.Controls.Add(this.lblBacklashVal);
             this.panelInputs.Controls.Add(this.lblError);
             this.panelInputs.Dock = System.Windows.Forms.DockStyle.Left;
             this.panelInputs.Location = new System.Drawing.Point(0, 0);
@@ -219,6 +226,28 @@ namespace Bolsover.Gears.Gui.Views
             this.numClearance.Size = new System.Drawing.Size(115, 27);
             this.numClearance.TabIndex = 7;
             this.numClearance.Value = new decimal(new int[] { 5, 0, 0, 65536 });
+            // 
+            // lblBacklash
+            // 
+            this.lblBacklash.AutoSize = true;
+            this.lblBacklash.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblBacklash.Location = new System.Drawing.Point(12, 146);
+            this.lblBacklash.Name = "lblBacklash";
+            this.lblBacklash.Size = new System.Drawing.Size(138, 19);
+            this.lblBacklash.TabIndex = 8;
+            this.lblBacklash.Text = "Backlash j_t (mm)";
+            // 
+            // numBacklash
+            // 
+            this.numBacklash.DecimalPlaces = 3;
+            this.numBacklash.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
+            this.numBacklash.Location = new System.Drawing.Point(195, 144);
+            this.numBacklash.Maximum = new decimal(new int[] { 50, 0, 0, 0 });
+            this.numBacklash.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
+            this.numBacklash.Name = "numBacklash";
+            this.numBacklash.Size = new System.Drawing.Size(115, 27);
+            this.numBacklash.TabIndex = 9;
+            this.numBacklash.Value = new decimal(new int[] { 0, 0, 0, 0 });
             // 
             // lblFaceWidth
             // 
@@ -522,14 +551,24 @@ namespace Bolsover.Gears.Gui.Views
             this.lblClearanceVal.TabIndex = 32;
             this.lblClearanceVal.Text = "Clearance: –";
             // 
+            // lblBacklashVal
+            // 
+            this.lblBacklashVal.AutoSize = true;
+            this.lblBacklashVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblBacklashVal.Location = new System.Drawing.Point(12, 751);
+            this.lblBacklashVal.Name = "lblBacklashVal";
+            this.lblBacklashVal.Size = new System.Drawing.Size(84, 19);
+            this.lblBacklashVal.TabIndex = 33;
+            this.lblBacklashVal.Text = "Backlash: –";
+            // 
             // lblError
             // 
             this.lblError.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.lblError.ForeColor = System.Drawing.Color.Firebrick;
-            this.lblError.Location = new System.Drawing.Point(12, 755);
+            this.lblError.Location = new System.Drawing.Point(12, 775);
             this.lblError.Name = "lblError";
             this.lblError.Size = new System.Drawing.Size(298, 75);
-            this.lblError.TabIndex = 33;
+            this.lblError.TabIndex = 34;
             // 
             // splitContainerMain
             // 
@@ -687,6 +726,7 @@ namespace Bolsover.Gears.Gui.Views
             ((System.ComponentModel.ISupportInitialize)(this.numModule)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numPressureAngle)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numClearance)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numBacklash)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numFaceWidth)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numProfileShift)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRimThickness)).EndInit();
@@ -713,6 +753,8 @@ namespace Bolsover.Gears.Gui.Views
         private System.Windows.Forms.NumericUpDown numPressureAngle;
         private System.Windows.Forms.Label lblClearance;
         private System.Windows.Forms.NumericUpDown numClearance;
+        private System.Windows.Forms.Label lblBacklash;
+        private System.Windows.Forms.NumericUpDown numBacklash;
         private System.Windows.Forms.Label lblFaceWidth;
         private System.Windows.Forms.NumericUpDown numFaceWidth;
         private System.Windows.Forms.Label lblProfileShift;
@@ -741,6 +783,7 @@ namespace Bolsover.Gears.Gui.Views
         private System.Windows.Forms.Label lblAddendum;
         private System.Windows.Forms.Label lblDedendum;
         private System.Windows.Forms.Label lblClearanceVal;
+        private System.Windows.Forms.Label lblBacklashVal;
         private System.Windows.Forms.Label lblError;
         private System.Windows.Forms.SplitContainer splitContainerMain;
         private Bolsover.Gears.Gui.AlibreGearPreviewControl preview;
