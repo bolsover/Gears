@@ -2,15 +2,17 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.Linq;
 using Bolsover.Gears.Builder;
+using Bolsover.Gears.Calculator;
 using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Data;
 
 /// <summary>
 /// GearVariableLoader is responsible for loading gear variables from a data source
-/// based on a specified gear context.
+/// based on a specified gear type.
 /// </summary>
 /// <remarks>
 /// This class provides functionality to query a database and retrieve a list of
@@ -21,9 +23,9 @@ public static class GearVariableLoader
     /// <summary>
     /// Loads gear variables associated with the specified gear context.
     /// </summary>
-    /// <param name="ctx">The gear context that determines which gear variables to load.</param>
+    /// <param id="type">The gear context that determines which gear variables to load.</param>
     /// <returns>A list of gear variables corresponding to the specified context.</returns>
-    public static List<GearVariable> LoadGearVariables(GearContext ctx)
+    public static List<GearVariable> LoadGearVariables(GearTypes type)
     {
         var variables = new List<GearVariable>();
         const string connectionString = @"Data Source=.\Data\Nexus.db";
@@ -31,23 +33,26 @@ public static class GearVariableLoader
         connection.Open();
 
         // Prepare the SQL query
-        var contextKey = ctx.ToString();
+        var typeKey = type.ToString();
+        // SELECT * so that databases both before and after Migrations\001_SingleSourceFormula.sql can be read
         var query =
-            $"SELECT Context, VariableName, Value, Symbol, Formula, isDesign, Ordinal, NCalc, ValueType, CalcMethod, GearPart, DisplayName,  DisplayMetricFormat,  DisplayImperialFormat, ConvertImperial, ConvertMetric, DisplayNote1, DisplayNote2, IsError FROM GearVariables where Context = '{contextKey}' order by Ordinal";
+            $"SELECT * FROM GearVariables where GearType = '{typeKey}' order by Ordinal";
         using var command = new SQLiteCommand(query, connection);
         // Execute the query and read the results
         using var reader = command.ExecuteReader();
+     //   var overrideColumn = HasColumn(reader, "FormulaOverride") ? "FormulaOverride" : "Formula";
+        var hasKeyColumn = HasColumn(reader, "Key");
         while (reader.Read())
         {
             GearVariableBuilder builder = new();
 
-            var context =
-                (GearContext)Enum.Parse(typeof(GearContext), GetReaderValue(reader, "Context", reader.GetString));
-            var variableName = (VariableNames)Enum.Parse(typeof(VariableNames),
-                GetReaderValue(reader, "VariableName", reader.GetString));
+            var gearType =
+                (GearTypes)Enum.Parse(typeof(GearTypes), GetReaderValue(reader, "GearType", reader.GetString));
+            var variableId = (VariableIds)Enum.Parse(typeof(VariableIds),
+                GetReaderValue(reader, "VariableId", reader.GetString));
             var value = GetReaderValue(reader, "Value", reader.GetDouble);
             var symbol = GetReaderValue(reader, "Symbol", reader.GetString);
-            var formula = GetReaderValue(reader, "Formula", reader.GetString);
+            var formulaOverride = GetReaderValue(reader, "FormulaOverride", reader.GetString);
             var isDesign = GetReaderValue(reader, "IsDesign", reader.GetInt16) == 1;
             var ordinal = GetReaderValue(reader, "Ordinal", reader.GetInt32);
             var nCalc = GetReaderValue(reader, "NCalc", reader.GetString);
@@ -64,13 +69,16 @@ public static class GearVariableLoader
             var displayNote1 = GetReaderValue(reader, "DisplayNote1", reader.GetString, "");
             var displayNote2 = GetReaderValue(reader, "DisplayNote2", reader.GetString, "");
             var isError = GetReaderValue(reader, "IsError", reader.GetInt16) == 0;
+            var key = hasKeyColumn ? GetReaderValue(reader, "Key", reader.GetString) : null;
+            if (string.IsNullOrWhiteSpace(key)) key = DeriveKey(variableId, symbol, nCalc, gearPart);
 
 
-            builder.SetGearContext(context)
-                .SetVariableName(variableName)
+            builder.SetGearType(gearType)
+                .SetVariableId(variableId)
+                .SetKey(key)
                 .SetValue(value)
                 .SetSymbol(symbol)
-                .SetFormula(formula)
+                .SetFormulaOverride(formulaOverride)
                 .SetIsDesgn(isDesign)
                 .SetOrdinal(ordinal)
                 .SetNCalc(nCalc)
@@ -92,7 +100,65 @@ public static class GearVariableLoader
 
         connection.Close();
 
+        ApplyFormulas(variables);
         return variables;
+    }
+
+    /// <summary>
+    /// Sets the display <see cref="GearVariable.Formula"/> of each variable: its FormulaOverride when present,
+    /// otherwise LaTeX generated from its NCalc expression, with each [Key] rendered as that variable's Symbol.
+    /// </summary>
+    public static void ApplyFormulas(IReadOnlyCollection<GearVariable> variables)
+    {
+        var symbols = variables
+            .Where(v => !string.IsNullOrWhiteSpace(v.Key))
+            .GroupBy(v => v.Key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Symbol, StringComparer.Ordinal);
+
+        foreach (var variable in variables)
+        {
+            if (!string.IsNullOrWhiteSpace(variable.FormulaOverride))
+            {
+                variable.Formula = variable.FormulaOverride;
+                continue;
+            }
+
+            try
+            {
+                variable.Formula = NCalcLatexRenderer.Render(variable.NCalc,
+                    k => symbols.TryGetValue(k, out var s) ? s : null);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"Cannot render {variable.GearType}.{variable.Id} NCalc '{variable.NCalc}': {ex.Message}");
+                variable.Formula = variable.Symbol;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Derives a key for a database that predates the Key column, using the same rules as
+    /// Migrations\001_SingleSourceFormula.sql.
+    /// </summary>
+    private static string DeriveKey(VariableIds id, string symbol, string nCalc, string gearPart)
+    {
+        if (id == VariableIds.Hand) return "hand" + (gearPart?.Length > 4 ? gearPart.Substring(4) : "");
+
+        var trimmed = nCalc?.Trim() ?? "";
+        var key = trimmed.Length > 2 && trimmed[0] == '[' && trimmed.IndexOf(']') == trimmed.Length - 1
+            ? trimmed.Substring(1, trimmed.Length - 2)
+            : new string((symbol ?? "").Where(c => !@"\{}_ ^':+-".Contains(c)).ToArray());
+        return id == VariableIds.WorkingPressureAngleNR ? key + "NR" : key;
+    }
+
+    private static bool HasColumn(DbDataReader reader, string columnName)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), columnName, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
     }
 
     public static List<string> GetGearContexts()
@@ -104,13 +170,13 @@ public static class GearVariableLoader
 
 
         var query =
-            $"SELECT distinct Context FROM GearVariables ";
+            $"SELECT distinct GearType FROM GearVariables ";
         using var command = new SQLiteCommand(query, connection);
         // Execute the query and read the results
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            var ctx = GetReaderValue(reader, "Context", reader.GetString);
+            var ctx = GetReaderValue(reader, "GearType", reader.GetString);
             contexts.Add(ctx);
         }
 
@@ -130,7 +196,7 @@ public static class GearVariableLoader
     {
         public List<GearVariable> Common { get; }
 
-        // Map of gear name -> variables for that gear (supports 1..N named gears)
+        // Map of gear id -> variables for that gear (supports 1..N named gears)
         public Dictionary<string, List<GearVariable>> PerGear { get; }
 
         public GroupedGearVariables(List<GearVariable> common, Dictionary<string, List<GearVariable>> perGear)
@@ -145,7 +211,7 @@ public static class GearVariableLoader
     /// Non-suffixed variable names are treated as set-level (common) variables.
     /// Variable names ending with '1' go to Gear1; ending with '2' go to Gear2.
     /// </summary>
-    public static GroupedGearVariables LoadGroupedGearVariables(GearContext ctx)
+    public static GroupedGearVariables LoadGroupedGearVariables(GearTypes ctx)
     {
         var all = LoadGearVariables(ctx);
         var common = new List<GearVariable>();

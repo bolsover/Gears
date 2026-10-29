@@ -34,6 +34,27 @@ public static class LaTeXUtils
 
 
     /// <summary>
+    /// Determines whether a LaTeX string can be parsed for rendering.
+    /// </summary>
+    /// <param name="latex">The LaTeX string to be parsed.</param>
+    /// <param name="error">The parser's error message when parsing fails; otherwise null.</param>
+    /// <returns>True if the string parses; otherwise false.</returns>
+    public static bool TryParse(string latex, out string error)
+    {
+        try
+        {
+            Parser.Parse(latex);
+            error = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Creates an image representation of a LaTeX string.
     /// </summary>
     /// <param name="latex">The LaTeX string to be parsed and converted into an image.</param>

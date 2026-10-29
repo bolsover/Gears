@@ -16,7 +16,7 @@ namespace UnitTests
         public void SetUp()
         {
 
-            _gear = new Gear(GearContext.ExternalRadialHelical, CalculationMode.Automatic);
+            _gear = new Gear(GearTypes.ExternalRadialHelical, CalculationMode.Automatic);
           //  _gear.Calculate();
 
         }
@@ -24,63 +24,63 @@ namespace UnitTests
         [Test]
         public void TestRadialModule()
         {
-            var result = _gear.CalculateVariable(VariableNames.RadialModule);
+            var result = _gear.CalculateVariable(VariableIds.RadialModule);
             Assert.That(result, Is.EqualTo(3d).Within(0.001d));
         }
         
         [Test]
         public void TestTeeth()
         {
-            var result = _gear.CalculateVariable(VariableNames.Teeth);
+            var result = _gear.CalculateVariable(VariableIds.Teeth);
             Assert.That(result, Is.EqualTo(60d).Within(0.001d));
         }
         
         [Test]
         public void TestRadialPressureAngle()
         {
-            var result = _gear.CalculateVariable(VariableNames.RadialPressureAngle);
+            var result = _gear.CalculateVariable(VariableIds.RadialPressureAngle);
             Assert.That(result* (180.0 / Math.PI), Is.EqualTo(20d).Within(0.001d));
         }
         
         [Test]
         public void TestPitchDiameter()
         {
-            var result = _gear.CalculateVariable(VariableNames.PitchDiameter);
+            var result = _gear.CalculateVariable(VariableIds.PitchDiameter);
             Assert.That(result, Is.EqualTo(180.0d).Within(0.001d));
         }
         
         [Test]
         public void TestBaseDiameter()
         {
-            var result = _gear.CalculateVariable(VariableNames.BaseDiameter);
+            var result = _gear.CalculateVariable(VariableIds.BaseDiameter);
             Assert.That(result, Is.EqualTo(169.1446d).Within(0.001d));
         }
         
         [Test]
         public void TestAddendum()
         {
-            var result = _gear.CalculateVariable(VariableNames.Addendum);
+            var result = _gear.CalculateVariable(VariableIds.Addendum);
             Assert.That(result, Is.EqualTo(3d).Within(0.001d));
         }
         
         [Test]
         public void TestDedendum()
         {
-            var result = _gear.CalculateVariable(VariableNames.Dedendum);
+            var result = _gear.CalculateVariable(VariableIds.Dedendum);
             Assert.That(result, Is.EqualTo(3.75d).Within(0.001d));
         }
         
         [Test]
         public void TestOutsideDiameter()
         {
-            var result = _gear.CalculateVariable(VariableNames.OutsideDiameter);
+            var result = _gear.CalculateVariable(VariableIds.OutsideDiameter);
             Assert.That(result, Is.EqualTo(186.0d).Within(0.001d));
         }
         
         [Test]
         public void TestRootDiameter()
         {
-            var result = _gear.CalculateVariable(VariableNames.RootDiameter);
+            var result = _gear.CalculateVariable(VariableIds.RootDiameter);
             Assert.That(result, Is.EqualTo(172.5d).Within(0.001d));
         }
         
@@ -89,16 +89,16 @@ namespace UnitTests
         [Test]
         public void TestWholeDepth()
         {
-            var result = _gear.CalculateVariable(VariableNames.WholeDepth);
+            var result = _gear.CalculateVariable(VariableIds.WholeDepth);
             Assert.That(result, Is.EqualTo(6.75d).Within(0.001d));
         }
         
         [Test]
         public void TestVariableChange()
         {
-            _gear.GetVariable(VariableNames.RadialModule).Value = 2;
+            _gear.GetVariable(VariableIds.RadialModule).Value = 2;
            
-            var result = _gear.CalculateVariable(VariableNames.PitchDiameter);
+            var result = _gear.CalculateVariable(VariableIds.PitchDiameter);
             Assert.That(result, Is.EqualTo(120.000d).Within(0.001d));
         }
         

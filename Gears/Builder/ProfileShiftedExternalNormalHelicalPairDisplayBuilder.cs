@@ -10,65 +10,62 @@ public class ProfileShiftedExternalNormalHelicalPairDisplayBuilder : IDisplayDat
 
     private DisplayData DataForVariable(GearVariable variable)
     {
-        return new DisplayData(variable.Name.ToString(),  variable.DisplayMetricValue, variable.DisplayImperialValue,"",
+        return new DisplayData(variable.Id.ToString(),  variable.DisplayMetricValue, variable.DisplayImperialValue,"",
             false);
     }
     
     public IEnumerable<DisplayData> BuildDisplayData(Gear gear)
     {
-        var gearData = new List<DisplayData>();
-        
+        var gearData = new List<DisplayData>
+        {
+            new("Pinion: ", null, null, null, false),
+            DataForVariable(gear.GetVariable(VariableIds.NormalModule)),
+            DataForVariable(gear.GetVariable(VariableIds.RadialModule)),
+            DataForVariable(gear.GetVariable(VariableIds.NormalPressureAngle)),
+            DataForVariable(gear.GetVariable(VariableIds.HelixAngle)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.Teeth)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.PitchDiameter)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.BaseDiameter)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.OutsideDiameter)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.Addendum)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.Dedendum)),
+            DataForVariable(gear.GetVariable(VariableIds.WholeDepth)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.NormalCoefficientOfProfileShift)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.Phi)),
+            DataForVariable(gear.Gears[0].GetVariable(VariableIds.Theta)),
+            new("", null, null, null, false),
+            new("Gear: ", null, null, null, false),
+            DataForVariable(gear.GetVariable(VariableIds.NormalModule)),
+            DataForVariable(gear.GetVariable(VariableIds.RadialModule)),
+            DataForVariable(gear.GetVariable(VariableIds.NormalPressureAngle)),
+            DataForVariable(gear.GetVariable(VariableIds.HelixAngle)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.Teeth)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.PitchDiameter)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.BaseDiameter)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.OutsideDiameter)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.Addendum)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.Dedendum)),
+            DataForVariable(gear.GetVariable(VariableIds.WholeDepth)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.NormalCoefficientOfProfileShift)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.Phi)),
+            DataForVariable(gear.Gears[1].GetVariable(VariableIds.Theta)),
+            new("", null, null, null, false),
+            new("Pair: ", null, null, null, false),
+            DataForVariable(gear.GetVariable(VariableIds.StandardCentreDistance)),
+            DataForVariable(gear.GetVariable(VariableIds.WorkingCentreDistanceax)),
+            DataForVariable(gear.GetVariable(VariableIds.CentreDistanceIncrementFactor)),
+            DataForVariable(gear.GetVariable(VariableIds.RootFilletFactor)),
+            DataForVariable(gear.GetVariable(VariableIds.TipReliefFactor)),
+            DataForVariable(gear.GetVariable(VariableIds.CircularBacklash)),
+            DataForVariable(gear.GetVariable(VariableIds.RadialPressureAngle)),
+            DataForVariable(gear.GetVariable(VariableIds.InvoluteFunction)),
+            DataForVariable(gear.GetVariable(VariableIds.RadialWorkingInvoluteFunction)),
+            DataForVariable(gear.GetVariable(VariableIds.RadialWorkingPressureAngle)),
+            DataForVariable(gear.GetVariable(VariableIds.SumNormalCoefficientOfProfileShift)),
+            DataForVariable(gear.GetVariable(VariableIds.ProfileShiftModificationForBacklash))
+        };
 
-        gearData.Add(new DisplayData("Pinion: ", null, null, null, false));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalModule)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialModule)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalPressureAngle)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.HelixAngle)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Teeth)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.PitchDiameter)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.BaseDiameter)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.OutsideDiameter)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Addendum)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Dedendum)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.WholeDepth)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.NormalCoefficientOfProfileShift)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Phi)));
-        gearData.Add(DataForVariable(gear.Gears[0].GetVariable(VariableNames.Theta)));
-        
-        gearData.Add(new DisplayData("", null, null, null, false));
 
-        gearData.Add(new DisplayData("Gear: ", null, null, null, false));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalModule)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialModule)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.NormalPressureAngle)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.HelixAngle)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Teeth)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.PitchDiameter)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.BaseDiameter)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.OutsideDiameter)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Addendum)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Dedendum)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.WholeDepth)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.NormalCoefficientOfProfileShift)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Phi)));
-        gearData.Add(DataForVariable(gear.Gears[1].GetVariable(VariableNames.Theta)));
-        
-        gearData.Add(new DisplayData("", null, null, null, false));
-        
-        gearData.Add(new DisplayData("Pair: ", null, null, null, false));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.StandardCentreDistance)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.WorkingCentreDistanceax)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.CentreDistanceIncrementFactor)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RootFilletFactor)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.TipReliefFactor)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.CircularBacklash)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialPressureAngle)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.InvoluteFunction)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialWorkingInvoluteFunction)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.RadialWorkingPressureAngle)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.SumNormalCoefficientOfProfileShift)));
-        gearData.Add(DataForVariable(gear.GetVariable(VariableNames.ProfileShiftModificationForBacklash)));
-        
         return gearData;
     }
 }

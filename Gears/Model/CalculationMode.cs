@@ -1,4 +1,4 @@
-﻿namespace Bolsover.Gears.Calculator;
+﻿namespace Bolsover.Gears.Model;
 
 /// <summary>
 /// Represents the modes of calculation available in the gear calculation context.

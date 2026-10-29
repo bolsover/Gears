@@ -26,7 +26,7 @@ namespace UnitTests
         public ToothProfileControlForm()
         {
             // Set up the form.
-            this.Text = "Tooth Profile Renderer";
+            this.Text = @"Tooth Profile Renderer";
             this.Size = new System.Drawing.Size(1000, 800);
             
             // Create a scrollable container for the profile control.
@@ -72,7 +72,7 @@ namespace UnitTests
         private ToothProfile CreateToothProfileUsingCalculator()
         {
             ToothProfileCalculator calculator = new ToothProfileCalculator();
-            var gear = new Gear(GearContext.ExternalNormalHelical, CalculationMode.Automatic);
+            var gear = new Gear(GearTypes.ExternalNormalHelical, CalculationMode.Automatic);
             return calculator.Calculate(gear);
            
             

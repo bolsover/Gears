@@ -16,6 +16,11 @@ namespace Bolsover.Gears.Gui.Views
 
       
 
+        private void alibreToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new AlibreGearForm().Show();
+        }
+
         private void involuteToolStripMenuItem_Click(object sender, EventArgs e)
         {
             panel1.Controls.Clear();
@@ -27,7 +32,7 @@ namespace Bolsover.Gears.Gui.Views
             gearView.Size = new System.Drawing.Size(744, 0);
             gearView.TabIndex = 3;
             panel1.Controls.Add(gearView);
-            var gear = new Gear(GearContext.ProfileShiftedExternalNormalHelicalPair, CalculationMode.Automatic);
+            var gear = new Gear(GearTypes.ProfileShiftedExternalNormalHelicalPair, CalculationMode.Automatic);
             gearView.Presenter.InitialiseGear(gear);
         }
     }

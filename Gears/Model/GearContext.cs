@@ -11,7 +11,7 @@ namespace Bolsover.Gears.Model
     /// to describe complex gear configurations.
     /// </remarks>
     [Flags]
-    public enum GearContext
+    public enum GearTypes
     {
         Undefined = 0,
         External = 1 << 0,

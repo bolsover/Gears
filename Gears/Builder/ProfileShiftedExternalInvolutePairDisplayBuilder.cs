@@ -9,7 +9,7 @@ public class ProfileShiftedExternalInvolutePairDisplayBuilder :IDisplayDataBuild
     public IEnumerable<DisplayData> BuildDisplayData(Gear gear)
     {
         var gearData = new List<DisplayData>();
-        var module = gear.Gears[0].GetVariable(VariableNames.NormalModule);
+        var module = gear.Gears[0].GetVariable(VariableIds.NormalModule);
         gearData.Add(new DisplayData("Module" , module.Value.ToString("0.000"), (25.4 / module.Value).ToString("0.0000 in DP"),
                        (Math.PI / (25.4 / module.Value)).ToString("0.0000 in CP"), false));
 

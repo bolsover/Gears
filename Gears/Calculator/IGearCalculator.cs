@@ -10,12 +10,12 @@ namespace Bolsover.Gears.Calculator
         /// <summary>
         /// Calculates all non-design variables for the provided gear (and its subtree if applicable).
         /// </summary>
-        /// <param name="gear">The gear whose variables should be calculated.</param>
+        /// <param id="gear">The gear whose variables should be calculated.</param>
         void CalculateAll(Gear gear);
 
         /// <summary>
-        /// Calculates a single variable by its name on the provided gear.
+        /// Calculates a single variable by its id on the provided gear.
         /// </summary>
-        double CalculateVariable(Gear gear, VariableNames name);
+        double CalculateVariable(Gear gear, VariableIds id);
     }
 }

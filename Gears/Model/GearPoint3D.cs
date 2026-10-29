@@ -17,9 +17,9 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Initializes a new instance of GearPoint3D.
         /// </summary>
-        /// <param name="x">X-coordinate</param>
-        /// <param name="y">Y-coordinate</param>
-        /// <param name="z">Z-coordinate</param>
+        /// <param id="x">X-coordinate</param>
+        /// <param id="y">Y-coordinate</param>
+        /// <param id="z">Z-coordinate</param>
         public GearPoint3D(double x, double y, double z) : base(x, y)
         {
             Z = z;
@@ -28,7 +28,7 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Calculates the magnitude (distance from the origin) of the point in 3D space.
         /// </summary>
-        public double Magnitude => Math.Sqrt(X * X + Y * Y + Z * Z);
+        public new double Magnitude => Math.Sqrt(X * X + Y * Y + Z * Z);
 
         /// <summary>
         /// Offsets the point by the specified X, Y, and Z values.

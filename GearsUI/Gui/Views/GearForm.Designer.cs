@@ -12,7 +12,7 @@ namespace Bolsover.Gears.Gui.Views
         /// <summary>
         /// Clean up any resources being used.
         /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        /// <param id="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -38,6 +38,7 @@ namespace Bolsover.Gears.Gui.Views
             this.bevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.standardToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.gleasonToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.alibreToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.panel1 = new System.Windows.Forms.Panel();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
@@ -45,7 +46,7 @@ namespace Bolsover.Gears.Gui.Views
             // menuStrip
             // 
             this.menuStrip.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.gearsToolStripMenuItem });
+            this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.gearsToolStripMenuItem, this.alibreToolStripMenuItem });
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(1634, 28);
@@ -90,7 +91,14 @@ namespace Bolsover.Gears.Gui.Views
             this.gleasonToolStripMenuItem.Name = "gleasonToolStripMenuItem";
             this.gleasonToolStripMenuItem.Size = new System.Drawing.Size(138, 24);
             this.gleasonToolStripMenuItem.Text = "Gleason";
-            // 
+            //
+            // alibreToolStripMenuItem
+            //
+            this.alibreToolStripMenuItem.Name = "alibreToolStripMenuItem";
+            this.alibreToolStripMenuItem.Size = new System.Drawing.Size(140, 24);
+            this.alibreToolStripMenuItem.Text = "Alibre Generator";
+            this.alibreToolStripMenuItem.Click += new System.EventHandler(this.alibreToolStripMenuItem_Click);
+            //
             // panel1
             // 
             this.panel1.AutoSize = true;
@@ -129,6 +137,7 @@ namespace Bolsover.Gears.Gui.Views
         private System.Windows.Forms.ToolStripMenuItem bevelToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem standardToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem gleasonToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem alibreToolStripMenuItem;
 
         private System.Windows.Forms.MenuStrip menuStrip;
 

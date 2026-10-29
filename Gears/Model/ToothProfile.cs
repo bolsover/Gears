@@ -6,7 +6,7 @@ namespace Bolsover.Gears.Model
     public class ToothProfile
     {
         /// <summary>
-        /// A collection of geometries, identified by a key (name or type).
+        /// A collection of geometries, identified by a key (id or type).
         /// </summary>
         public Dictionary<string, Feature> Features { get; private set; }
 
@@ -22,8 +22,8 @@ namespace Bolsover.Gears.Model
         /// Adds a feature to the profile using a string key.
         /// If a feature with the same key already exists, it will NOT be added again.
         /// </summary>
-        /// <param name="key">Name or description of the feature.</param>
-        /// <param name="feature">The feature to add.</param>
+        /// <param id="key">Id or description of the feature.</param>
+        /// <param id="feature">The feature to add.</param>
         public void AddFeature(string key, Feature feature)
         {
             if (key == null || feature == null) return;
@@ -43,7 +43,7 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Removes a geometry from the profile by string key.
         /// </summary>
-        /// <param name="key">The key of the geometry to remove.</param>
+        /// <param id="key">The key of the geometry to remove.</param>
         public void RemoveFeature(string key)
         {
             Features.Remove(key);
@@ -60,7 +60,7 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Retrieves a geometry by its string key.
         /// </summary>
-        /// <param name="key">The key of the geometry.</param>
+        /// <param id="key">The key of the geometry.</param>
         /// <returns>The geometry if found, otherwise null.</returns>
         public Feature GetFeature(string key)
         {

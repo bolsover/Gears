@@ -26,7 +26,7 @@ namespace Bolsover.Gears.Calculator
 
         /// <summary>
         /// Adds a circle feature identified by a key.
-        /// Points: center point. Parameters: Radius (clamped to >= 0).
+        /// Points: center point. Variables: Radius (clamped to >= 0).
         /// </summary>
         public static void AddCircle(ToothProfile profile, ToothFeatureKey key, GearPoint center, double radius)
         {
@@ -77,7 +77,7 @@ namespace Bolsover.Gears.Calculator
 
         /// <summary>
         /// Adds an arc feature defined by center, radius and start/end angles (radians).
-        /// Points: center. Parameters: Radius, StartAngle, EndAngle (radians).
+        /// Points: center. Variables: Radius, StartAngle, EndAngle (radians).
         /// </summary>
         public static void AddArc(ToothProfile profile, ToothFeatureKey key, GearPoint center, double radius, double startAngle, double endAngle)
         {

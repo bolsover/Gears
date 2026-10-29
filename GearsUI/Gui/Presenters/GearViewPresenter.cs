@@ -34,18 +34,18 @@ namespace Bolsover.Gears.Gui.Presenters
             gear.Calculate();
             var pinion = gear.Gears[0];
             var wheel = gear.Gears[1];
-            var normalModule = gear.GetVariable(VariableNames.NormalModule);
-            var pressureAngle = gear.GetVariable(VariableNames.NormalPressureAngle);
-            var helixAngle = gear.GetVariable(VariableNames.HelixAngle);
-            var wheelTeeth = wheel.GetVariable(VariableNames.Teeth);
-            var pinionTeeth = pinion.GetVariable(VariableNames.Teeth);
-            var circularBacklash = gear.GetVariable(VariableNames.CircularBacklash);
-            var rootFilletFactor = gear.GetVariable(VariableNames.RootFilletFactor);
-            var tipReliefFactor = gear.GetVariable(VariableNames.TipReliefFactor);
-            var standardCentreDistance = gear.GetVariable(VariableNames.StandardCentreDistance);
-            var pinionProfileShift = gear.Gears[0].GetVariable(VariableNames.NormalCoefficientOfProfileShift);
-            var wheelProfileShift = gear.Gears[1].GetVariable(VariableNames.NormalCoefficientOfProfileShift);
-            var sumProfileShift = gear.GetVariable(VariableNames.SumNormalCoefficientOfProfileShift);
+            var normalModule = gear.GetVariable(VariableIds.NormalModule);
+            var pressureAngle = gear.GetVariable(VariableIds.NormalPressureAngle);
+            var helixAngle = gear.GetVariable(VariableIds.HelixAngle);
+            var wheelTeeth = wheel.GetVariable(VariableIds.Teeth);
+            var pinionTeeth = pinion.GetVariable(VariableIds.Teeth);
+            var circularBacklash = gear.GetVariable(VariableIds.CircularBacklash);
+            var rootFilletFactor = gear.GetVariable(VariableIds.RootFilletFactor);
+            var tipReliefFactor = gear.GetVariable(VariableIds.TipReliefFactor);
+            var standardCentreDistance = gear.GetVariable(VariableIds.StandardCentreDistance);
+            var pinionProfileShift = gear.Gears[0].GetVariable(VariableIds.NormalCoefficientOfProfileShift);
+            var wheelProfileShift = gear.Gears[1].GetVariable(VariableIds.NormalCoefficientOfProfileShift);
+            var sumProfileShift = gear.GetVariable(VariableIds.SumNormalCoefficientOfProfileShift);
 
             _view.moduleNumericUpDown.Value = (decimal)normalModule.Value;
             _view.pressureAngleNumericUpDown.Value = (decimal)ConversionUtils.Degrees(pressureAngle.Value);
@@ -366,7 +366,7 @@ namespace Bolsover.Gears.Gui.Presenters
             if (sender is NumericUpDown numericUpDown)
             {
                 var newValue = (double) numericUpDown.Value;
-                var module = _gear.GetVariable(VariableNames.NormalModule);
+                var module = _gear.GetVariable(VariableIds.NormalModule);
                 module.Value = newValue;
             }
             var rowdata = GetDisplayData();
@@ -463,7 +463,7 @@ namespace Bolsover.Gears.Gui.Presenters
             if (sender is NumericUpDown numericUpDown)
             {
                 var newValue = (double) numericUpDown.Value;
-                var ax = _gear.GetVariable(VariableNames.WorkingCentreDistanceax);
+                var ax = _gear.GetVariable(VariableIds.WorkingCentreDistanceax);
                 ax.Value = newValue;
             }
             var rowdata = GetDisplayData();

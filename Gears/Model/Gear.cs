@@ -14,22 +14,22 @@ namespace Bolsover.Gears.Model;
 public class Gear
 {
     // Properties
-    public string Name { get; set; }
+    public string Id { get; set; }
     public CalculationMode Mode { get; set; }
-    public GearContext Context { get; private set; }
+    public GearTypes Context { get; private set; }
     public List<Gear> Gears { get; } = new();
 
     private readonly GearCalculator _calculator = new();
 
     /// <summary>
     /// Represents a collection of gear-related variables, where each variable is
-    /// identified by a unique name and represented as a key-value pair. The keys
-    /// are of type <see cref="VariableNames"/>, and the values are instances of
+    /// identified by a unique id and represented as a key-value pair. The keys
+    /// are of type <see cref="VariableIds"/>, and the values are instances of
     /// <see cref="GearVariable"/>. This property provides access to a dictionary
     /// that encapsulates the state and characteristics of a gear's behavior or
     /// configuration.
     /// </summary>
-    public Dictionary<VariableNames, GearVariable> GearVariables { get; } = new();
+    public Dictionary<VariableIds, GearVariable> GearVariables { get; } = new();
 
     private Gear ParentGear { get; set; }
 
@@ -48,7 +48,7 @@ public class Gear
     /// <summary>
     /// Represents a Gear object with associated context, calculation mode, and variable management.
     /// </summary>
-    public Gear(GearContext context, CalculationMode mode)
+    public Gear(GearTypes context, CalculationMode mode)
     {
         Mode = mode;
         Context = context;
@@ -76,13 +76,13 @@ public class Gear
             else
             {
                 // Create named child gears and populate their variables
-                // Ensure deterministic order: Gear1, Gear2, Gear3... then by name
+                // Ensure deterministic order: Gear1, Gear2, Gear3... then by id
                 IEnumerable<KeyValuePair<string, List<GearVariable>>> ordered = grouped.PerGear
                     .OrderBy(kvp => TryParseGearIndex(kvp.Key) ?? int.MaxValue)
                     .ThenBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
                 foreach (var kvp in ordered)
                 {
-                    var child = new Gear(context, mode, false) { Name = kvp.Key };
+                    var child = new Gear(context, mode, false) { Id = kvp.Key };
                     AddGear(child);
                     foreach (var v in kvp.Value)
                     {
@@ -99,7 +99,7 @@ public class Gear
     /// Constructor that allows deferring the automatic loading of variables. Useful when the gear is part of a GearSet
     /// and variables are supplied externally (e.g., from a grouped loader).
     /// </summary>
-    private Gear(GearContext context, CalculationMode mode, bool autoLoad)
+    private Gear(GearTypes context, CalculationMode mode, bool autoLoad)
     {
         Mode = mode;
         Context = context;
@@ -124,7 +124,7 @@ public class Gear
     /// <summary>
     /// Adds a GearVariable to the GearVariables dictionary and updates associated event handlers and NCalc variable mappings.
     /// </summary>
-    /// <param name="variable">The GearVariable to be added. This variable contains properties including its name and whether it is a design variable.</param>
+    /// <param id="variable">The GearVariable to be added. This variable contains properties including its id and whether it is a design variable.</param>
     private void AddVariable(GearVariable variable)
     {
         if (variable.IsDesign)
@@ -132,37 +132,37 @@ public class Gear
             variable.PropertyChanged += OnDesignVariableChanged;
         }
 
-        GearVariables.Add(variable.Name, variable);
+        GearVariables.Add(variable.Id, variable);
     }
 
     /// <summary>
-    /// Retrieves a gear variable by its name from the collection of gear variables.
-    /// Returns null if the specified variable name does not exist.
+    /// Retrieves a gear variable by its id from the collection of gear variables.
+    /// Returns null if the specified variable id does not exist.
     /// </summary>
-    /// <param name="name">The name of the variable to retrieve.</param>
+    /// <param id="id">The id of the variable to retrieve.</param>
     /// <returns>The corresponding <see cref="GearVariable"/> if found, otherwise null.</returns>
-    public GearVariable GetVariable(VariableNames name) =>
-        GearVariables.TryGetValue(name, out var variable) ? variable : null;
+    public GearVariable GetVariable(VariableIds id) =>
+        GearVariables.TryGetValue(id, out var variable) ? variable : null;
 
     /// <summary>
-    /// Calculates the value of a gear variable based on its name and expression.
+    /// Calculates the value of a gear variable based on its id and expression.
     /// Delegates to external calculator to avoid mixing calculations into model
     /// </summary>
-    /// <param name="name">The name of the variable to calculate.</param>
+    /// <param id="id">The id of the variable to calculate.</param>
     /// <returns>Returns the calculated value of the specified variable.</returns>
-    public double CalculateVariable(VariableNames name)
+    public double CalculateVariable(VariableIds id)
     {
-        return _calculator.CalculateVariable(this, name);
+        return _calculator.CalculateVariable(this, id);
     }
     
-    public string CalculateDisplayImperialValue(VariableNames name)
+    public string CalculateDisplayImperialValue(VariableIds id)
     {
-        return _calculator.CalculateDisplayImperialValue(this, name);
+        return _calculator.CalculateDisplayImperialValue(this, id);
     }
     
-    public string CalculateDisplayMetricValue(VariableNames name)
+    public string CalculateDisplayMetricValue(VariableIds id)
     {
-        return _calculator.CalculateDisplayMetricValue(this, name);
+        return _calculator.CalculateDisplayMetricValue(this, id);
     }
 
 
@@ -187,8 +187,8 @@ public class Gear
     /// <summary>
     /// Handles the PropertyChanged event of a design variable and triggers recalculation of all gear variables.
     /// </summary>
-    /// <param name="sender">The source of the event, typically the design variable that was changed.</param>
-    /// <param name="e">An object containing data about the property change event.</param>
+    /// <param id="sender">The source of the event, typically the design variable that was changed.</param>
+    /// <param id="e">An object containing data about the property change event.</param>
     private void OnDesignVariableChanged(object sender, PropertyChangedEventArgs e)
     {
         Calculate();

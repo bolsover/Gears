@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace UnitTests
 {
-    public class TestVariableNames
+    public class TestVariableIds
     {
 
         [Test]
@@ -17,7 +17,7 @@ namespace UnitTests
 
             foreach (var variable in variableNameSymbols)
             {
-                Console.WriteLine($"Variable: {variable.Key}, Symbol: {variable.Value}");
+                Console.WriteLine($@"Variable: {variable.Key}, Symbol: {variable.Value}");
             }
 
         }
@@ -26,8 +26,8 @@ namespace UnitTests
         {
             var result = new Dictionary<string, string>();
 
-            // Get all fields of the VariableNames enum
-            var enumValues = typeof(VariableNames).GetFields(BindingFlags.Public | BindingFlags.Static);
+            // Get all fields of the VariableIds enum
+            var enumValues = typeof(VariableIds).GetFields(BindingFlags.Public | BindingFlags.Static);
 
             foreach (var fieldInfo in enumValues)
             {

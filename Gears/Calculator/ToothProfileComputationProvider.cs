@@ -10,10 +10,10 @@ namespace Bolsover.Gears.Calculator
     /// </summary>
     public class ToothProfileComputationProvider
     {
-        public IToothProfileComputation Get(GearContext context, CalculationMode mode)
+        public IToothProfileComputation Get(GearTypes context, CalculationMode mode)
         {
-            var isInternal = (context & GearContext.Internal) == GearContext.Internal;
-            var isExternal = (context & GearContext.External) == GearContext.External || !isInternal;
+            var isInternal = (context & GearTypes.Internal) == GearTypes.Internal;
+            var isExternal = (context & GearTypes.External) == GearTypes.External || !isInternal;
 
             // Prefer explicit mapping; fall back to external automatic as a safe default.
             return (isInternal, mode) switch

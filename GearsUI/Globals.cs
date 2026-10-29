@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using Microsoft.Win32;
 
-namespace Bolsover
+namespace Bolsover.Gears
 {
     public class Globals
     {

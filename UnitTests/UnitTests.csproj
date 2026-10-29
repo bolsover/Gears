@@ -183,16 +183,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConsoleIO.cs" />
-    <Compile Include="DataBuilder.cs" />
+    <Compile Include="FormulaRegressionTests.cs" />
     <Compile Include="FormulaTests.cs" />
+    <Compile Include="NCalcLatexRendererTests.cs" />
     <Compile Include="NCalcTests.cs" />
     <Compile Include="NewtonRaphsonTest.cs" />
-    <Compile Include="SQLitetests.cs" />
     <Compile Include="TestStraightBevelGleasonPair.cs" />
     <Compile Include="TestStraightBevelStandardPair.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearLoading.cs" />
-    <Compile Include="TestGearVariableExporter.cs" />
     <Compile Include="TestProfileShiftedInternalExternalHelicalPair.cs" />
     <Compile Include="TestExternalInvolutePair.cs" />
     <Compile Include="TestExternalRadialHelicalGear.cs" />
@@ -203,8 +202,9 @@
     <Compile Include="TestProfileShiftedExternalNormalHelicalPair.cs" />
     <Compile Include="TestProfileShiftedExternalRadialHelicalPair.cs" />
     <Compile Include="TestProfileShiftedInternalExternalInvolutePair.cs" />
-    <Compile Include="TestVariableNames.cs" />
+    <Compile Include="TestVariableIds.cs" />
     <Compile Include="ToothProfileControlTests.cs" />
+    <Compile Include="VariableTests\ExternalGearVariableTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GearsUI\GearsUI.csproj">

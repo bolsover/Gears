@@ -170,6 +170,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Globals.cs" />
+    <Compile Include="Gui\AlibreGearPreviewControl.cs" />
     <Compile Include="Gui\GearControlProvider.cs" />
     <Compile Include="Gui\Presenters\GearViewPresenter.cs" />
     <Compile Include="Gui\ToothProfileControl.cs" />
@@ -177,6 +178,8 @@
     <Compile Include="Gui\Views\GearView.Designer.cs" />
     <Compile Include="Gui\Views\GearForm.cs" />
     <Compile Include="Gui\Views\GearForm.Designer.cs" />
+    <Compile Include="Gui\Views\AlibreGearForm.cs" />
+    <Compile Include="Gui\Views\AlibreGearForm.Designer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Gui\Views\GearView.resx" />

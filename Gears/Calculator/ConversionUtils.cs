@@ -10,7 +10,7 @@ public static class ConversionUtils
     /// <summary>
     /// Formats a measurement in millimeters to a string with three decimal places and an "in" suffix.
     /// </summary>
-    /// <param name="mm">The length in millimeters to be converted and formatted in inches.</param>
+    /// <param id="mm">The length in millimeters to be converted and formatted in inches.</param>
     /// <returns>A string representation of the measurement in inches, formatted to three decimal places with an "in" suffix.</returns>
     public static string ToInchFormat(double mm)
     {
@@ -20,7 +20,7 @@ public static class ConversionUtils
     /// <summary>
     /// Formats an angle in degrees to a string with three decimal places and a "°" suffix.
     /// </summary>
-    /// <param name="angle">The angle in degrees to be formatted.</param>
+    /// <param id="angle">The angle in degrees to be formatted.</param>
     /// <returns>A string representation of the angle in degrees, formatted to three decimal places with a "°" suffix.</returns>
     public static string ToDegreeFormat(double angle)
     {
@@ -30,7 +30,7 @@ public static class ConversionUtils
     /// <summary>
     /// Formats a measurement in millimeters to a string with three decimal places and the "mm" unit suffix.
     /// </summary>
-    /// <param name="mm">The length in millimeters to be formatted.</param>
+    /// <param id="mm">The length in millimeters to be formatted.</param>
     /// <returns>A string representation of the measurement in millimeters, formatted to three decimal places with a "mm" unit suffix.</returns>
     public static string ToMmFormat(double mm)
     {
@@ -41,7 +41,7 @@ public static class ConversionUtils
     /// Converts a measurement in millimeters to inches.
     /// The conversion uses the formula: inches = millimeters / 25.4.
     /// </summary>
-    /// <param name="mm">The length in millimeters to be converted.</param>
+    /// <param id="mm">The length in millimeters to be converted.</param>
     /// <returns>The equivalent length in inches.</returns>
     public static double ToInches(double mm)
     {
@@ -53,8 +53,8 @@ public static class ConversionUtils
     /// The output string is generated using the specified format, allowing for precision
     /// or unit appending, such as decimal places or specific unit formats (e.g., "0.000 mm").
     /// </summary>
-    /// <param name="d">The double value to be formatted.</param>
-    /// <param name="format">A string format to dictate how the double value should be represented.</param>
+    /// <param id="d">The double value to be formatted.</param>
+    /// <param id="format">A string format to dictate how the double value should be represented.</param>
     /// <returns>A string representation of the double value formatted according to the provided format.</returns>
     public static string ToFormat(double d, string format)
     {
@@ -65,7 +65,7 @@ public static class ConversionUtils
     ///     Converts the given angle in Degrees ° to Radians
     ///     Uses the formula Radians = Degrees * Pi/180
     /// </summary>
-    /// <param name="angle"></param>
+    /// <param id="angle"></param>
     /// <returns></returns>
     public static double Radians(double angle)
     {
@@ -110,7 +110,7 @@ public static class ConversionUtils
     ///     Converts the given angle in Radians to Degrees
     ///     Uses the formula Degrees = Radians * 180/Pi
     /// </summary>
-    /// <param name="radians"></param>
+    /// <param id="radians"></param>
     /// <returns></returns>
     public static double Degrees(double radians)
     {
@@ -121,7 +121,7 @@ public static class ConversionUtils
     ///     Converts the given length in millimeters to inches.
     ///     Uses the formula Inches = Millimeters / 25.4.
     /// </summary>
-    /// <param name="mm">The length in millimeters to be converted.</param>
+    /// <param id="mm">The length in millimeters to be converted.</param>
     /// <returns>The length in inches.</returns>
     public static double MillimetersToInches(double mm)
     {
@@ -132,7 +132,7 @@ public static class ConversionUtils
     ///     Converts the given length in inches to millimeters.
     ///     Uses the formula Millimeters = Inches * 25.4.
     /// </summary>
-    /// <param name="inches">The length in inches to be converted.</param>
+    /// <param id="inches">The length in inches to be converted.</param>
     /// <returns>The length in millimeters.</returns>
     public static double InchesToMillimeters(double inches)
     {
@@ -143,7 +143,7 @@ public static class ConversionUtils
     ///     Converts the given module to diametral pitch.
     ///     Uses the formula DiametralPitch = 25.4 / module.
     /// </summary>
-    /// <param name="module">The module to be converted.</param>
+    /// <param id="module">The module to be converted.</param>
     /// <returns>The diametral pitch value.</returns>
     public static double ModuleToDiametralPitch(double module)
     {
@@ -154,7 +154,7 @@ public static class ConversionUtils
     ///     Converts the given diametral pitch value to module.
     ///     Uses the formula Module = 25.4 / diametralPitch.
     /// </summary>
-    /// <param name="diametralPitch">The diametral pitch value to be converted.</param>
+    /// <param id="diametralPitch">The diametral pitch value to be converted.</param>
     /// <returns>The module value.</returns>
     public static double DiametralPitchToModule(double diametralPitch)
     {
@@ -165,7 +165,7 @@ public static class ConversionUtils
     ///     Converts the given pitch in millimeters to module.
     ///     Uses the formula Module = PitchMillimeters / Pi.
     /// </summary>
-    /// <param name="pitchMillimeters">The pitch in millimeters to be converted.</param>
+    /// <param id="pitchMillimeters">The pitch in millimeters to be converted.</param>
     /// <returns>The module value.</returns>
     public static double PitchMillimetersToModule(double pitchMillimeters)
     {
@@ -176,7 +176,7 @@ public static class ConversionUtils
     ///     Converts the given module to pitch in inches.
     ///     Uses the formula PitchInches = Pi * module / 25.4.
     /// </summary>
-    /// <param name="module">The module to be converted.</param>
+    /// <param id="module">The module to be converted.</param>
     /// <returns>The pitch value in inches.</returns>
     public static double ModuleToPitchInches(double module)
     {
@@ -187,7 +187,7 @@ public static class ConversionUtils
     ///     Converts the given pitch in inches to module.
     ///     Uses the formula Module = PitchInches * 25.4 / Pi.
     /// </summary>
-    /// <param name="pitchInches">The pitch in inches to be converted.</param>
+    /// <param id="pitchInches">The pitch in inches to be converted.</param>
     /// <returns>The module value.</returns>
     public static double PitchInchesToModule(double pitchInches)
     {
@@ -198,7 +198,7 @@ public static class ConversionUtils
     ///     Converts the given module to circular pitch.
     ///     Uses the formula CircularPitch = Math.PI * module.
     /// </summary>
-    /// <param name="module">The module to be converted.</param>
+    /// <param id="module">The module to be converted.</param>
     /// <returns>The circular pitch value.</returns>
     public static double ModuleToCircularPitch(double module)
     {
@@ -209,8 +209,8 @@ public static class ConversionUtils
     ///     Converts the given worm normal module to axial module based on the given helix angle.
     ///     The formula used is AxialModule = NormalModule / Cos(helixAngle).
     /// </summary>
-    /// <param name="normalModule">The normal module value to convert.</param>
-    /// <param name="helixAngle">The helix angle in radians.</param>
+    /// <param id="normalModule">The normal module value to convert.</param>
+    /// <param id="helixAngle">The helix angle in radians.</param>
     /// <returns>The converted axial module value.</returns>
     public static double WormNormalModuleToAxialModule(double normalModule, double helixAngle)
     {
@@ -220,8 +220,8 @@ public static class ConversionUtils
     /// <summary>
     ///     Converts the given worm axial module to normal module based on the helix angle
     /// </summary>
-    /// <param name="axialModule">The axial module to be converted</param>
-    /// <param name="helixAngle">The helix angle in degrees</param>
+    /// <param id="axialModule">The axial module to be converted</param>
+    /// <param id="helixAngle">The helix angle in degrees</param>
     /// <returns>The converted normal module</returns>
     public static double WormAxialModuleToNormalModule(double axialModule, double helixAngle)
     {
@@ -232,8 +232,8 @@ public static class ConversionUtils
     ///     Converts the given worm normal module to radial module.
     ///     The radial module is calculated using the formula: radialModule = normalModule / Sin(helixAngle).
     /// </summary>
-    /// <param name="normalModule">The normal module to be converted.</param>
-    /// <param name="helixAngle">The helix angle (in radians).</param>
+    /// <param id="normalModule">The normal module to be converted.</param>
+    /// <param id="helixAngle">The helix angle (in radians).</param>
     /// <returns>The calculated radial module.</returns>
     public static double WormNormalModuleToRadialModule(double normalModule, double helixAngle)
     {
@@ -245,8 +245,8 @@ public static class ConversionUtils
     /// where RadialModule is the radial distance from the axis of the gear to the pitch circle, in millimeters,
     /// and HelixAngle is the angle between the helix and the gear axis, in radians.
     /// </summary>
-    /// <param name="radialModule">The radial module of the gear.</param>
-    /// <param name="helixAngle">The angle between the helix and the gear axis, in radians.</param>
+    /// <param id="radialModule">The radial module of the gear.</param>
+    /// <param id="helixAngle">The angle between the helix and the gear axis, in radians.</param>
     /// <returns>The corresponding normal module of the gear.</returns>
     public static double WormRadialModuleToNormalModule(double radialModule, double helixAngle)
     {
@@ -260,8 +260,8 @@ public static class ConversionUtils
     ///     where RadialModule is the radial distance from the axis of the gear to the pitch circle, in millimeters,
     ///     and HelixAngle is the angle between the helix and the gear axis, in radians.
     /// </summary>
-    /// <param name="radialModule">The radial module of the gear.</param>
-    /// <param name="helixAngle">The angle between the helix and the gear axis, in radians.</param>
+    /// <param id="radialModule">The radial module of the gear.</param>
+    /// <param id="helixAngle">The angle between the helix and the gear axis, in radians.</param>
     /// <returns>The corresponding axial module of the gear.</returns>
     public static double WormRadialModuleToAxialModule(double radialModule, double helixAngle)
     {
@@ -273,8 +273,8 @@ public static class ConversionUtils
     ///     Converts the given worm axial module to radial module.
     ///     The radial module is calculated using the formula: radialModule = normalModule / Sin(helixAngle).
     /// </summary>
-    /// <param name="axialModule">The axial module to be converted.</param>
-    /// <param name="helixAngle">The helix angle (in radians).</param>
+    /// <param id="axialModule">The axial module to be converted.</param>
+    /// <param id="helixAngle">The helix angle (in radians).</param>
     /// <returns>The calculated radial module.</returns>
     public static double WormAxialModuleToRadialModule(double axialModule, double helixAngle)
     {
@@ -285,7 +285,7 @@ public static class ConversionUtils
     /// <summary>
     /// Converts a System.Windows.Point to a System.Drawing.PointF.
     /// </summary>
-    /// <param name="point">The System.Windows.Point to convert.</param>
+    /// <param id="point">The System.Windows.Point to convert.</param>
     /// <returns>The equivalent System.Drawing.PointF.</returns>
     public static PointF ToPointF(GearPoint point)
     {
@@ -296,7 +296,7 @@ public static class ConversionUtils
     /// <summary>
     /// Converts a System.Drawing.PointF to a System.Windows.Point.
     /// </summary>
-    /// <param name="point">The System.Drawing.PointF to convert.</param>
+    /// <param id="point">The System.Drawing.PointF to convert.</param>
     /// <returns>The equivalent System.Windows.Point.</returns>
     public static GearPoint ToPoint(PointF point)
     {

@@ -20,7 +20,8 @@ public class Program
         Application.SetCompatibleTextRenderingDefault(false);
 
 
-        var form = new GearForm();
+        var form = new AlibreGearForm();
+       // var form = new GearForm();
         Application.Run(form);
     }
 }

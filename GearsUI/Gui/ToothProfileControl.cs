@@ -291,8 +291,8 @@ public class ToothProfileControl : UserControl
     /// <summary>
     /// Calculates the nearest start point for tick marks, ensuring alignment with the grid.
     /// </summary>
-    /// <param name="minValue">The minimum visible value.</param>
-    /// <param name="interval">The distance between tick marks.</param>
+    /// <param id="minValue">The minimum visible value.</param>
+    /// <param id="interval">The distance between tick marks.</param>
     /// <returns>A starting point that is a multiple of the interval.</returns>
     private double GetNearestStart(double minValue, double interval)
     {
@@ -358,9 +358,9 @@ public class ToothProfileControl : UserControl
     /// <summary>
     /// Draws an arc using the given points (start, end, and center).
     /// </summary>
-    /// <param name="graphics">Graphics object for drawing.</param>
-    /// <param name="pen">Pen for line drawing.</param>
-    /// <param name="points">The points defining the arc (start, end, center).</param>
+    /// <param id="graphics">Graphics object for drawing.</param>
+    /// <param id="pen">Pen for line drawing.</param>
+    /// <param id="points">The points defining the arc (start, end, center).</param>
     private void DrawArc(Graphics graphics, Feature feature)
     {
         var transformedPointsF = TransformAndConvertPoints(feature);

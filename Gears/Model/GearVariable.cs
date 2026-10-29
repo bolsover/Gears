@@ -18,11 +18,25 @@ namespace Bolsover.Gears.Model;
 /// </remarks>
 public sealed class GearVariable : INotifyPropertyChanged
 {
-    public GearContext Context { get; set; }
-    public VariableNames Name { get; set; }
+    public GearTypes GearType { get; set; }
+    public VariableIds Id { get; set; }
     public bool IsDesign { get; set; }
+    /// <summary>
+    /// Machine identifier, unique per GearType. NCalc expressions reference this variable as <c>[Key]</c>,
+    /// and <see cref="Symbol"/> is its LaTeX rendering.
+    /// </summary>
+    public string Key { get; set; }
     public string Symbol { get; set; }
+
+    /// <summary>
+    /// LaTeX for display. Generated from <see cref="NCalc"/> unless <see cref="FormulaOverride"/> is set.
+    /// </summary>
     public string Formula { get; set; }
+
+    /// <summary>
+    /// Hand-written LaTeX shown in place of the generated formula, for rows that cannot or should not be generated.
+    /// </summary>
+    public string FormulaOverride { get; set; }
     public string NCalc { get; set; }
     public string CalcMethod { get; set; }
     public string GroupId { get; set; }
@@ -51,11 +65,11 @@ public sealed class GearVariable : INotifyPropertyChanged
     }
 
 
-    public GearVariable(GearContext context, VariableNames name, double value, string symbol, string formula,
+    public GearVariable(GearTypes gearType, VariableIds id, double value, string symbol, string formula,
         bool isDesign, string valueType, string nCalc)
     {
-        Context = context;
-        Name = name;
+        GearType = gearType;
+        Id = id;
         Value = value;
         Symbol = symbol;
         Formula = formula;
@@ -66,7 +80,7 @@ public sealed class GearVariable : INotifyPropertyChanged
 
     public override string ToString()
     {
-        return "GearVariable [Name=" + Name + ", Value=" + Value + ", Symbol=" + Symbol + ", Formula=" + Formula +
+        return "GearVariable [Id=" + Id + ", Key=" + Key + ", Value=" + Value + ", Symbol=" + Symbol + ", Formula=" + Formula +
                ", IsDesign=" + IsDesign +
                ", NCalc=" + NCalc + "]";
     }

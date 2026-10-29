@@ -32,8 +32,8 @@ public record Feature
     /// <summary>
     /// Initializes a new instance of the Feature class.
     /// </summary>
-    /// <param name="type">Type of the feature.</param>
-    /// <param name="points">Points defining the feature.</param>
+    /// <param id="type">Type of the feature.</param>
+    /// <param id="points">Points defining the feature.</param>
     public Feature(FeatureType type, List<GearPoint> points)
     {
         Type = type;

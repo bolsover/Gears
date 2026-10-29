@@ -16,7 +16,7 @@ namespace UnitTests
         [Test]
         public void TestGearVariables()
         {
-            var context = GearContext.ProfileShiftedExternalNormalHelicalPair;
+            var context = GearTypes.ProfileShiftedExternalNormalHelicalPair;
             var gear = new Gear(context, CalculationMode.Automatic);
             gear.Calculate();
             var variables0 = gear.Gears[0].GearVariables;
@@ -30,18 +30,19 @@ namespace UnitTests
 
     public class TestFormulaVariablesForm : Form
     {
-        private readonly Dictionary<VariableNames, GearVariable> _variables;
-        private readonly GearContext _context;
+        private readonly Dictionary<VariableIds, GearVariable> _variables;
+        private readonly GearTypes _context;
         private readonly Gear _gear;
         private const int NameColumn = 0;
         private const int DesignColumn = 1;
         private const int ValueColumn = 2;
         private const int SymbolColumn = 3;
         private const int FormulaColumn = 4;
-        private const int NCalcColumn = 5;
+        private const int FormulaOverrideColumn = 5;
+        private const int NCalcColumn = 6;
 
 
-        public TestFormulaVariablesForm(Dictionary<VariableNames, GearVariable> variables, GearContext context,
+        public TestFormulaVariablesForm(Dictionary<VariableIds, GearVariable> variables, GearTypes context,
             Gear gear)
         {
             _variables = variables;
@@ -62,7 +63,7 @@ namespace UnitTests
 
         private void SetFormProperties()
         {
-            Text = $"Test Data {_context} {_variables.Count} variables";
+            Text = $@"Test Data {_context} {_variables.Count} variables";
             Size = new Size(1920, 1020);
         }
 
@@ -72,7 +73,7 @@ namespace UnitTests
             {
                 Dock = DockStyle.Fill,
                 Padding = new Padding(10),
-                ColumnCount = 6,
+                ColumnCount =7,
                 AutoScroll = true,
                 RowCount = _variables.Count + 1,
                 
@@ -83,7 +84,7 @@ namespace UnitTests
 
         private static void AddColumnHeaders(TableLayoutPanel panel)
         {
-            string[] headers = { "VariableName", "IsDesign", "Value", "Symbol", "Formula", "Ncalc" };
+            string[] headers = { "VariableName", "IsDesign", "Value", "Symbol", "Formula", "FormulaOverride","Ncalc" };
             for (var col = 0; col < headers.Length; col++)
             {
                 AddLabel(panel, headers[col], true, col, 0);
@@ -109,11 +110,12 @@ namespace UnitTests
             var row = 1;
             foreach (var variable in _variables.Select(gearVariable => gearVariable.Value))
             {
-                AddLabel(panel, variable.Name.ToString(), true, NameColumn, row);
+                AddLabel(panel, variable.Id.ToString(), true, NameColumn, row);
                 AddLabel(panel, variable.IsDesign.ToString(), true, DesignColumn, row);
                 AddVariableUiControl(panel, variable, row);
                 AddImageIfExists(panel, LaTeXUtils.CreateImageFromLatex(variable.Symbol), SymbolColumn, row);
                 AddImageIfExists(panel, LaTeXUtils.CreateImageFromLatex(variable.Formula), FormulaColumn, row);
+             //   AddImageIfExists(panel, LaTeXUtils.CreateImageFromLatex(variable.FormulaOverride), FormulaOverrideColumn, row);
                 AddLabel(panel, variable.NCalc.ToString(CultureInfo.CurrentCulture), false, NCalcColumn, row,
                     new Size(1000, 70));
 

@@ -1,0 +1,194 @@
+﻿@startuml
+title Unified Variable Architecture (Gear + Mesh Calculation Engine)
+
+skinparam class {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam linetype ortho
+
+' ============================================================
+' ENUMS
+' ============================================================
+
+enum GearType { 
+Spur
+Helical
+ Bevel
+  Worm
+   WormWheel 
+   }
+   
+enum MeshType { 
+External
+ Internal
+  Bevel
+   WormMesh 
+   }
+enum VariableRole { 
+Design
+ Calculated 
+ }
+enum VariableStatus { 
+Unknown
+ Provided
+  Pending
+   Computed
+    Error 
+    }
+enum VariableDataType {
+Number
+ Boolean
+  Text 
+  }
+
+
+
+' =============================
+' CORE ENTITIES
+' =============================
+class GearTrain {
+    +Id: string
+    +Name: string
+    +Gears: List<Gear>
+    +Meshes: List<Mesh>
+    +Shafts: List<Shaft>
+    +Selectors: List<Selector>
+}
+
+class Gear {
+    +Id: string
+    +Type: GearType
+    +Variables: List<GearVariable>
+    +Position: GearPosition
+}
+
+class Mesh {
+    +Id: string
+    +MeshVariantType: MeshType
+    +GearA: Gear
+    +GearB: Gear
+    +SharedVariables: List<MeshVariable>
+}
+
+class GearPosition {
+    +Axial: double
+    +Radial: double
+    +OrientationDeg: double
+}
+
+class Selector {
+    +Id: string
+    +Shaft: Shaft
+    +ControlledMeshes: List<Mesh>
+    +CurrentSelection: Mesh
+}
+
+class Shaft {
+    +Id: string
+    +Name: string
+    +Gears: List<Gear>
+}
+
+' =============================
+' VARIABLE MODELS
+' =============================
+class GearVariable {
+    +Id: string
+    +Name: string
+    +Role: VariableRole
+
+    +Formula: string                  << instance override >>
+    +ResolvedFormula: string          << final searchable formula >>
+
+    +Value: double
+    +ValueText: string
+    +ValueBool: bool
+
+    +DependsOn: List<VariableRef>
+    +Status: VariableStatus
+}
+
+class MeshVariable {
+    +Id: string
+    +MeshId: string
+    +Name: string
+
+    +Formula: string                  << optional override >>
+    +ResolvedFormula: string
+
+    +Value: double
+    +Unit: string
+}
+
+class VariableRef {
+    +OwnerType: string   << gear | mesh >>
+    +OwnerId: string     << G1, M12 >>
+    +VariableName: string
+}
+
+' =============================
+' UNIFIED VARIABLE MODEL
+' =============================
+class UnifiedVariable {
+    +FullyQualifiedName: string  << gear.G1.module >>
+    +OwnerType: string
+    +OwnerId: string
+    +Name: string
+
+    +Formula: string
+    +ResolvedFormula: string
+
+    +Value: double?
+    +Role: VariableRole
+}
+
+class VariableSource {
+    +Variables: Dictionary<string, UnifiedVariable>
+}
+
+class EvaluationContext {
+    +AllVariables: Dictionary<string, UnifiedVariable>
+}
+
+class CalculationEngine {
+    +ResolveFormulas()
+    +BuildDependencyGraph()
+    +TopologicalSort()
+    +Evaluate()
+}
+
+' =============================
+' FORMULA TEMPLATE SYSTEM
+' =============================
+class FormulaTemplate {
+    +Id: string
+    +OwnerType: string            << gear | mesh >>
+    +AppliesToType: string        << GearType or MeshType >>
+    +VariableName: string
+    +Formula: string              << NCalc >>
+    +ExpressionLanguage: string
+    +Notes: string
+}
+
+' =============================
+' RELATIONSHIPS
+' =============================
+GearTrain "1" o-- "*" Gear
+GearTrain "1" o-- "*" Mesh
+GearTrain "1" o-- "*" Shaft
+
+Gear "1" o-- "*" GearVariable
+Mesh "1" o-- "*" MeshVariable
+Mesh "1" o-- "1" Gear : GearA
+Mesh "1" o-- "1" Gear : GearB
+
+GearVariable "*" --> "*" VariableRef
+
+VariableSource "1" o-- "*" UnifiedVariable
+EvaluationContext "1" o-- "*" UnifiedVariable
+CalculationEngine "1" --> "1" EvaluationContext
+
+FormulaTemplate "1" <-- "*" CalculationEngine : resolves templates >
+
+@enduml

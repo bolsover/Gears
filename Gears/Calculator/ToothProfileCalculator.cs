@@ -8,7 +8,7 @@ namespace Bolsover.Gears.Calculator
     /// delegating to a context- and mode-aware computation strategy.
     /// </summary>
     /// <remarks>
-    /// The calculator selects a computation strategy based on Gear.Context and Gear.Mode.
+    /// The calculator selects a computation strategy based on Gear.GearType and Gear.Mode.
     /// Default strategies produce a minimal, safe set of features (reference circles and
     /// simple flank placeholders) and can be extended to use different GearVariables
     /// per mode/context in the future.
@@ -25,10 +25,10 @@ namespace Bolsover.Gears.Calculator
         }
 
         /// <summary>
-        /// Creates a <see cref="ToothProfile"/> for the provided <paramref name="gear"/> by selecting
+        /// Creates a <see cref="ToothProfile"/> for the provided <paramref id="gear"/> by selecting
         /// an appropriate strategy for the gear's context and calculation mode.
         /// </summary>
-        /// <param name="gear">The gear model containing variables, context and mode.</param>
+        /// <param id="gear">The gear model containing variables, context and mode.</param>
         /// <returns>A populated <see cref="ToothProfile"/>.</returns>
         public ToothProfile Calculate(Gear gear)
         {

@@ -11,11 +11,11 @@ namespace UnitTests
         public void GearPair_Loads_Common_And_PerGear_Variables()
         {
             // Arrange & Act
-            var gear = new Gear(GearContext.ProfileShiftedExternalInvolutePair, CalculationMode.Automatic);
+            var gear = new Gear(GearTypes.ProfileShiftedExternalInvolutePair, CalculationMode.Automatic);
             gear.Calculate();
 
             // Common (set-level) variable assertions
-            var module = gear.GetVariable(VariableNames.Module);
+            var module = gear.GetVariable(VariableIds.Module);
             Assert.That(module, Is.Not.Null, "Set-level NormalModule should exist");
             Assert.That(module.Value, Is.EqualTo(3d).Within(0.001d));
 
@@ -24,13 +24,13 @@ namespace UnitTests
 
             // Per-gear variables: Gear1
             var gear1 = gear.Gears[0];
-            Assert.That(gear1.GetVariable(VariableNames.Teeth).Value, Is.EqualTo(12d).Within(0.001d));
-            Assert.That(gear1.GetVariable(VariableNames.Addendum).Value, Is.EqualTo(4.41989d).Within(0.001d));
+            Assert.That(gear1.GetVariable(VariableIds.Teeth).Value, Is.EqualTo(12d).Within(0.001d));
+            Assert.That(gear1.GetVariable(VariableIds.Addendum).Value, Is.EqualTo(4.41989d).Within(0.001d));
 
             // Per-gear variables: Gear2
             var gear2 = gear.Gears[1];
-            Assert.That(gear2.GetVariable(VariableNames.Teeth).Value, Is.EqualTo(24d).Within(0.001d));
-            Assert.That(gear2.GetVariable(VariableNames.Addendum).Value, Is.EqualTo(3.69989d).Within(0.001d));
+            Assert.That(gear2.GetVariable(VariableIds.Teeth).Value, Is.EqualTo(24d).Within(0.001d));
+            Assert.That(gear2.GetVariable(VariableIds.Addendum).Value, Is.EqualTo(3.69989d).Within(0.001d));
         }
     }
 }

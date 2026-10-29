@@ -11,10 +11,10 @@ namespace Bolsover.Gears.Calculator.Strategies
             if (gear == null) throw new ArgumentNullException(nameof(gear));
             gear.Calculate();
 
-            var rootDiameter = GetValueOrDefault(gear, VariableNames.RootDiameter);
-            var baseDiameter = GetValueOrDefault(gear, VariableNames.BaseDiameter);
-            var pitchDiameter = GetValueOrDefault(gear, VariableNames.PitchDiameter);
-            var outsideDiameter = GetValueOrDefault(gear, VariableNames.OutsideDiameter);
+            var rootDiameter = GetValueOrDefault(gear, VariableIds.RootDiameter);
+            var baseDiameter = GetValueOrDefault(gear, VariableIds.BaseDiameter);
+            var pitchDiameter = GetValueOrDefault(gear, VariableIds.PitchDiameter);
+            var outsideDiameter = GetValueOrDefault(gear, VariableIds.OutsideDiameter);
 
             var rRoot = rootDiameter / 2.0;
            
@@ -56,14 +56,14 @@ namespace Bolsover.Gears.Calculator.Strategies
             }
             return rhSinvolute;
         }
-        
+
         /// <summary>
         ///     Trims the given list of points to remove any points below the intersection with the root fillet end point or above
         ///     the tip relief radius start point.
         /// </summary>
         /// <param name="involutePoints"></param>
         /// <returns></returns>
-        public static List<GearPoint> TrimmedInvolutePoints(List<GearPoint> involutePoints, GearPoint tipReliefStart,
+        private static List<GearPoint> TrimmedInvolutePoints(List<GearPoint> involutePoints, GearPoint tipReliefStart,
             GearPoint rootFilletEnd)
         {
             var points = PointsToIntersectionWithTipReliefArc(involutePoints, tipReliefStart);
@@ -78,8 +78,8 @@ namespace Bolsover.Gears.Calculator.Strategies
         ///         of involute points to remove any points above the intersection with the tip relief arc.
         ///         The final point in the returned list will be the tip relief start point .
         /// </summary>
-        /// <param name="involutePoints"></param>
-        /// <param name="radius"></param>
+        /// <param id="involutePoints"></param>
+        /// <param id="radius"></param>
         /// <returns></returns>
         public static List<GearPoint> PointsToIntersectionWithTipReliefArc(List<GearPoint> involutePoints,
             GearPoint tipReliefStart)
@@ -110,9 +110,9 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Method to calculate if a specified checkPoint is within a circle
         /// </summary>
-        /// <param name="centreGearPoint"></param>
-        /// <param name="circleRadius"></param>
-        /// <param name="checkGearPoint"></param>
+        /// <param id="centreGearPoint"></param>
+        /// <param id="circleRadius"></param>
+        /// <param id="checkGearPoint"></param>
         /// <returns>Return bool true if the checkPoint is within the specifies circle. Otherwise false</returns>
         private static bool IsInsideCircle(GearPoint centreGearPoint, double circleRadius, GearPoint checkGearPoint)
         {
@@ -123,8 +123,8 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Returns the absolute distance between two points
         /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
+        /// <param id="a"></param>
+        /// <param id="b"></param>
         /// <returns></returns>
         public static double DistanceBetweenPoints(GearPoint a, GearPoint b)
         {
@@ -142,8 +142,8 @@ namespace Bolsover.Gears.Calculator.Strategies
         ///         of involute points to remove any points below the intersection with the root fillet.
         ///         A calculated (interpolated) point will be added to ensure the root fillet ends where the involute curve starts.
         /// </summary>
-        /// <param name="involutePoints"></param>
-        /// <param name="radius"></param>
+        /// <param id="involutePoints"></param>
+        /// <param id="radius"></param>
         /// <returns></returns>
         public static List<GearPoint> PointsFromIntersectionWithRootFillet(List<GearPoint> involutePoints,
             GearPoint rootFilletEnd)
@@ -209,11 +209,11 @@ namespace Bolsover.Gears.Calculator.Strategies
         // x = (-b ± Sqrt(b^2 - 4ac))/(2a)
         // This gives two roots for the infinite line on which our line segment lies - we do a final check above to make sure that we choose the solution for our specific line segment.
         /// </summary>
-        /// <param name="centreGearPoint"></param>
-        /// <param name="circleRadius"></param>
-        /// <param name="lineStart"></param>
-        /// <param name="lineEnd"></param>
-        /// <param name="intersectionGearPoint"></param>
+        /// <param id="centreGearPoint"></param>
+        /// <param id="circleRadius"></param>
+        /// <param id="lineStart"></param>
+        /// <param id="lineEnd"></param>
+        /// <param id="intersectionGearPoint"></param>
         /// <returns>Returns 0 if a solution is found otherwise returns -1</returns>
         public static int Intersect(GearPoint centreGearPoint, double circleRadius,
             GearPoint lineStart, GearPoint lineEnd, ref GearPoint intersectionGearPoint)
@@ -255,10 +255,10 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Method to calculate if a line between two points intersects a given circle
         /// </summary>
-        /// <param name="circlePos"></param>
-        /// <param name="circleRad"></param>
-        /// <param name="lineStart"></param>
-        /// <param name="lineEnd"></param>
+        /// <param id="circlePos"></param>
+        /// <param id="circleRad"></param>
+        /// <param id="lineStart"></param>
+        /// <param id="lineEnd"></param>
         /// <returns></returns>
         private static bool IsIntersecting(GearPoint circlePos, double circleRad, GearPoint lineStart,
             GearPoint lineEnd)
@@ -271,15 +271,15 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Calculates the X,Y coordinate of the point at which the tip relief radius starts.
         /// </summary>
-        /// <param name="gearDesignOutputParams"></param>
+        /// <param id="gearDesignOutputParams"></param>
         /// <returns>Start point of the tip relief radius</returns>
         public static GearPoint RhsStartOfTipRelief(Gear gear)
         {
-            var baseDiameter = GetValueOrDefault(gear, VariableNames.BaseDiameter);
+            var baseDiameter = GetValueOrDefault(gear, VariableIds.BaseDiameter);
             var baseRadius = baseDiameter / 2;
-            var outsideDiameter = GetValueOrDefault(gear, VariableNames.OutsideDiameter);
+            var outsideDiameter = GetValueOrDefault(gear, VariableIds.OutsideDiameter);
             var addendumRadius = outsideDiameter / 2;
-            var tipReliefRadius = GetValueOrDefault(gear, VariableNames.TipReliefRadius);
+            var tipReliefRadius = GetValueOrDefault(gear, VariableIds.TipReliefRadius);
             var distanceToInvolute = CentreToTipReliefRadiusStart(baseRadius, addendumRadius, tipReliefRadius);
             var pointc = PointOnInvolute(baseRadius, distanceToInvolute);
             return pointc;
@@ -288,9 +288,9 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Calculates the distance form the gear centre (0,0) to the start of the tip release radius.
         /// </summary>
-        /// <param name="baseRadius"></param>
-        /// <param name="addendumRadius"></param>
-        /// <param name="reliefRadius"></param>
+        /// <param id="baseRadius"></param>
+        /// <param id="addendumRadius"></param>
+        /// <param id="reliefRadius"></param>
         /// <returns>A double value. The distance from the gear centre (0,0) to the start of the tip relief radius.</returns>
         private static double CentreToTipReliefRadiusStart(double baseRadius, double addendumRadius, double reliefRadius)
         {
@@ -308,8 +308,8 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Calculates a point in the involute at a distance from the gear centre (0,0)
         /// </summary>
-        /// <param name="baseRadius"></param>
-        /// <param name="distanceToInvolute"></param>
+        /// <param id="baseRadius"></param>
+        /// <param id="distanceToInvolute"></param>
         /// <returns>A point in the involute at a distance from the gear centre</returns>
         public static GearPoint PointOnInvolute(double baseRadius, double distanceToInvolute)
         {
@@ -322,9 +322,9 @@ namespace Bolsover.Gears.Calculator.Strategies
         
         private static List<GearPoint> BuildBasicInvolute(Gear gear, int steps)
         {
-            var baseDiameter = GetValueOrDefault(gear, VariableNames.BaseDiameter);
+            var baseDiameter = GetValueOrDefault(gear, VariableIds.BaseDiameter);
             var baseRadius = baseDiameter / 2;
-            var outsideDiameter = GetValueOrDefault(gear, VariableNames.OutsideDiameter);
+            var outsideDiameter = GetValueOrDefault(gear, VariableIds.OutsideDiameter);
             var addendumRadius = outsideDiameter / 2;
             var involuteList = InvolutePoints(gear, steps);
             return involuteList;
@@ -332,7 +332,7 @@ namespace Bolsover.Gears.Calculator.Strategies
         public static GearPoint GearPointRhsEndRootRelief(Gear gear)
         {
             var rhSinvolute = BuildBasicInvolute(gear, 25);
-            var rootDiameter = GetValueOrDefault(gear, VariableNames.RootDiameter);
+            var rootDiameter = GetValueOrDefault(gear, VariableIds.RootDiameter);
             var rootradius = rootDiameter / 2;
             var x =
                 rootradius * Math.Tan(AngleToRootFilletCentre(gear)) +
@@ -352,8 +352,8 @@ namespace Bolsover.Gears.Calculator.Strategies
         
         private static double AngleToRootFilletCentre(Gear gear)
         {
-            var rfd = GetValueOrDefault(gear, VariableNames.RootFilletDiameter);
-            var rootDiameter = GetValueOrDefault(gear, VariableNames.RootDiameter);
+            var rfd = GetValueOrDefault(gear, VariableIds.RootFilletDiameter);
+            var rootDiameter = GetValueOrDefault(gear, VariableIds.RootDiameter);
             var result = Math.Asin(rfd / (rootDiameter + rfd));
             return result;
         }
@@ -362,8 +362,8 @@ namespace Bolsover.Gears.Calculator.Strategies
         /// <summary>
         ///     Returns the angle to a Point(x,y) on a circle diameter.
         /// </summary>
-        /// <param name="circleCentre"></param>
-        /// <param name="gearPointOnCircleDiameter"></param>
+        /// <param id="circleCentre"></param>
+        /// <param id="gearPointOnCircleDiameter"></param>
         /// <returns></returns>
         public static double AngleToPointOnCircle(GearPoint circleCentre, GearPoint gearPointOnCircleDiameter)
         {
@@ -388,15 +388,15 @@ namespace Bolsover.Gears.Calculator.Strategies
         ///     For 25 steps, the first step (0) will be on the base circle, the last step (24) will be on the tip circle.
         ///     Intervening points will be regularly spaced from the base circle.
         /// </summary>
-        /// <param name="baseRadius"></param>
-        /// <param name="addendumRadius"></param>
-        /// <param name="steps"></param>
+        /// <param id="baseRadius"></param>
+        /// <param id="addendumRadius"></param>
+        /// <param id="steps"></param>
         /// <returns></returns>
         public static List<GearPoint> InvolutePoints(Gear gear, int steps)
         {
-            var baseDiameter = GetValueOrDefault(gear, VariableNames.BaseDiameter);
+            var baseDiameter = GetValueOrDefault(gear, VariableIds.BaseDiameter);
             var baseRadius = baseDiameter / 2;
-            var outsideDiameter = GetValueOrDefault(gear, VariableNames.OutsideDiameter);
+            var outsideDiameter = GetValueOrDefault(gear, VariableIds.OutsideDiameter);
             var addendumRadius = outsideDiameter / 2;
             var points = new List<GearPoint>(steps);
             var stepSize = (addendumRadius - baseRadius) / steps;
@@ -418,7 +418,7 @@ namespace Bolsover.Gears.Calculator.Strategies
         {
             var rhsInvolute = RhsInvolute(gear);
             // var involuteList = BuildBasicInvolute(gear, 25);
-            // var rootDiameter = GetValueOrDefault(gear, VariableNames.RootDiameter);
+            // var rootDiameter = GetValueOrDefault(gear, VariableIds.RootDiameter);
             // var rootradius = rootDiameter / 2;
             // var x =
             //     rootradius * Math.Tan(AngleToRootFilletCentre(gear)) +
@@ -454,9 +454,9 @@ namespace Bolsover.Gears.Calculator.Strategies
             profile.AddFeature(ToothFeatureKey.ToothFlankMirror, mirrorFlank);
         }
 
-        private static double GetValueOrDefault(Gear gear, VariableNames name)
+        private static double GetValueOrDefault(Gear gear, VariableIds id)
         {
-            var variable = gear.GetVariable(name);
+            var variable = gear.GetVariable(id);
             return variable?.Value ?? 0.0;
         }
     }

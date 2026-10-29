@@ -7,11 +7,11 @@ namespace Bolsover.Gears.Gui;
 
 public class GearControlProvider
 {
-    UserControl Get(GearContext context)
+    UserControl Get(GearTypes context)
     {
         switch (context)
         {
-            case GearContext.External: return new GearView();
+            case GearTypes.External: return new GearView();
             
             default: return new GearView();
         }

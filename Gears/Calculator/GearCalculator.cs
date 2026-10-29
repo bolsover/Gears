@@ -17,6 +17,9 @@ namespace Bolsover.Gears.Calculator
         private const double DefaultTolerance = 1e-6;
         private const int DefaultMaxIterations = 100;
 
+        // Variables currently being evaluated, used to detect circular references between NCalc expressions.
+        private readonly HashSet<GearVariable> _evaluating = new();
+
         public void CalculateAll(Gear gear)
         {
             if (gear == null) throw new ArgumentNullException(nameof(gear));
@@ -25,20 +28,20 @@ namespace Bolsover.Gears.Calculator
             CalculateSubtree(root, visited);
         }
 
-        public double CalculateVariable(Gear gear, VariableNames name)
+        public double CalculateVariable(Gear gear, VariableIds id)
         {
             if (gear == null) throw new ArgumentNullException(nameof(gear));
-            var variable = gear.GearVariables.TryGetValue(name, out var v) ? v : null;
+            var variable = gear.GearVariables.TryGetValue(id, out var v) ? v : null;
             if (variable == null) return 0;
             variable.Value = EvaluateVariableValue(gear, variable);
             return variable.Value;
         }
 
 
-        public string CalculateDisplayImperialValue(Gear gear, VariableNames name)
+        public string CalculateDisplayImperialValue(Gear gear, VariableIds id)
         {
             if (gear == null) throw new ArgumentNullException(nameof(gear));
-            var variable = gear.GearVariables.TryGetValue(name, out var v) ? v : null;
+            var variable = gear.GearVariables.TryGetValue(id, out var v) ? v : null;
             if (variable == null) return "";
             variable.DisplayImperialValue = EvaluateDisplayImperialValue(variable);
             return variable.DisplayImperialValue;
@@ -79,28 +82,16 @@ namespace Bolsover.Gears.Calculator
         }
 
 
-        public string CalculateDisplayMetricValue(Gear gear, VariableNames name)
+        public string CalculateDisplayMetricValue(Gear gear, VariableIds id)
         {
             if (gear == null) throw new ArgumentNullException(nameof(gear));
-            var variable = gear.GearVariables.TryGetValue(name, out var v) ? v : null;
+            var variable = gear.GearVariables.TryGetValue(id, out var v) ? v : null;
             if (variable == null) return "";
             variable.DisplayMetricValue = EvaluateDisplayMetricValue(variable);
             return variable.DisplayMetricValue;
         }
         
-        // private string EvaluateDisplayMetricValue(Gear gear, GearVariable variable)
-        // {
-        //     if (variable.DisplayMetricCalc != "")
-        //     {
-        //         var expression = new Expression(variable.DisplayMetricCalc);
-        //         AssignExpressionParameters(gear, expression, variable.DisplayMetricCalc);
-        //         var value = (double)expression.Evaluate()!;
-        //         variable.DisplayMetricValue = value.ToString(variable.DisplayMetricFormat);
-        //     }
-        //
-        //     return variable.DisplayMetricValue;
-        // }
-        
+     
         private string EvaluateDisplayMetricValue(GearVariable variable)
         {
             var returnValue = "";
@@ -150,9 +141,9 @@ namespace Bolsover.Gears.Calculator
 
             foreach (var variable in gear.GearVariables.Values)
             {
-                CalculateVariable(gear, variable.Name);
-                CalculateDisplayImperialValue(gear, variable.Name);
-                CalculateDisplayMetricValue(gear, variable.Name);
+                CalculateVariable(gear, variable.Id);
+                CalculateDisplayImperialValue(gear, variable.Id);
+                CalculateDisplayMetricValue(gear, variable.Id);
             }
 
             if (gear.Gears == null) return;
@@ -164,20 +155,35 @@ namespace Bolsover.Gears.Calculator
 
         private double EvaluateVariableValue(Gear gear, GearVariable variable)
         {
-            if (variable.IsDesign) return variable.Value;
+            // A calculated variable whose expression is just its own [Key] behaves as an input.
+            if (variable.IsDesign || variable.NCalc?.Trim() == $"[{variable.Key}]") return variable.Value;
 
-            switch (variable.CalcMethod)
+            // NCalc expressions may reference other calculated variables, which are evaluated on demand.
+            if (!_evaluating.Add(variable))
             {
-                case "NCalc":
-                    EvaluateNCalcExpression(gear, variable);
-                    break;
-                case "PressureAngleByNewtonRaphson":
-                    variable.Value = CustomCalculations.PressureAngleByNewtonRaphson(
-                        CalculateVariable(gear, VariableNames.WorkingInvoluteFunction),
-                        DefaultInitialGuess,
-                        DefaultTolerance,
-                        DefaultMaxIterations);
-                    break;
+                throw new InvalidOperationException(
+                    $"Circular reference evaluating {variable.GearType}.{variable.Id} [{variable.Key}]");
+            }
+
+            try
+            {
+                switch (variable.CalcMethod)
+                {
+                    case "NCalc":
+                        EvaluateNCalcExpression(gear, variable);
+                        break;
+                    case "PressureAngleByNewtonRaphson":
+                        variable.Value = CustomCalculations.PressureAngleByNewtonRaphson(
+                            CalculateVariable(gear, VariableIds.WorkingInvoluteFunction),
+                            DefaultInitialGuess,
+                            DefaultTolerance,
+                            DefaultMaxIterations);
+                        break;
+                }
+            }
+            finally
+            {
+                _evaluating.Remove(variable);
             }
 
             return variable.Value;
@@ -216,7 +222,7 @@ namespace Bolsover.Gears.Calculator
                 // local variables available on this gear via NCalcVariables map
                 var ncalcMapProp = typeof(Gear).GetProperty("NCalcVariables",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var map = (Dictionary<string, VariableNames>)ncalcMapProp?.GetValue(gear);
+                var map = (Dictionary<string, VariableIds>)ncalcMapProp?.GetValue(gear);
                 if (map != null && map.TryGetValue(parameter, out var varName))
                 {
                     var localVar = gear.GetVariable(varName);
@@ -250,39 +256,43 @@ namespace Bolsover.Gears.Calculator
                 .ToArray();
         }
 
+        /// <summary>
+        /// Resolves an NCalc parameter to the value of the variable with that <see cref="GearVariable.Key"/>,
+        /// searching the current gear's subtree and then the whole gear set. A calculated variable is evaluated first.
+        /// </summary>
         public double? ResolveByNCalcSymbol(string symbol, Gear currentGear)
         {
             if (string.IsNullOrWhiteSpace(symbol)) return null;
-            var formatted = $"[{symbol}]";
 
             var start = currentGear;
             var visited = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
-            var match = FindFirstVariableRecursive(start, formatted, visited);
-            if (match != null) return match.Value;
+            var match = FindFirstVariableRecursive(start, symbol, visited);
 
             // search from the root as fallback
             var root = GetRoot(start);
-            if (!ReferenceEquals(root, start))
+            if (match == null && !ReferenceEquals(root, start))
             {
                 var visitedFromRoot = new HashSet<Gear>(ReferenceEqualityComparer.Instance);
-                var rootMatch = FindFirstVariableRecursive(root, formatted, visitedFromRoot);
-                if (rootMatch != null) return rootMatch.Value;
+                match = FindFirstVariableRecursive(root, symbol, visitedFromRoot);
             }
 
-            return null;
+            if (match == null) return null;
+            var (owner, variable) = match.Value;
+            return EvaluateVariableValue(owner, variable);
         }
 
-        private static GearVariable FindFirstVariableRecursive(Gear gear, string formattedSymbol, HashSet<Gear> visited)
+        private static (Gear Owner, GearVariable Variable)? FindFirstVariableRecursive(Gear gear, string key,
+            HashSet<Gear> visited)
         {
             if (gear == null) return null;
             if (visited != null && !visited.Add(gear)) return null;
-            var current = SearchVariables(gear, formattedSymbol);
-            if (current != null) return current;
+            var current = SearchVariables(gear, key);
+            if (current != null) return (gear, current);
             if (gear.Gears != null)
             {
                 foreach (var child in gear.Gears)
                 {
-                    var found = FindFirstVariableRecursive(child, formattedSymbol, visited);
+                    var found = FindFirstVariableRecursive(child, key, visited);
                     if (found != null) return found;
                 }
             }
@@ -290,9 +300,10 @@ namespace Bolsover.Gears.Calculator
             return null;
         }
 
-        private static GearVariable SearchVariables(Gear gear, string symbol)
+        private static GearVariable SearchVariables(Gear gear, string key)
         {
-            return gear?.GearVariables?.Values?.FirstOrDefault(v => v.NCalc == symbol);
+            var formatted = $"[{key}]";
+            return gear?.GearVariables?.Values?.FirstOrDefault(v => v.Key == key || v.NCalc == formatted);
         }
 
         // Reference equality comparer copy (internal to calculator) to avoid accessing Gear internals.

@@ -16,19 +16,19 @@ namespace Bolsover.Gears.Model
             // RootRelief.Clear();
 
             // Simulate the hob cutting path
-            for (int i = 0; i <= segments; i++)
+            for (var i = 0; i <= segments; i++)
             {
-                double t = (double)i / segments;
-                double theta = gearRotationStart + t * (gearRotationEnd - gearRotationStart); // gear rotation angle (radians)
-                double feed = t * feedRate; // linear feed of the hob
+                var t = (double)i / segments;
+                var theta = gearRotationStart + t * (gearRotationEnd - gearRotationStart); // gear rotation angle (radians)
+                var feed = t * feedRate; // linear feed of the hob
 
                 // Hob center position in gear coordinates
-                double hobX = feed;
-                double hobY = hobRadius;
+                var hobX = feed;
+                var hobY = hobRadius;
 
                 // Cutting point on hob periphery (rotated by theta)
-                double cutX = hobX + hobRadius * Math.Cos(theta);
-                double cutY = hobY - hobRadius * Math.Sin(theta);
+                var cutX = hobX + hobRadius * Math.Cos(theta);
+                var cutY = hobY - hobRadius * Math.Sin(theta);
 
                 // RootRelief.Add(new Point2D(cutX, cutY));
             }
@@ -48,9 +48,9 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Renders a ToothProfile onto a Bitmap image.
         /// </summary>
-        /// <param name="toothProfile">The tooth profile to render.</param>
-        /// <param name="width">The width of the image.</param>
-        /// <param name="height">The height of the image.</param>
+        /// <param id="toothProfile">The tooth profile to render.</param>
+        /// <param id="width">The width of the image.</param>
+        /// <param id="height">The height of the image.</param>
         /// <returns>A Bitmap image containing the rendered tooth profile.</returns>
         public Bitmap RenderToImage(ToothProfile toothProfile, int width, int height)
         {
@@ -83,10 +83,10 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Draws a single feature (a series of points) onto the Graphics object.
         /// </summary>
-        /// <param name="graphics">The Graphics object to draw on.</param>
-        /// <param name="feature">The feature (list of points) to draw.</param>
-        /// <param name="color">The color of the feature.</param>
-        /// <param name="thickness">The line thickness.</param>
+        /// <param id="graphics">The Graphics object to draw on.</param>
+        /// <param id="feature">The feature (list of points) to draw.</param>
+        /// <param id="color">The color of the feature.</param>
+        /// <param id="thickness">The line thickness.</param>
         private void DrawFeature(Graphics graphics, System.Collections.Generic.List<PointF> feature, Color color, float thickness)
         {
             if (feature.Count > 1)
@@ -101,19 +101,18 @@ namespace Bolsover.Gears.Model
         /// <summary>
         /// Adds X and Y axis lines to the drawing for reference.
         /// </summary>
-        /// <param name="graphics">The Graphics object to draw on.</param>
-        /// <param name="width">The width of the canvas.</param>
-        /// <param name="height">The height of the canvas.</param>
+        /// <param id="graphics">The Graphics object to draw on.</param>
+        /// <param id="width">The width of the canvas.</param>
+        /// <param id="height">The height of the canvas.</param>
         private void AddAxisLines(Graphics graphics, int width, int height)
         {
-            using (Pen axisPen = new Pen(Color.Gray, 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
-            {
-                // Draw horizontal X-axis (centered vertically).
-                graphics.DrawLine(axisPen, new Point(0, height / 2), new Point(width, height / 2));
+            using Pen axisPen = new Pen(Color.Gray, 1);
+            axisPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+            // Draw horizontal X-axis (centered vertically).
+            graphics.DrawLine(axisPen, new Point(0, height / 2), new Point(width, height / 2));
 
-                // Draw vertical Y-axis (centered horizontally).
-                graphics.DrawLine(axisPen, new Point(width / 2, 0), new Point(width / 2, height));
-            }
+            // Draw vertical Y-axis (centered horizontally).
+            graphics.DrawLine(axisPen, new Point(width / 2, 0), new Point(width / 2, height));
         }
     }
 }

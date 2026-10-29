@@ -21,7 +21,7 @@ namespace UnitTests
 
             expression.DynamicParameters["Pi"] = _ =>
             {
-                Console.WriteLine("I'm evaluating π!");
+                Console.WriteLine(@"I'm evaluating π!");
                 return 3.14;
             };
 
@@ -145,7 +145,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            // expression.Parameters["y"] = y;
+            // expression.Variables["y"] = y;
             var result = (double)expression.Evaluate() * (180.0 / Math.PI);
             Assert.That(result, Is.EqualTo(23.11263d).Within(0.0001d));
 
@@ -179,7 +179,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            // expression.Parameters["y"] = y;
+            // expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(0.023405d).Within(0.0001d));
 
@@ -207,7 +207,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            // expression.Parameters["y"] = y;
+            // expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(0.02241351d).Within(0.0001d));
 
@@ -242,7 +242,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            // expression.Parameters["y"] = y;
+            // expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(0.098089d).Within(0.0001d));
 
@@ -275,7 +275,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(6.7480d).Within(0.0001d));
 
@@ -307,7 +307,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(41.5692d).Within(0.0001d));
 
@@ -339,7 +339,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(207.8460d).Within(0.0001d));
 
@@ -370,7 +370,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(191.61145d).Within(0.0001d));
 
@@ -401,7 +401,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(38.3222d).Within(0.0001d));
 
@@ -432,7 +432,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(41.6666d).Within(0.0001d));
 
@@ -463,7 +463,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(208.3333).Within(0.0001d));
 
@@ -493,7 +493,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(3.2923).Within(0.0001d));
 
@@ -523,7 +523,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(2.9980).Within(0.0001d));
 
@@ -553,7 +553,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(3.4557).Within(0.0001d));
         }
@@ -582,7 +582,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(3.75).Within(0.0001d));
         }
@@ -611,7 +611,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(48.1539).Within(0.0001d));
         }
@@ -640,7 +640,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(213.8422).Within(0.0001d));
         }
@@ -669,7 +669,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(34.6577).Within(0.0001d));
         }
@@ -698,7 +698,7 @@ namespace UnitTests
             expression.Parameters["beta"] = beta;
             expression.Parameters["alphan"] = alphan;
             expression.Parameters["mn"] = mn;
-            //  expression.Parameters["y"] = y;
+            //  expression.Variables["y"] = y;
             var result = (double)expression.Evaluate();
             Assert.That(result, Is.EqualTo(200.3460).Within(0.0001d));
         }

@@ -102,9 +102,9 @@ namespace Bolsover.Gears.Model;
         ///     Rotate a sequence of points about the origin in the anticlockwise
         ///     direction by the angle phi
         /// </summary>
-        /// <param name="points">
+        /// <param id="points">
         ///     The points from which a rotated
-        ///     <param name="phi">The angle to rotate by in radians</param>
+        ///     <param id="phi">The angle to rotate by in radians</param>
         ///     point sequence will be generated
         /// </param>
         /// <returns>The sequence of rotated points</returns>

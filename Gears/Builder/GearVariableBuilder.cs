@@ -12,15 +12,15 @@ public class GearVariableBuilder
         return _gearVariable;
     }
 
-    public GearVariableBuilder SetVariableName(VariableNames name)
+    public GearVariableBuilder SetVariableId(VariableIds id)
     {
-        _gearVariable.Name = name;
+        _gearVariable.Id = id;
         return this;
     }
 
-    public GearVariableBuilder SetGearContext(GearContext context)
+    public GearVariableBuilder SetGearType(GearTypes context)
     {
-        _gearVariable.Context = context;
+        _gearVariable.GearType = context;
         return this;
     }
 
@@ -39,6 +39,18 @@ public class GearVariableBuilder
     public GearVariableBuilder SetFormula(string formula)
     {
         _gearVariable.Formula = formula;
+        return this;
+    }
+
+    public GearVariableBuilder SetFormulaOverride(string formulaOverride)
+    {
+        _gearVariable.FormulaOverride = formulaOverride;
+        return this;
+    }
+
+    public GearVariableBuilder SetKey(string key)
+    {
+        _gearVariable.Key = key;
         return this;
     }
 

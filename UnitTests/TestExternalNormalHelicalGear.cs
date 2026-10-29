@@ -20,7 +20,7 @@ namespace UnitTests
         public void SetUp()
         {
             
-            _gear = new Gear(GearContext.ExternalNormalHelical, CalculationMode.Automatic);
+            _gear = new Gear(GearTypes.ExternalNormalHelical, CalculationMode.Automatic);
   
             _gear.Calculate();
 
@@ -31,86 +31,86 @@ namespace UnitTests
         [Test]
         public void TestNormalModule()
         {
-            GearVariable module = _gear.GetVariable(VariableNames.NormalModule);
+            GearVariable module = _gear.GetVariable(VariableIds.NormalModule);
             Assert.That(module.Value, Is.EqualTo(3d).Within(0.001d));
         }
         
         [Test]
         public void TestTeeth()
         {
-            GearVariable teeth = _gear.GetVariable(VariableNames.Teeth);
+            GearVariable teeth = _gear.GetVariable(VariableIds.Teeth);
             Assert.That(teeth.Value, Is.EqualTo(60d).Within(0.001d));
         }
         
         [Test]
         public void TestNormalPressureAngle()
         {
-            GearVariable pressureAngle =_gear.GetVariable(VariableNames.NormalPressureAngle);
+            GearVariable pressureAngle =_gear.GetVariable(VariableIds.NormalPressureAngle);
             Assert.That(Degrees(pressureAngle.Value), Is.EqualTo(20d).Within(0.001d));
         }
         
         [Test]
         public void TestPitchDiameter()
         {
-            GearVariable pitchDiameter = _gear.GetVariable(VariableNames.PitchDiameter);
+            GearVariable pitchDiameter = _gear.GetVariable(VariableIds.PitchDiameter);
             Assert.That(pitchDiameter.Value, Is.EqualTo(207.846d).Within(0.001d));
         }
         
         [Test]
         public void TestBaseDiameter()
         {
-            var variable = _gear.GetVariable(VariableNames.BaseDiameter);
+            var variable = _gear.GetVariable(VariableIds.BaseDiameter);
             Assert.That(variable.Value, Is.EqualTo(191.61145d).Within(0.001d));
         }
         
         [Test]
         public void TestAddendum()
         {
-            var variable  = _gear.GetVariable(VariableNames.Addendum);
+            var variable  = _gear.GetVariable(VariableIds.Addendum);
             Assert.That(variable.Value, Is.EqualTo(3d).Within(0.001d));
         }
         
         [Test]
         public void TestDedendum()
         {
-            var variable  = _gear.GetVariable(VariableNames.Dedendum);
+            var variable  = _gear.GetVariable(VariableIds.Dedendum);
             Assert.That(variable.Value, Is.EqualTo(3.75d).Within(0.001d));
         }
         
         [Test]
         public void TestOutsideDiameter()
         {
-            var variable  = _gear.GetVariable(VariableNames.OutsideDiameter);
+            var variable  = _gear.GetVariable(VariableIds.OutsideDiameter);
             Assert.That(variable.Value, Is.EqualTo(213.846d).Within(0.001d));
         }
         
         [Test]
         public void TestRootDiameter()
         {
-            var variable = _gear.GetVariable(VariableNames.RootDiameter);
+            var variable = _gear.GetVariable(VariableIds.RootDiameter);
             Assert.That(variable.Value, Is.EqualTo(200.346d).Within(0.001d));
         }
         
         [Test]
         public void TestRadialPressureAngle()
         {
-            var variable =  _gear.GetVariable(VariableNames.RadialPressureAngle);
+            var variable =  _gear.GetVariable(VariableIds.RadialPressureAngle);
            Assert.That(variable.Value, Is.EqualTo(22.79587725895782d * (Math.PI / 180.0)).Within(0.001d));
         }
         
         [Test]
         public void TestWholeDepth()
         {
-            var variable =  _gear.GetVariable(VariableNames.WholeDepth);
+            var variable =  _gear.GetVariable(VariableIds.WholeDepth);
             Assert.That(variable.Value, Is.EqualTo(6.75d).Within(0.001d));
         }
         
         [Test]
         public void TestVariableChange()
         {
-            _gear.GetVariable(VariableNames.NormalModule).Value = 2;
+            _gear.GetVariable(VariableIds.NormalModule).Value = 2;
             _gear.Calculate();
-            var variable  = _gear.GetVariable(VariableNames.PitchDiameter);
+            var variable  = _gear.GetVariable(VariableIds.PitchDiameter);
             Assert.That(variable.Value, Is.EqualTo(138.564d).Within(0.001d));
         }
         

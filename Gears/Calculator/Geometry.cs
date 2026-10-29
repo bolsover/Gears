@@ -9,9 +9,9 @@ public static class Geometry
     /// <summary>
     /// Converts spherical coordinates to Cartesian coordinates.
     /// </summary>
-    /// <param name="r">Sphere radius</param>
-    /// <param name="gamma">Polar angle (in radians)</param>
-    /// <param name="theta">Azimuth angle (in radians)</param>
+    /// <param id="r">Sphere radius</param>
+    /// <param id="gamma">Polar angle (in radians)</param>
+    /// <param id="theta">Azimuth angle (in radians)</param>
     /// <returns>Tuple containing Cartesian coordinates (x, y, z)</returns>
     public static (double x, double y, double z) SphereToCartesian(double r, double gamma, double theta)
     {
@@ -25,14 +25,14 @@ public static class Geometry
      /// <summary>
         /// Gets arc points plotted on a sphere's surface.
         /// </summary>
-        /// <param name="sr">Sphere radius.</param>
-        /// <param name="cGamma">Polar angle of the arc's center (in radians).</param>
-        /// <param name="cTheta">Azimuth angle of the arc's center (in radians).</param>
-        /// <param name="rDelta">Angle between OC and OP, where O is the sphere's center,
+        /// <param id="sr">Sphere radius.</param>
+        /// <param id="cGamma">Polar angle of the arc's center (in radians).</param>
+        /// <param id="cTheta">Azimuth angle of the arc's center (in radians).</param>
+        /// <param id="rDelta">Angle between OC and OP, where O is the sphere's center,
         ///                      C is the arc's center, and P is any point on the arc.</param>
-        /// <param name="start">Arc's starting angle (in radians).</param>
-        /// <param name="end">Arc's ending angle (in radians).</param>
-        /// <param name="n">Number of points on the arc.</param>
+        /// <param id="start">Arc's starting angle (in radians).</param>
+        /// <param id="end">Arc's ending angle (in radians).</param>
+        /// <param id="n">Number of points on the arc.</param>
         /// <returns>List of Cartesian coordinates (x, y, z) representing the arc points.</returns>
         public static List<(double x, double y, double z)> SArc(
             double sr, double cGamma, double cTheta,
@@ -98,8 +98,8 @@ public static class Geometry
         /// <summary>
         /// Spherical involute geometry function.
         /// </summary>
-        /// <param name="gamma0">Base polar angle that corresponds to the pitch cone.</param>
-        /// <param name="gamma">Polar angle(s) of the point(s) lying on the geometry, for which the corresponding azimuth angle(s) are to be calculated.</param>
+        /// <param id="gamma0">Base polar angle that corresponds to the pitch cone.</param>
+        /// <param id="gamma">Polar angle(s) of the point(s) lying on the geometry, for which the corresponding azimuth angle(s) are to be calculated.</param>
         /// <returns>Azimuth angle(s) of the point(s) lying on the geometry.</returns>
         public static double SphericalInvolute(double gamma0, double gamma)
         {
@@ -113,9 +113,9 @@ public static class Geometry
              /// <summary>
         /// Finds a circle in 3D space defined by three points.
         /// </summary>
-        /// <param name="a">3D point A lying on the circle.</param>
-        /// <param name="b">3D point B lying on the circle.</param>
-        /// <param name="c">3D point C lying on the circle.</param>
+        /// <param id="a">3D point A lying on the circle.</param>
+        /// <param id="b">3D point B lying on the circle.</param>
+        /// <param id="c">3D point C lying on the circle.</param>
         /// <returns>A tuple containing the radius and the center of the circle.</returns>
         public static (double radius, (double x, double y, double z) center) Circle3DBy3Points(
             (double x, double y, double z) a,
@@ -200,8 +200,8 @@ public static class Geometry
         /// <summary>
         /// Constructs a 3D rotation transform matrix.
         /// </summary>
-        /// <param name="axis">The axis of rotation as a 3D vector (x, y, z).</param>
-        /// <param name="alpha">The angle to rotate to (in radians).</param>
+        /// <param id="axis">The axis of rotation as a 3D vector (x, y, z).</param>
+        /// <param id="alpha">The angle to rotate to (in radians).</param>
         /// <returns>A 3x3 rotation matrix represented as a 2D array of doubles.</returns>
         public static double[,] RotationMatrix((double x, double y, double z) axis, double alpha)
         {
@@ -235,9 +235,9 @@ public static class Geometry
         /// <summary>
         /// Finds the angle between two vectors defined by points OA and OB.
         /// </summary>
-        /// <param name="o">The origin point O of the vectors.</param>
-        /// <param name="a">The endpoint A of the first vector.</param>
-        /// <param name="b">The endpoint B of the second vector.</param>
+        /// <param id="o">The origin point O of the vectors.</param>
+        /// <param id="a">The endpoint A of the first vector.</param>
+        /// <param id="b">The endpoint B of the second vector.</param>
         /// <returns>The angle between the two vectors in radians.</returns>
         public static double AngleBetween(
             (double x, double y, double z) o,

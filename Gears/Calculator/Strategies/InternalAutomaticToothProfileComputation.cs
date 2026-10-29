@@ -11,10 +11,10 @@ namespace Bolsover.Gears.Calculator.Strategies
             if (gear == null) throw new ArgumentNullException(nameof(gear));
             gear.Calculate();
 
-            var rootDiameter = GetValueOrDefault(gear, VariableNames.RootDiameter);
-            var baseDiameter = GetValueOrDefault(gear, VariableNames.BaseDiameter);
-            var pitchDiameter = GetValueOrDefault(gear, VariableNames.PitchDiameter);
-            var outsideDiameter = GetValueOrDefault(gear, VariableNames.OutsideDiameter);
+            var rootDiameter = GetValueOrDefault(gear, VariableIds.RootDiameter);
+            var baseDiameter = GetValueOrDefault(gear, VariableIds.BaseDiameter);
+            var pitchDiameter = GetValueOrDefault(gear, VariableIds.PitchDiameter);
+            var outsideDiameter = GetValueOrDefault(gear, VariableIds.OutsideDiameter);
 
             var rRoot = rootDiameter / 2.0;
             var rBase = baseDiameter / 2.0;
@@ -44,9 +44,9 @@ namespace Bolsover.Gears.Calculator.Strategies
             return profile;
         }
 
-        private static double GetValueOrDefault(Gear gear, VariableNames name)
+        private static double GetValueOrDefault(Gear gear, VariableIds id)
         {
-            var variable = gear.GetVariable(name);
+            var variable = gear.GetVariable(id);
             return variable?.Value ?? 0.0;
         }
     }
