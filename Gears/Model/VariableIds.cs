@@ -23,6 +23,8 @@ public enum VariableIds
     AxialModule,
     [Description("Base Diameter"), Symbol("db")]
     BaseDiameter,
+    [Description("Bottom Clearance"), Symbol("c")]
+    BottomClearance,
     [Description("Centre Distance Increment Factor"), Symbol("y")]
     CentreDistanceIncrementFactor,
     [Description("Circular Backlash"), Symbol("jt")]

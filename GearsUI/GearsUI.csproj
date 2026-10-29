@@ -177,6 +177,12 @@
     <Compile Include="Gui\Views\GearForm.Designer.cs" />
     <Compile Include="Gui\Views\AlibreGearForm.cs" />
     <Compile Include="Gui\Views\AlibreGearForm.Designer.cs" />
+    <Compile Include="Gui\Views\AddMeshedGearDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Gui\Views\AddMeshedGearDialog.Designer.cs">
+      <DependentUpon>AddMeshedGearDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Gui\Views\GearView.resx" />

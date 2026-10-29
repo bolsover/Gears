@@ -95,5 +95,155 @@ namespace UnitTests
             Assert.IsNotNull(addendumRow);
             Assert.AreEqual("h_a", addendumRow.SymbolLatex);
         }
+
+        [Test]
+        public void TestStandardExternalPairCalculation()
+        {
+            var pair = GearParameterCalculator.CalculatePair(
+                z1: 20, m: 2.0, alphaDeg: 20.0, faceWidth1: 15.0, x1: 0.0, isInternal1: false, rimThickness1: 10.0,
+                z2: 40, faceWidth2: 15.0, x2: 0.0, isInternal2: false, rimThickness2: 10.0);
+
+            Assert.IsNotNull(pair);
+            Assert.AreEqual(20, pair.Gear1.Teeth);
+            Assert.AreEqual(40, pair.Gear2.Teeth);
+            Assert.AreEqual(40.0, pair.Gear1.PitchDiameter, 1e-6);
+            Assert.AreEqual(80.0, pair.Gear2.PitchDiameter, 1e-6);
+            Assert.AreEqual(60.0, pair.StandardCentreDistance, 1e-6); // a = m * (z1 + z2) / 2 = 2 * 60 / 2 = 60
+            Assert.AreEqual(60.0, pair.WorkingCentreDistance, 1e-6); // zero profile shift => aw = a
+            Assert.AreEqual(20.0, pair.WorkingPressureAngleDeg, 1e-6);
+            Assert.AreEqual(2.0, pair.GearRatio, 1e-6); // z2 / z1 = 40 / 20 = 2.0
+            Assert.Greater(pair.ContactRatio, 1.0);
+            Assert.Greater(pair.ParameterRows.Count, 20);
+        }
+
+        [Test]
+        public void TestProfileShiftedExternalPairCalculation()
+        {
+            var pair = GearParameterCalculator.CalculatePair(
+                z1: 16, m: 3.0, alphaDeg: 20.0, faceWidth1: 20.0, x1: 0.3, isInternal1: false, rimThickness1: 10.0,
+                z2: 24, faceWidth2: 20.0, x2: 0.2, isInternal2: false, rimThickness2: 10.0);
+
+            Assert.IsNotNull(pair);
+            Assert.AreEqual(60.0, pair.StandardCentreDistance, 1e-6); // 3 * 40 / 2 = 60
+            Assert.Greater(pair.WorkingCentreDistance, pair.StandardCentreDistance); // Positive sum shift increases aw
+            Assert.Greater(pair.WorkingPressureAngleDeg, 20.0);
+            Assert.Greater(pair.CentreDistanceIncrementFactor, 0.0);
+            Assert.Greater(pair.ContactRatio, 1.0);
+
+            var awRow = pair.ParameterRows.Find(r => r.ParameterName == "Working Centre Distance");
+            Assert.IsNotNull(awRow);
+            Assert.AreEqual("a_w", awRow.SymbolLatex);
+            Assert.AreEqual(pair.WorkingCentreDistance, awRow.Value, 1e-6);
+        }
+
+        [Test]
+        public void TestInternalExternalPairCalculation()
+        {
+            var pair = GearParameterCalculator.CalculatePair(
+                z1: 20, m: 2.5, alphaDeg: 20.0, faceWidth1: 15.0, x1: 0.0, isInternal1: false, rimThickness1: 10.0,
+                z2: 60, faceWidth2: 15.0, x2: 0.0, isInternal2: true, rimThickness2: 12.0);
+
+            Assert.IsNotNull(pair);
+            Assert.IsFalse(pair.Gear1.IsInternal);
+            Assert.IsTrue(pair.Gear2.IsInternal);
+            Assert.AreEqual(2.5 * (60 - 20) / 2.0, pair.StandardCentreDistance, 1e-6); // m*(z2 - z1)/2 = 50.0
+            Assert.AreEqual(50.0, pair.WorkingCentreDistance, 1e-6);
+            Assert.AreEqual(3.0, pair.GearRatio, 1e-6);
+            Assert.Greater(pair.ContactRatio, 1.0);
+        }
+
+        [Test]
+        public void TestClearanceCalculation_CustomClearance_ExternalGear()
+        {
+            var z = 20;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var faceWidth = 15.0;
+            var x = 0.0;
+            var customClearance = 0.6; // non-standard clearance (standard is 0.25 * 2 = 0.5)
+
+            var result = GearParameterCalculator.Calculate(z, m, alphaDeg, faceWidth, x, false, 10.0, customClearance);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(customClearance, result.Clearance, 1e-6);
+            Assert.AreEqual(2.0, result.Addendum, 1e-6); // ha = m * (1 + x) = 2.0
+            Assert.AreEqual(2.0 + customClearance, result.Dedendum, 1e-6); // hf = m * (1 - x) + c = 2.0 + 0.6 = 2.6
+            Assert.AreEqual(4.6, result.WholeDepth, 1e-6); // h = ha + hf = 2.0 + 2.6 = 4.6
+            Assert.AreEqual(44.0, result.TipDiameter, 1e-6); // da = d + 2 * ha = 44.0
+            Assert.AreEqual(40.0 - 2.0 * 2.6, result.RootDiameter, 1e-6); // df = d - 2 * hf = 34.8
+
+            var clearanceRow = result.ParameterRows.Find(r => r.ParameterName == "Bottom Clearance");
+            Assert.IsNotNull(clearanceRow);
+            Assert.AreEqual("c", clearanceRow.SymbolLatex);
+            Assert.AreEqual("c", clearanceRow.FormulaLatex);
+            Assert.AreEqual(customClearance, clearanceRow.Value, 1e-6);
+            Assert.AreEqual("mm", clearanceRow.Unit);
+
+            var dedendumRow = result.ParameterRows.Find(r => r.ParameterName == "Dedendum");
+            Assert.IsNotNull(dedendumRow);
+            Assert.AreEqual("m(1 - x) + c", dedendumRow.FormulaLatex);
+            Assert.AreEqual(2.6, dedendumRow.Value, 1e-6);
+        }
+
+        [Test]
+        public void TestClearanceCalculation_CustomClearance_InternalGear()
+        {
+            var z = 40;
+            var m = 2.0;
+            var alphaDeg = 20.0;
+            var faceWidth = 15.0;
+            var x = 0.1;
+            var customClearance = 0.75;
+
+            var result = GearParameterCalculator.Calculate(z, m, alphaDeg, faceWidth, x, true, 10.0, customClearance);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(customClearance, result.Clearance, 1e-6);
+            Assert.AreEqual(2.0 * (1.0 - 0.1), result.Addendum, 1e-6); // ha = 1.8
+            Assert.AreEqual(2.0 * (1.0 + 0.1) + customClearance, result.Dedendum, 1e-6); // hf = 2.2 + 0.75 = 2.95
+            Assert.AreEqual(1.8 + 2.95, result.WholeDepth, 1e-6); // h = 4.75
+            Assert.AreEqual(80.0 - 2.0 * 1.8, result.TipDiameter, 1e-6); // da = 76.4
+            Assert.AreEqual(80.0 + 2.0 * 2.95, result.RootDiameter, 1e-6); // df = 85.9
+
+            var dedendumRow = result.ParameterRows.Find(r => r.ParameterName == "Dedendum");
+            Assert.IsNotNull(dedendumRow);
+            Assert.AreEqual("m(1 + x) + c", dedendumRow.FormulaLatex);
+            Assert.AreEqual(2.95, dedendumRow.Value, 1e-6);
+        }
+
+        [Test]
+        public void TestClearanceCalculation_GearPairWithClearance()
+        {
+            var pair = GearParameterCalculator.CalculatePair(
+                z1: 20, m: 2.0, alphaDeg: 20.0, faceWidth1: 15.0, x1: 0.0, isInternal1: false, rimThickness1: 10.0,
+                z2: 30, faceWidth2: 15.0, x2: 0.0, isInternal2: false, rimThickness2: 10.0,
+                clearance1: 0.6, clearance2: 0.7);
+
+            Assert.IsNotNull(pair);
+            Assert.AreEqual(0.6, pair.Gear1.Clearance, 1e-6);
+            Assert.AreEqual(0.7, pair.Gear2.Clearance, 1e-6);
+            Assert.AreEqual(0.6, pair.Gear1Clearance, 1e-6);
+            Assert.AreEqual(0.7, pair.Gear2Clearance, 1e-6);
+
+            var c1Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 1 Clearance");
+            Assert.IsNotNull(c1Row);
+            Assert.AreEqual("c_1", c1Row.SymbolLatex);
+            Assert.AreEqual(0.6, c1Row.Value, 1e-6);
+
+            var c2Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 2 Clearance");
+            Assert.IsNotNull(c2Row);
+            Assert.AreEqual("c_2", c2Row.SymbolLatex);
+            Assert.AreEqual(0.7, c2Row.Value, 1e-6);
+
+            var hf1Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 1 Dedendum");
+            Assert.IsNotNull(hf1Row);
+            Assert.AreEqual("m(1 - x_1) + c_1", hf1Row.FormulaLatex);
+            Assert.AreEqual(2.6, hf1Row.Value, 1e-6);
+
+            var hf2Row = pair.ParameterRows.Find(r => r.ParameterName == "Gear 2 Dedendum");
+            Assert.IsNotNull(hf2Row);
+            Assert.AreEqual("m(1 - x_2) + c_2", hf2Row.FormulaLatex);
+            Assert.AreEqual(2.7, hf2Row.Value, 1e-6);
+        }
     }
 }

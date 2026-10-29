@@ -71,6 +71,13 @@ namespace Bolsover.Gears.Gui
         public double AddendumRadius { get; set; }
         public double DedendumRadius { get; set; }
 
+        public bool HasSecondGear { get; set; }
+        public double Gear2CenterDistance { get; set; }
+        public double Gear2PitchRadius { get; set; }
+        public double Gear2BaseRadius { get; set; }
+        public double Gear2AddendumRadius { get; set; }
+        public double Gear2DedendumRadius { get; set; }
+
         /// <summary>
         /// Current visualization mode (2D or 3D).
         /// </summary>
@@ -271,14 +278,30 @@ namespace Bolsover.Gears.Gui
             // Render Reference Circles
             if (ShowReferenceCircles)
             {
-                DrawReferenceCircle(g, screenCx - (float)(worldCx * fitScale), screenCy + (float)(worldCy * fitScale),
+                var g1Cx = screenCx - (float)(worldCx * fitScale);
+                var g1Cy = screenCy + (float)(worldCy * fitScale);
+                DrawReferenceCircle(g, g1Cx, g1Cy,
                     (float)(PitchRadius * fitScale), Color.DarkSeaGreen, "Pitch (d)");
-                DrawReferenceCircle(g, screenCx - (float)(worldCx * fitScale), screenCy + (float)(worldCy * fitScale),
+                DrawReferenceCircle(g, g1Cx, g1Cy,
                     (float)(BaseRadius * fitScale), Color.DarkGoldenrod, "Base (db)");
-                DrawReferenceCircle(g, screenCx - (float)(worldCx * fitScale), screenCy + (float)(worldCy * fitScale),
+                DrawReferenceCircle(g, g1Cx, g1Cy,
                     (float)(AddendumRadius * fitScale), Color.CornflowerBlue, "Tip (da)");
-                DrawReferenceCircle(g, screenCx - (float)(worldCx * fitScale), screenCy + (float)(worldCy * fitScale),
+                DrawReferenceCircle(g, g1Cx, g1Cy,
                     (float)(DedendumRadius * fitScale), Color.IndianRed, "Root (df)");
+
+                if (HasSecondGear)
+                {
+                    var g2Cx = screenCx + (float)((Gear2CenterDistance - worldCx) * fitScale);
+                    var g2Cy = screenCy + (float)(worldCy * fitScale);
+                    DrawReferenceCircle(g, g2Cx, g2Cy,
+                        (float)(Gear2PitchRadius * fitScale), Color.DarkSeaGreen, "Pitch 2 (d2)");
+                    DrawReferenceCircle(g, g2Cx, g2Cy,
+                        (float)(Gear2BaseRadius * fitScale), Color.DarkGoldenrod, "Base 2 (db2)");
+                    DrawReferenceCircle(g, g2Cx, g2Cy,
+                        (float)(Gear2AddendumRadius * fitScale), Color.CornflowerBlue, "Tip 2 (da2)");
+                    DrawReferenceCircle(g, g2Cx, g2Cy,
+                        (float)(Gear2DedendumRadius * fitScale), Color.IndianRed, "Root 2 (df2)");
+                }
             }
 
             // Draw Gear Polylines
@@ -332,6 +355,14 @@ namespace Bolsover.Gears.Gui
                 minY = Math.Min(minY, -AddendumRadius);
                 maxX = Math.Max(maxX, AddendumRadius);
                 maxY = Math.Max(maxY, AddendumRadius);
+
+                if (HasSecondGear && Gear2AddendumRadius > 0)
+                {
+                    minX = Math.Min(minX, Gear2CenterDistance - Gear2AddendumRadius);
+                    minY = Math.Min(minY, -Gear2AddendumRadius);
+                    maxX = Math.Max(maxX, Gear2CenterDistance + Gear2AddendumRadius);
+                    maxY = Math.Max(maxY, Gear2AddendumRadius);
+                }
             }
 
             return any;
@@ -361,14 +392,29 @@ namespace Bolsover.Gears.Gui
                 return;
             }
 
-            // Calculate bounding radius for scale
-            var maxR = 1.0;
+            // Calculate bounding box for center and scale
+            var minX = double.MaxValue; var maxX = double.MinValue;
+            var minY = double.MaxValue; var maxY = double.MinValue;
+            var minZ = double.MaxValue; var maxZ = double.MinValue;
             for (var i = 0; i < _mesh.Vertices.Count; i++)
             {
                 var v = _mesh.Vertices[i];
-                var r = Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
-                if (r > maxR) maxR = r;
+                if (v.X < minX) minX = v.X;
+                if (v.X > maxX) maxX = v.X;
+                if (v.Y < minY) minY = v.Y;
+                if (v.Y > maxY) maxY = v.Y;
+                if (v.Z < minZ) minZ = v.Z;
+                if (v.Z > maxZ) maxZ = v.Z;
             }
+
+            var cx = (minX + maxX) / 2.0;
+            var cy = (minY + maxY) / 2.0;
+            var cz = (minZ + maxZ) / 2.0;
+
+            var dx = maxX - minX;
+            var dy = maxY - minY;
+            var dz = maxZ - minZ;
+            var maxR = Math.Max(Math.Sqrt(dx * dx + dy * dy + dz * dz) / 2.0, 1.0);
 
             var fitScale = (float)((Math.Min(Width, Height) * 0.42 / maxR) * _userZoom3D);
             var screenCx = Width / 2f + _userPan3D.X;
@@ -396,11 +442,14 @@ namespace Bolsover.Gears.Gui
             for (var i = 0; i < numVerts; i++)
             {
                 var v = _mesh.Vertices[i];
+                var vx = v.X - cx;
+                var vy = v.Y - cy;
+                var vz = v.Z - cz;
 
                 // Yaw rotation around Y axis
-                var x1 = v.X * cosY + v.Z * sinY;
-                var y1 = v.Y;
-                var z1 = -v.X * sinY + v.Z * cosY;
+                var x1 = vx * cosY + vz * sinY;
+                var y1 = vy;
+                var z1 = -vx * sinY + vz * cosY;
 
                 // Pitch rotation around X axis
                 var x2 = x1;

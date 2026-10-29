@@ -83,6 +83,63 @@ namespace Bolsover.Gears.Calculator
         }
 
         /// <summary>
+        /// Combines two 3D meshes into a single unified mesh.
+        /// </summary>
+        public static Mesh3D Combine(Mesh3D mesh1, Mesh3D mesh2)
+        {
+            var combined = new Mesh3D();
+            if (mesh1 != null)
+            {
+                combined.Vertices.AddRange(mesh1.Vertices);
+                combined.TriangleIndices.AddRange(mesh1.TriangleIndices);
+                combined.Normals.AddRange(mesh1.Normals);
+            }
+
+            if (mesh2 != null)
+            {
+                var offset = combined.Vertices.Count;
+                combined.Vertices.AddRange(mesh2.Vertices);
+                foreach (var index in mesh2.TriangleIndices)
+                {
+                    combined.TriangleIndices.Add(index + offset);
+                }
+                combined.Normals.AddRange(mesh2.Normals);
+            }
+
+            return combined;
+        }
+
+        /// <summary>
+        /// Transforms a 3D mesh by rotating around the Z axis and translating along (X, Y, Z).
+        /// </summary>
+        public static Mesh3D Transform(Mesh3D mesh, double offsetX, double offsetY, double offsetZ, double rotationAngleZRad = 0.0)
+        {
+            if (mesh == null) return new Mesh3D();
+
+            var transformed = new Mesh3D();
+            var cosZ = Math.Cos(rotationAngleZRad);
+            var sinZ = Math.Sin(rotationAngleZRad);
+
+            foreach (var v in mesh.Vertices)
+            {
+                var xRot = v.X * cosZ - v.Y * sinZ;
+                var yRot = v.X * sinZ + v.Y * cosZ;
+                transformed.Vertices.Add(new GearPoint3D(xRot + offsetX, yRot + offsetY, v.Z + offsetZ));
+            }
+
+            transformed.TriangleIndices.AddRange(mesh.TriangleIndices);
+
+            foreach (var n in mesh.Normals)
+            {
+                var nxRot = n.X * cosZ - n.Y * sinZ;
+                var nyRot = n.X * sinZ + n.Y * cosZ;
+                transformed.Normals.Add(new GearPoint3D(nxRot, nyRot, n.Z));
+            }
+
+            return transformed;
+        }
+
+        /// <summary>
         /// Builds a 3D solid mesh for external or internal gears.
         /// For internal gears, the interior cavity is completely open/transparent (annular ring between inner teeth and outer rim).
         /// </summary>
