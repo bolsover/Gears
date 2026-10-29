@@ -168,6 +168,8 @@
         <Compile Include="Calculator\ConversionUtils.cs" />
         <Compile Include="Calculator\CustomCalculations.cs" />
         <Compile Include="Calculator\GearCalculator.cs" />
+        <Compile Include="Calculator\GearMesh3DBuilder.cs" />
+        <Compile Include="Calculator\GearParameterCalculator.cs" />
         <Compile Include="Calculator\Geometry.cs" />
         <Compile Include="Calculator\IGearCalculator.cs" />
         <Compile Include="Calculator\IToothProfileComputation.cs" />
@@ -200,6 +202,7 @@
         <Compile Include="Model\GearModels\ExternalGear.cs" />
         <Compile Include="Model\GearModels\GearCalc.cs" />
         <Compile Include="Model\GearModels\HelicalGearMesh.cs" />
+        <Compile Include="Model\GearParameterRow.cs" />
         <Compile Include="Model\GearPoint.cs" />
         <Compile Include="Model\GearPoint3D.cs" />
         <Compile Include="Model\GearVariable.cs" />

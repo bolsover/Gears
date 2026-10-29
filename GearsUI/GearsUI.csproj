@@ -44,9 +44,6 @@
     <Reference Include="ExtendedNumerics.BigDecimal, Version=3000.0.3.40, Culture=neutral, PublicKeyToken=65f1315a45ad8949, processorArchitecture=MSIL">
       <HintPath>..\packages\ExtendedNumerics.BigDecimal.3000.0.3.40\lib\net48\ExtendedNumerics.BigDecimal.dll</HintPath>
     </Reference>
-    <Reference Include="GearsUI">
-      <HintPath>bin\Debug\GearsUI.exe</HintPath>
-    </Reference>
     <Reference Include="MathNet.Numerics, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MathNet.Numerics.6.0.0-beta1\lib\net48\MathNet.Numerics.dll</HintPath>
     </Reference>

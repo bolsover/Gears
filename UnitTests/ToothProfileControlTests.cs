@@ -11,15 +11,15 @@ using NUnit.Framework;
 
 namespace UnitTests
 {
-    public class ToothProfileControlTests
-    {
-        [Test]
-        public void ProfileControlTests() {
-            Form form = new ToothProfileControlForm();
-            System.Windows.Forms.Application.Run(form);
-        }
-        
-    }
+    // public class ToothProfileControlTests
+    // {
+    //     [Test]
+    //     public void ProfileControlTests() {
+    //         Form form = new ToothProfileControlForm();
+    //         System.Windows.Forms.Application.Run(form);
+    //     }
+    //     
+    // }
 
     public class ToothProfileControlForm : Form
     {

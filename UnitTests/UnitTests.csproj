@@ -192,6 +192,8 @@
     <Compile Include="TestStraightBevelStandardPair.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearLoading.cs" />
+    <Compile Include="TestGearMesh3DBuilder.cs" />
+    <Compile Include="TestGearParameterCalculator.cs" />
     <Compile Include="TestProfileShiftedInternalExternalHelicalPair.cs" />
     <Compile Include="TestExternalInvolutePair.cs" />
     <Compile Include="TestExternalRadialHelicalGear.cs" />
