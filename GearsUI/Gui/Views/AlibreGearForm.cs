@@ -71,51 +71,48 @@ namespace Bolsover.Gears.Gui.Views
 
             chkInternal.CheckedChanged += OnInternalChanged;
 
-            // Meshed gear buttons
-            btnAddMeshedGear.Click += OnAddOrEditMeshedGear;
-            btnRemoveMeshedGear.Click += OnRemoveMeshedGear;
+            // Menu File options
+            menuExportDxf.Click += (s, e) => Export(ExportFormat.Dxf);
+            menuExportCsv.Click += (s, e) => Export(ExportFormat.Csv);
+            menuExit.Click += (s, e) => Close();
 
-            // View options listeners
-            rb2D.CheckedChanged += (s, e) =>
-            {
-                if (rb2D.Checked)
-                {
-                    preview.ViewMode = PreviewViewMode.Mode2D;
-                }
-            };
+            // Menu Gear options
+            menuAddMeshedGear.Click += OnAddOrEditMeshedGear;
+            menuRemoveMeshedGear.Click += OnRemoveMeshedGear;
+            menuCalculate.Click += (s, e) => ExecuteCalculation();
 
-            rb3D.CheckedChanged += (s, e) =>
-            {
-                if (rb3D.Checked)
-                {
-                    preview.ViewMode = PreviewViewMode.Mode3D;
-                    preview.Mode3D = Render3DMode.Solid;
-                }
-            };
+            // Menu View options
+            menuView2D.Click += (s, e) => SetVisualisationMode(PreviewViewMode.Mode2D);
+            menuView3DSolid.Click += (s, e) => SetVisualisationMode(PreviewViewMode.Mode3D, Render3DMode.Solid);
+            menuView3DWireframe.Click += (s, e) => SetVisualisationMode(PreviewViewMode.Mode3D, Render3DMode.Wireframe);
 
-            rb3DWireframe.CheckedChanged += (s, e) =>
+            menuShowReferenceCircles.CheckedChanged += (s, e) =>
             {
-                if (rb3DWireframe.Checked)
-                {
-                    preview.ViewMode = PreviewViewMode.Mode3D;
-                    preview.Mode3D = Render3DMode.Wireframe;
-                }
-            };
-
-            chkShowCircles.CheckedChanged += (s, e) =>
-            {
-                preview.ShowReferenceCircles = chkShowCircles.Checked;
+                preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
                 preview.Invalidate();
             };
+            menuResetView.Click += (s, e) => preview.ResetView();
 
             // Buttons
             btnCalculate.Click += (s, e) => ExecuteCalculation();
             btnResetView.Click += (s, e) => preview.ResetView();
-            btnExportDxf.Click += (s, e) => Export(ExportFormat.Dxf);
-            btnExportCsv.Click += (s, e) => Export(ExportFormat.Csv);
 
             UpdateInternalControls();
             ExecuteCalculation();
+        }
+
+        private void SetVisualisationMode(PreviewViewMode viewMode, Render3DMode mode3D = Render3DMode.Solid)
+        {
+            menuView2D.Checked = (viewMode == PreviewViewMode.Mode2D);
+            menuView3DSolid.Checked = (viewMode == PreviewViewMode.Mode3D && mode3D == Render3DMode.Solid);
+            menuView3DWireframe.Checked = (viewMode == PreviewViewMode.Mode3D && mode3D == Render3DMode.Wireframe);
+
+            preview.ViewMode = viewMode;
+            if (viewMode == PreviewViewMode.Mode3D)
+            {
+                preview.Mode3D = mode3D;
+            }
+            preview.Invalidate();
         }
 
         private void OnAddOrEditMeshedGear(object sender, EventArgs e)
@@ -149,8 +146,8 @@ namespace Bolsover.Gears.Gui.Views
                 _meshedRimThickness = dialog.RimThickness;
                 _meshedOptimalShift = dialog.OptimalShift;
 
-                btnAddMeshedGear.Text = "Edit Meshed Gear…";
-                btnRemoveMeshedGear.Visible = true;
+                menuAddMeshedGear.Text = "Edit Meshed Gear…";
+                menuRemoveMeshedGear.Enabled = true;
                 lblTableTitle.Text = "Calculated Gear Pair Parameters (Elements of Metric Gear Technology)";
                 ExecuteCalculation();
             }
@@ -159,8 +156,8 @@ namespace Bolsover.Gears.Gui.Views
         private void OnRemoveMeshedGear(object sender, EventArgs e)
         {
             _hasMeshedGear = false;
-            btnAddMeshedGear.Text = "Add Meshed Gear…";
-            btnRemoveMeshedGear.Visible = false;
+            menuAddMeshedGear.Text = "Add Meshed Gear…";
+            menuRemoveMeshedGear.Enabled = false;
             lblTableTitle.Text = "Calculated Gear Parameters (Elements of Metric Gear Technology)";
             ExecuteCalculation();
         }
@@ -287,7 +284,7 @@ namespace Bolsover.Gears.Gui.Views
                     preview.Gear2AddendumRadius = pairData.Gear2.TipDiameter / 2.0;
                     preview.Gear2DedendumRadius = pairData.Gear2.RootDiameter / 2.0;
 
-                    preview.ShowReferenceCircles = chkShowCircles.Checked;
+                    preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
                     UpdatePreviewViewMode();
                     preview.Invalidate();
 
@@ -333,7 +330,7 @@ namespace Bolsover.Gears.Gui.Views
                     preview.DedendumRadius = calcData.RootDiameter / 2.0;
 
                     preview.HasSecondGear = false;
-                    preview.ShowReferenceCircles = chkShowCircles.Checked;
+                    preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
                     UpdatePreviewViewMode();
                     preview.Invalidate();
 
@@ -363,12 +360,12 @@ namespace Bolsover.Gears.Gui.Views
 
         private void UpdatePreviewViewMode()
         {
-            if (rb3DWireframe.Checked)
+            if (menuView3DWireframe.Checked)
             {
                 preview.ViewMode = PreviewViewMode.Mode3D;
                 preview.Mode3D = Render3DMode.Wireframe;
             }
-            else if (rb3D.Checked)
+            else if (menuView3DSolid.Checked)
             {
                 preview.ViewMode = PreviewViewMode.Mode3D;
                 preview.Mode3D = Render3DMode.Solid;
