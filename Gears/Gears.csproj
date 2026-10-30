@@ -166,7 +166,6 @@
         <Compile Include="Calculator\GearCalculator.cs" />
         <Compile Include="Calculator\GearMesh3DBuilder.cs" />
         <Compile Include="Calculator\GearParameterCalculator.cs" />
-        <Compile Include="Calculator\Geometry.cs" />
         <Compile Include="Calculator\IGearCalculator.cs" />
         <Compile Include="Calculator\LaTeXUtils.cs" />
         <Compile Include="Calculator\NCalcLatexRenderer.cs" />
@@ -177,43 +176,13 @@
         <Compile Include="Model\Feature.cs" />
         <Compile Include="Model\FeatureType.cs" />
         <Compile Include="Model\Gear.cs" />
-        <Compile Include="Model\GearBox\GearBuilder.cs" />
-        <Compile Include="Model\GearBox\IGear.cs" />
-        <Compile Include="Model\GearBox\IGearTrain.cs" />
-        <Compile Include="Model\GearBox\IMesh.cs" />
-        <Compile Include="Model\GearBox\ISelector.cs" />
-        <Compile Include="Model\GearBox\IShaft.cs" />
-        <Compile Include="Model\GearBox\PrototypeGear.cs" />
-        <Compile Include="Model\GearBox\Resolver.cs" />
         <Compile Include="Model\GearContext.cs" />
-        <Compile Include="Model\DisplayData.cs" />
-        <Compile Include="Model\GearModels\ExternalGear.cs" />
-        <Compile Include="Model\GearModels\GearCalc.cs" />
-        <Compile Include="Model\GearModels\HelicalGearMesh.cs" />
         <Compile Include="Model\GearParameterRow.cs" />
         <Compile Include="Model\GearPoint.cs" />
         <Compile Include="Model\GearPoint3D.cs" />
         <Compile Include="Model\GearVariable.cs" />
         <Compile Include="Model\IVariableResolver.cs" />
-        <Compile Include="Model\Tooth.cs" />
-        <Compile Include="Model\ToothProfile.cs" />
-        <Compile Include="Model\ToothProfileRenderer.cs" />
-        <Compile Include="Model\ToothFeatureKey.cs" />
         <Compile Include="Model\VariableIds.cs" />
-        <Compile Include="Model\Variable\Addendum.cs" />
-        <Compile Include="Model\Variable\BaseDiameter.cs" />
-        <Compile Include="Model\Variable\BottomClearance.cs" />
-        <Compile Include="Model\Variable\CircularBacklash.cs" />
-        <Compile Include="Model\Variable\Dedendum.cs" />
-        <Compile Include="Model\Variable\Hand.cs" />
-        <Compile Include="Model\Variable\HelixAngle.cs" />
-        <Compile Include="Model\Variable\IVariable.cs" />
-        <Compile Include="Model\Variable\Module.cs" />
-        <Compile Include="Model\Variable\OutsideDiameter.cs" />
-        <Compile Include="Model\Variable\PitchDiameter.cs" />
-        <Compile Include="Model\Variable\PressureAngle.cs" />
-        <Compile Include="Model\Variable\RootDiameter.cs" />
-        <Compile Include="Model\Variable\Teeth.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>
@@ -224,7 +193,6 @@
       <Content Include="Data\Nexus.db">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
-      <Content Include="Model\GearTrain.puml" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

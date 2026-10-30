@@ -206,7 +206,6 @@
     <Compile Include="TestProfileShiftedExternalRadialHelicalPair.cs" />
     <Compile Include="TestProfileShiftedInternalExternalInvolutePair.cs" />
     <Compile Include="TestVariableIds.cs" />
-    <Compile Include="VariableTests\ExternalGearVariableTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GearsUI\GearsUI.csproj">

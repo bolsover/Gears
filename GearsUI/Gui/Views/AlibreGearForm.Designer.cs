@@ -20,8 +20,14 @@ namespace Bolsover.Gears.Gui.Views
 
         #region Windows Form Designer generated code
 
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
         private void InitializeComponent()
         {
+            Bolsover.Gears.Calculator.GearMesh3DBuilder.Mesh3D mesh3D1 = new Bolsover.Gears.Calculator.GearMesh3DBuilder.Mesh3D();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlibreGearForm));
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             this.menuStrip = new System.Windows.Forms.MenuStrip();
@@ -83,12 +89,12 @@ namespace Bolsover.Gears.Gui.Views
             this.preview = new Bolsover.Gears.Gui.AlibreGearPreviewControl();
             this.panelTableContainer = new System.Windows.Forms.Panel();
             this.gridCalculations = new System.Windows.Forms.DataGridView();
+            this.lblTableTitle = new System.Windows.Forms.Label();
             this.colParamName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSymbol = new System.Windows.Forms.DataGridViewImageColumn();
             this.colFormula = new System.Windows.Forms.DataGridViewImageColumn();
             this.colValue = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.lblTableTitle = new System.Windows.Forms.Label();
             this.menuStrip.SuspendLayout();
             this.panelInputs.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numTeeth)).BeginInit();
@@ -111,10 +117,7 @@ namespace Bolsover.Gears.Gui.Views
             // menuStrip
             // 
             this.menuStrip.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuFile,
-            this.menuGear,
-            this.menuView});
+            this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.menuFile, this.menuGear, this.menuView });
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(1200, 28);
@@ -123,86 +126,71 @@ namespace Bolsover.Gears.Gui.Views
             // 
             // menuFile
             // 
-            this.menuFile.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuExportDxf,
-            this.menuExportCsv,
-            this.toolStripSeparatorFile,
-            this.menuExit});
+            this.menuFile.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.menuExportDxf, this.menuExportCsv, this.toolStripSeparatorFile, this.menuExit });
             this.menuFile.Name = "menuFile";
-            this.menuFile.Size = new System.Drawing.Size(46, 24);
+            this.menuFile.Size = new System.Drawing.Size(44, 24);
             this.menuFile.Text = "&File";
             // 
             // menuExportDxf
             // 
             this.menuExportDxf.Name = "menuExportDxf";
-            this.menuExportDxf.Size = new System.Drawing.Size(182, 26);
+            this.menuExportDxf.Size = new System.Drawing.Size(163, 24);
             this.menuExportDxf.Text = "Export &DXF…";
             // 
             // menuExportCsv
             // 
             this.menuExportCsv.Name = "menuExportCsv";
-            this.menuExportCsv.Size = new System.Drawing.Size(182, 26);
+            this.menuExportCsv.Size = new System.Drawing.Size(163, 24);
             this.menuExportCsv.Text = "Export &CSV…";
             // 
             // toolStripSeparatorFile
             // 
             this.toolStripSeparatorFile.Name = "toolStripSeparatorFile";
-            this.toolStripSeparatorFile.Size = new System.Drawing.Size(179, 6);
+            this.toolStripSeparatorFile.Size = new System.Drawing.Size(160, 6);
             // 
             // menuExit
             // 
             this.menuExit.Name = "menuExit";
-            this.menuExit.Size = new System.Drawing.Size(182, 26);
+            this.menuExit.Size = new System.Drawing.Size(163, 24);
             this.menuExit.Text = "E&xit";
             // 
             // menuGear
             // 
-            this.menuGear.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuAddMeshedGear,
-            this.menuRemoveMeshedGear,
-            this.toolStripSeparatorGear,
-            this.menuCalculate});
+            this.menuGear.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.menuAddMeshedGear, this.menuRemoveMeshedGear, this.toolStripSeparatorGear, this.menuCalculate });
             this.menuGear.Name = "menuGear";
-            this.menuGear.Size = new System.Drawing.Size(55, 24);
+            this.menuGear.Size = new System.Drawing.Size(52, 24);
             this.menuGear.Text = "&Gear";
             // 
             // menuAddMeshedGear
             // 
             this.menuAddMeshedGear.Name = "menuAddMeshedGear";
-            this.menuAddMeshedGear.Size = new System.Drawing.Size(240, 26);
+            this.menuAddMeshedGear.Size = new System.Drawing.Size(237, 24);
             this.menuAddMeshedGear.Text = "&Add Meshed Gear…";
             // 
             // menuRemoveMeshedGear
             // 
             this.menuRemoveMeshedGear.Enabled = false;
             this.menuRemoveMeshedGear.Name = "menuRemoveMeshedGear";
-            this.menuRemoveMeshedGear.Size = new System.Drawing.Size(240, 26);
+            this.menuRemoveMeshedGear.Size = new System.Drawing.Size(237, 24);
             this.menuRemoveMeshedGear.Text = "&Remove Meshed Gear";
             // 
             // toolStripSeparatorGear
             // 
             this.toolStripSeparatorGear.Name = "toolStripSeparatorGear";
-            this.toolStripSeparatorGear.Size = new System.Drawing.Size(237, 6);
+            this.toolStripSeparatorGear.Size = new System.Drawing.Size(234, 6);
             // 
             // menuCalculate
             // 
             this.menuCalculate.Name = "menuCalculate";
             this.menuCalculate.ShortcutKeys = System.Windows.Forms.Keys.F5;
-            this.menuCalculate.Size = new System.Drawing.Size(240, 26);
+            this.menuCalculate.Size = new System.Drawing.Size(237, 24);
             this.menuCalculate.Text = "&Execute Calculations";
             // 
             // menuView
             // 
-            this.menuView.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuView2D,
-            this.menuView3DSolid,
-            this.menuView3DWireframe,
-            this.toolStripSeparatorView1,
-            this.menuShowReferenceCircles,
-            this.toolStripSeparatorView2,
-            this.menuResetView});
+            this.menuView.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.menuView2D, this.menuView3DSolid, this.menuView3DWireframe, this.toolStripSeparatorView1, this.menuShowReferenceCircles, this.toolStripSeparatorView2, this.menuResetView });
             this.menuView.Name = "menuView";
-            this.menuView.Size = new System.Drawing.Size(55, 24);
+            this.menuView.Size = new System.Drawing.Size(53, 24);
             this.menuView.Text = "&View";
             // 
             // menuView2D
@@ -210,25 +198,25 @@ namespace Bolsover.Gears.Gui.Views
             this.menuView2D.Checked = true;
             this.menuView2D.CheckState = System.Windows.Forms.CheckState.Checked;
             this.menuView2D.Name = "menuView2D";
-            this.menuView2D.Size = new System.Drawing.Size(244, 26);
+            this.menuView2D.Size = new System.Drawing.Size(231, 24);
             this.menuView2D.Text = "&2D Profile";
             // 
             // menuView3DSolid
             // 
             this.menuView3DSolid.Name = "menuView3DSolid";
-            this.menuView3DSolid.Size = new System.Drawing.Size(244, 26);
+            this.menuView3DSolid.Size = new System.Drawing.Size(231, 24);
             this.menuView3DSolid.Text = "3D &Solid";
             // 
             // menuView3DWireframe
             // 
             this.menuView3DWireframe.Name = "menuView3DWireframe";
-            this.menuView3DWireframe.Size = new System.Drawing.Size(244, 26);
+            this.menuView3DWireframe.Size = new System.Drawing.Size(231, 24);
             this.menuView3DWireframe.Text = "3D &Wireframe";
             // 
             // toolStripSeparatorView1
             // 
             this.toolStripSeparatorView1.Name = "toolStripSeparatorView1";
-            this.toolStripSeparatorView1.Size = new System.Drawing.Size(241, 6);
+            this.toolStripSeparatorView1.Size = new System.Drawing.Size(228, 6);
             // 
             // menuShowReferenceCircles
             // 
@@ -236,18 +224,18 @@ namespace Bolsover.Gears.Gui.Views
             this.menuShowReferenceCircles.CheckOnClick = true;
             this.menuShowReferenceCircles.CheckState = System.Windows.Forms.CheckState.Checked;
             this.menuShowReferenceCircles.Name = "menuShowReferenceCircles";
-            this.menuShowReferenceCircles.Size = new System.Drawing.Size(244, 26);
+            this.menuShowReferenceCircles.Size = new System.Drawing.Size(231, 24);
             this.menuShowReferenceCircles.Text = "Show &Reference Circles";
             // 
             // toolStripSeparatorView2
             // 
             this.toolStripSeparatorView2.Name = "toolStripSeparatorView2";
-            this.toolStripSeparatorView2.Size = new System.Drawing.Size(241, 6);
+            this.toolStripSeparatorView2.Size = new System.Drawing.Size(228, 6);
             // 
             // menuResetView
             // 
             this.menuResetView.Name = "menuResetView";
-            this.menuResetView.Size = new System.Drawing.Size(244, 26);
+            this.menuResetView.Size = new System.Drawing.Size(231, 24);
             this.menuResetView.Text = "&Reset View / Camera";
             // 
             // panelInputs
@@ -290,29 +278,31 @@ namespace Bolsover.Gears.Gui.Views
             this.panelInputs.Controls.Add(this.lblHelixVal);
             this.panelInputs.Controls.Add(this.lblError);
             this.panelInputs.Dock = System.Windows.Forms.DockStyle.Left;
-            this.panelInputs.Location = new System.Drawing.Point(0, 0);
+            this.panelInputs.Location = new System.Drawing.Point(0, 28);
+            this.panelInputs.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.panelInputs.Name = "panelInputs";
-            this.panelInputs.Padding = new System.Windows.Forms.Padding(12);
-            this.panelInputs.Size = new System.Drawing.Size(340, 840);
+            this.panelInputs.Padding = new System.Windows.Forms.Padding(12, 10, 12, 10);
+            this.panelInputs.Size = new System.Drawing.Size(340, 644);
             this.panelInputs.TabIndex = 0;
             // 
             // lblTeeth
             // 
             this.lblTeeth.AutoSize = true;
             this.lblTeeth.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblTeeth.Location = new System.Drawing.Point(12, 14);
+            this.lblTeeth.Location = new System.Drawing.Point(12, 11);
             this.lblTeeth.Name = "lblTeeth";
-            this.lblTeeth.Size = new System.Drawing.Size(117, 19);
+            this.lblTeeth.Size = new System.Drawing.Size(140, 20);
             this.lblTeeth.TabIndex = 0;
             this.lblTeeth.Text = "Number of teeth (z)";
             // 
             // numTeeth
             // 
-            this.numTeeth.Location = new System.Drawing.Point(195, 12);
+            this.numTeeth.Location = new System.Drawing.Point(195, 10);
+            this.numTeeth.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numTeeth.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             this.numTeeth.Minimum = new decimal(new int[] { 3, 0, 0, 0 });
             this.numTeeth.Name = "numTeeth";
-            this.numTeeth.Size = new System.Drawing.Size(115, 27);
+            this.numTeeth.Size = new System.Drawing.Size(115, 22);
             this.numTeeth.TabIndex = 1;
             this.numTeeth.Value = new decimal(new int[] { 20, 0, 0, 0 });
             // 
@@ -320,9 +310,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblModule.AutoSize = true;
             this.lblModule.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblModule.Location = new System.Drawing.Point(12, 47);
+            this.lblModule.Location = new System.Drawing.Point(12, 38);
             this.lblModule.Name = "lblModule";
-            this.lblModule.Size = new System.Drawing.Size(127, 19);
+            this.lblModule.Size = new System.Drawing.Size(117, 20);
             this.lblModule.TabIndex = 2;
             this.lblModule.Text = "Module m (mm)";
             // 
@@ -330,11 +320,12 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.numModule.DecimalPlaces = 3;
             this.numModule.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.numModule.Location = new System.Drawing.Point(195, 45);
+            this.numModule.Location = new System.Drawing.Point(195, 36);
+            this.numModule.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numModule.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             this.numModule.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             this.numModule.Name = "numModule";
-            this.numModule.Size = new System.Drawing.Size(115, 27);
+            this.numModule.Size = new System.Drawing.Size(115, 22);
             this.numModule.TabIndex = 3;
             this.numModule.Value = new decimal(new int[] { 2, 0, 0, 0 });
             // 
@@ -342,9 +333,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblPressureAngle.AutoSize = true;
             this.lblPressureAngle.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblPressureAngle.Location = new System.Drawing.Point(12, 80);
+            this.lblPressureAngle.Location = new System.Drawing.Point(12, 64);
             this.lblPressureAngle.Name = "lblPressureAngle";
-            this.lblPressureAngle.Size = new System.Drawing.Size(149, 19);
+            this.lblPressureAngle.Size = new System.Drawing.Size(137, 20);
             this.lblPressureAngle.TabIndex = 4;
             this.lblPressureAngle.Text = "Pressure angle α (°)";
             // 
@@ -352,11 +343,12 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.numPressureAngle.DecimalPlaces = 2;
             this.numPressureAngle.Increment = new decimal(new int[] { 5, 0, 0, 65536 });
-            this.numPressureAngle.Location = new System.Drawing.Point(195, 78);
+            this.numPressureAngle.Location = new System.Drawing.Point(195, 62);
+            this.numPressureAngle.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numPressureAngle.Maximum = new decimal(new int[] { 45, 0, 0, 0 });
             this.numPressureAngle.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
             this.numPressureAngle.Name = "numPressureAngle";
-            this.numPressureAngle.Size = new System.Drawing.Size(115, 27);
+            this.numPressureAngle.Size = new System.Drawing.Size(115, 22);
             this.numPressureAngle.TabIndex = 5;
             this.numPressureAngle.Value = new decimal(new int[] { 20, 0, 0, 0 });
             // 
@@ -364,31 +356,29 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblHelixAngle.AutoSize = true;
             this.lblHelixAngle.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblHelixAngle.Location = new System.Drawing.Point(12, 113);
+            this.lblHelixAngle.Location = new System.Drawing.Point(12, 90);
             this.lblHelixAngle.Name = "lblHelixAngle";
-            this.lblHelixAngle.Size = new System.Drawing.Size(125, 19);
+            this.lblHelixAngle.Size = new System.Drawing.Size(116, 20);
             this.lblHelixAngle.TabIndex = 6;
             this.lblHelixAngle.Text = "Helix angle β (°)";
             // 
             // numHelixAngle
             // 
             this.numHelixAngle.DecimalPlaces = 2;
-            this.numHelixAngle.Increment = new decimal(new int[] { 1, 0, 0, 0 });
-            this.numHelixAngle.Location = new System.Drawing.Point(195, 111);
+            this.numHelixAngle.Location = new System.Drawing.Point(195, 89);
+            this.numHelixAngle.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numHelixAngle.Maximum = new decimal(new int[] { 75, 0, 0, 0 });
-            this.numHelixAngle.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
             this.numHelixAngle.Name = "numHelixAngle";
-            this.numHelixAngle.Size = new System.Drawing.Size(115, 27);
+            this.numHelixAngle.Size = new System.Drawing.Size(115, 22);
             this.numHelixAngle.TabIndex = 7;
-            this.numHelixAngle.Value = new decimal(new int[] { 0, 0, 0, 0 });
             // 
             // lblHelicalDirection
             // 
             this.lblHelicalDirection.AutoSize = true;
             this.lblHelicalDirection.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblHelicalDirection.Location = new System.Drawing.Point(12, 146);
+            this.lblHelicalDirection.Location = new System.Drawing.Point(12, 117);
             this.lblHelicalDirection.Name = "lblHelicalDirection";
-            this.lblHelicalDirection.Size = new System.Drawing.Size(110, 19);
+            this.lblHelicalDirection.Size = new System.Drawing.Size(118, 20);
             this.lblHelicalDirection.TabIndex = 8;
             this.lblHelicalDirection.Text = "Helical direction";
             // 
@@ -397,10 +387,9 @@ namespace Bolsover.Gears.Gui.Views
             this.cboHelicalDirection.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboHelicalDirection.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.cboHelicalDirection.FormattingEnabled = true;
-            this.cboHelicalDirection.Items.AddRange(new object[] {
-            "R (Right)",
-            "L (Left)"});
-            this.cboHelicalDirection.Location = new System.Drawing.Point(195, 144);
+            this.cboHelicalDirection.Items.AddRange(new object[] { "R (Right)", "L (Left)" });
+            this.cboHelicalDirection.Location = new System.Drawing.Point(195, 115);
+            this.cboHelicalDirection.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboHelicalDirection.Name = "cboHelicalDirection";
             this.cboHelicalDirection.Size = new System.Drawing.Size(115, 27);
             this.cboHelicalDirection.TabIndex = 9;
@@ -409,9 +398,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblClearance.AutoSize = true;
             this.lblClearance.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblClearance.Location = new System.Drawing.Point(12, 179);
+            this.lblClearance.Location = new System.Drawing.Point(12, 143);
             this.lblClearance.Name = "lblClearance";
-            this.lblClearance.Size = new System.Drawing.Size(138, 19);
+            this.lblClearance.Size = new System.Drawing.Size(125, 20);
             this.lblClearance.TabIndex = 10;
             this.lblClearance.Text = "Clearance c (mm)";
             // 
@@ -419,11 +408,10 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.numClearance.DecimalPlaces = 3;
             this.numClearance.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.numClearance.Location = new System.Drawing.Point(195, 177);
-            this.numClearance.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
-            this.numClearance.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
+            this.numClearance.Location = new System.Drawing.Point(195, 142);
+            this.numClearance.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numClearance.Name = "numClearance";
-            this.numClearance.Size = new System.Drawing.Size(115, 27);
+            this.numClearance.Size = new System.Drawing.Size(115, 22);
             this.numClearance.TabIndex = 11;
             this.numClearance.Value = new decimal(new int[] { 5, 0, 0, 65536 });
             // 
@@ -431,9 +419,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblBacklash.AutoSize = true;
             this.lblBacklash.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblBacklash.Location = new System.Drawing.Point(12, 212);
+            this.lblBacklash.Location = new System.Drawing.Point(12, 170);
             this.lblBacklash.Name = "lblBacklash";
-            this.lblBacklash.Size = new System.Drawing.Size(138, 19);
+            this.lblBacklash.Size = new System.Drawing.Size(125, 20);
             this.lblBacklash.TabIndex = 12;
             this.lblBacklash.Text = "Backlash j_t (mm)";
             // 
@@ -441,32 +429,32 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.numBacklash.DecimalPlaces = 3;
             this.numBacklash.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            this.numBacklash.Location = new System.Drawing.Point(195, 210);
+            this.numBacklash.Location = new System.Drawing.Point(195, 168);
+            this.numBacklash.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numBacklash.Maximum = new decimal(new int[] { 50, 0, 0, 0 });
-            this.numBacklash.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
             this.numBacklash.Name = "numBacklash";
-            this.numBacklash.Size = new System.Drawing.Size(115, 27);
+            this.numBacklash.Size = new System.Drawing.Size(115, 22);
             this.numBacklash.TabIndex = 13;
-            this.numBacklash.Value = new decimal(new int[] { 0, 0, 0, 0 });
             // 
             // lblFaceWidth
             // 
             this.lblFaceWidth.AutoSize = true;
             this.lblFaceWidth.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblFaceWidth.Location = new System.Drawing.Point(12, 245);
+            this.lblFaceWidth.Location = new System.Drawing.Point(12, 196);
             this.lblFaceWidth.Name = "lblFaceWidth";
-            this.lblFaceWidth.Size = new System.Drawing.Size(140, 19);
+            this.lblFaceWidth.Size = new System.Drawing.Size(132, 20);
             this.lblFaceWidth.TabIndex = 14;
             this.lblFaceWidth.Text = "Face width b (mm)";
             // 
             // numFaceWidth
             // 
             this.numFaceWidth.DecimalPlaces = 2;
-            this.numFaceWidth.Location = new System.Drawing.Point(195, 243);
+            this.numFaceWidth.Location = new System.Drawing.Point(195, 194);
+            this.numFaceWidth.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numFaceWidth.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             this.numFaceWidth.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             this.numFaceWidth.Name = "numFaceWidth";
-            this.numFaceWidth.Size = new System.Drawing.Size(115, 27);
+            this.numFaceWidth.Size = new System.Drawing.Size(115, 22);
             this.numFaceWidth.TabIndex = 15;
             this.numFaceWidth.Value = new decimal(new int[] { 15, 0, 0, 0 });
             // 
@@ -474,9 +462,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblProfileShift.AutoSize = true;
             this.lblProfileShift.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblProfileShift.Location = new System.Drawing.Point(12, 278);
+            this.lblProfileShift.Location = new System.Drawing.Point(12, 222);
             this.lblProfileShift.Name = "lblProfileShift";
-            this.lblProfileShift.Size = new System.Drawing.Size(150, 19);
+            this.lblProfileShift.Size = new System.Drawing.Size(146, 20);
             this.lblProfileShift.TabIndex = 16;
             this.lblProfileShift.Text = "Profile shift coeff. (x)";
             // 
@@ -484,11 +472,12 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.numProfileShift.DecimalPlaces = 3;
             this.numProfileShift.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.numProfileShift.Location = new System.Drawing.Point(195, 276);
+            this.numProfileShift.Location = new System.Drawing.Point(195, 221);
+            this.numProfileShift.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numProfileShift.Maximum = new decimal(new int[] { 5, 0, 0, 0 });
             this.numProfileShift.Minimum = new decimal(new int[] { 5, 0, 0, -2147483648 });
             this.numProfileShift.Name = "numProfileShift";
-            this.numProfileShift.Size = new System.Drawing.Size(115, 27);
+            this.numProfileShift.Size = new System.Drawing.Size(115, 22);
             this.numProfileShift.TabIndex = 17;
             // 
             // lblRimThickness
@@ -496,9 +485,9 @@ namespace Bolsover.Gears.Gui.Views
             this.lblRimThickness.AutoSize = true;
             this.lblRimThickness.Enabled = false;
             this.lblRimThickness.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblRimThickness.Location = new System.Drawing.Point(12, 311);
+            this.lblRimThickness.Location = new System.Drawing.Point(12, 249);
             this.lblRimThickness.Name = "lblRimThickness";
-            this.lblRimThickness.Size = new System.Drawing.Size(155, 19);
+            this.lblRimThickness.Size = new System.Drawing.Size(138, 20);
             this.lblRimThickness.TabIndex = 18;
             this.lblRimThickness.Text = "Rim thickness (mm)";
             // 
@@ -506,11 +495,12 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.numRimThickness.DecimalPlaces = 2;
             this.numRimThickness.Enabled = false;
-            this.numRimThickness.Location = new System.Drawing.Point(195, 309);
+            this.numRimThickness.Location = new System.Drawing.Point(195, 247);
+            this.numRimThickness.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.numRimThickness.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             this.numRimThickness.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             this.numRimThickness.Name = "numRimThickness";
-            this.numRimThickness.Size = new System.Drawing.Size(115, 27);
+            this.numRimThickness.Size = new System.Drawing.Size(115, 22);
             this.numRimThickness.TabIndex = 19;
             this.numRimThickness.Value = new decimal(new int[] { 10, 0, 0, 0 });
             // 
@@ -518,9 +508,10 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.chkInternal.AutoSize = true;
             this.chkInternal.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.chkInternal.Location = new System.Drawing.Point(15, 344);
+            this.chkInternal.Location = new System.Drawing.Point(15, 275);
+            this.chkInternal.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.chkInternal.Name = "chkInternal";
-            this.chkInternal.Size = new System.Drawing.Size(114, 24);
+            this.chkInternal.Size = new System.Drawing.Size(115, 24);
             this.chkInternal.TabIndex = 20;
             this.chkInternal.Text = "Internal gear";
             this.chkInternal.UseVisualStyleBackColor = true;
@@ -529,9 +520,10 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.chkOptimalShift.AutoSize = true;
             this.chkOptimalShift.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.chkOptimalShift.Location = new System.Drawing.Point(15, 370);
+            this.chkOptimalShift.Location = new System.Drawing.Point(15, 296);
+            this.chkOptimalShift.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.chkOptimalShift.Name = "chkOptimalShift";
-            this.chkOptimalShift.Size = new System.Drawing.Size(225, 24);
+            this.chkOptimalShift.Size = new System.Drawing.Size(220, 24);
             this.chkOptimalShift.TabIndex = 21;
             this.chkOptimalShift.Text = "Optimal shift (anti-undercut)";
             this.chkOptimalShift.UseVisualStyleBackColor = true;
@@ -542,9 +534,10 @@ namespace Bolsover.Gears.Gui.Views
             this.chkFullGear.Checked = true;
             this.chkFullGear.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkFullGear.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.chkFullGear.Location = new System.Drawing.Point(15, 396);
+            this.chkFullGear.Location = new System.Drawing.Point(15, 317);
+            this.chkFullGear.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.chkFullGear.Name = "chkFullGear";
-            this.chkFullGear.Size = new System.Drawing.Size(149, 24);
+            this.chkFullGear.Size = new System.Drawing.Size(174, 24);
             this.chkFullGear.TabIndex = 22;
             this.chkFullGear.Text = "Show full gear profile";
             this.chkFullGear.UseVisualStyleBackColor = true;
@@ -555,27 +548,29 @@ namespace Bolsover.Gears.Gui.Views
             this.btnCalculate.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCalculate.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnCalculate.ForeColor = System.Drawing.Color.White;
-            this.btnCalculate.Location = new System.Drawing.Point(12, 430);
+            this.btnCalculate.Location = new System.Drawing.Point(12, 344);
+            this.btnCalculate.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnCalculate.Name = "btnCalculate";
-            this.btnCalculate.Size = new System.Drawing.Size(298, 38);
+            this.btnCalculate.Size = new System.Drawing.Size(298, 30);
             this.btnCalculate.TabIndex = 23;
             this.btnCalculate.Text = "Execute Calculations";
             this.btnCalculate.UseVisualStyleBackColor = false;
             // 
             // progressBar
             // 
-            this.progressBar.Location = new System.Drawing.Point(12, 474);
+            this.progressBar.Location = new System.Drawing.Point(12, 379);
+            this.progressBar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(298, 16);
+            this.progressBar.Size = new System.Drawing.Size(298, 13);
             this.progressBar.TabIndex = 24;
             // 
             // lblStatus
             // 
             this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Italic);
             this.lblStatus.ForeColor = System.Drawing.Color.DarkSlateGray;
-            this.lblStatus.Location = new System.Drawing.Point(12, 493);
+            this.lblStatus.Location = new System.Drawing.Point(12, 394);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(298, 22);
+            this.lblStatus.Size = new System.Drawing.Size(298, 18);
             this.lblStatus.TabIndex = 25;
             this.lblStatus.Text = "Ready";
             // 
@@ -583,9 +578,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblResultsHeader.AutoSize = true;
             this.lblResultsHeader.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblResultsHeader.Location = new System.Drawing.Point(12, 522);
+            this.lblResultsHeader.Location = new System.Drawing.Point(12, 418);
             this.lblResultsHeader.Name = "lblResultsHeader";
-            this.lblResultsHeader.Size = new System.Drawing.Size(176, 20);
+            this.lblResultsHeader.Size = new System.Drawing.Size(160, 20);
             this.lblResultsHeader.TabIndex = 26;
             this.lblResultsHeader.Text = "Summary Radii (mm)";
             // 
@@ -593,9 +588,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblPitch.AutoSize = true;
             this.lblPitch.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblPitch.Location = new System.Drawing.Point(12, 544);
+            this.lblPitch.Location = new System.Drawing.Point(12, 435);
             this.lblPitch.Name = "lblPitch";
-            this.lblPitch.Size = new System.Drawing.Size(55, 19);
+            this.lblPitch.Size = new System.Drawing.Size(56, 20);
             this.lblPitch.TabIndex = 27;
             this.lblPitch.Text = "Pitch: –";
             // 
@@ -603,9 +598,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblBase.AutoSize = true;
             this.lblBase.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblBase.Location = new System.Drawing.Point(12, 564);
+            this.lblBase.Location = new System.Drawing.Point(12, 451);
             this.lblBase.Name = "lblBase";
-            this.lblBase.Size = new System.Drawing.Size(51, 19);
+            this.lblBase.Size = new System.Drawing.Size(55, 20);
             this.lblBase.TabIndex = 28;
             this.lblBase.Text = "Base: –";
             // 
@@ -613,9 +608,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblAddendum.AutoSize = true;
             this.lblAddendum.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblAddendum.Location = new System.Drawing.Point(12, 584);
+            this.lblAddendum.Location = new System.Drawing.Point(12, 467);
             this.lblAddendum.Name = "lblAddendum";
-            this.lblAddendum.Size = new System.Drawing.Size(92, 19);
+            this.lblAddendum.Size = new System.Drawing.Size(98, 20);
             this.lblAddendum.TabIndex = 29;
             this.lblAddendum.Text = "Addendum: –";
             // 
@@ -623,9 +618,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblDedendum.AutoSize = true;
             this.lblDedendum.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblDedendum.Location = new System.Drawing.Point(12, 604);
+            this.lblDedendum.Location = new System.Drawing.Point(12, 483);
             this.lblDedendum.Name = "lblDedendum";
-            this.lblDedendum.Size = new System.Drawing.Size(91, 19);
+            this.lblDedendum.Size = new System.Drawing.Size(98, 20);
             this.lblDedendum.TabIndex = 30;
             this.lblDedendum.Text = "Dedendum: –";
             // 
@@ -633,9 +628,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblClearanceVal.AutoSize = true;
             this.lblClearanceVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblClearanceVal.Location = new System.Drawing.Point(12, 624);
+            this.lblClearanceVal.Location = new System.Drawing.Point(12, 499);
             this.lblClearanceVal.Name = "lblClearanceVal";
-            this.lblClearanceVal.Size = new System.Drawing.Size(84, 19);
+            this.lblClearanceVal.Size = new System.Drawing.Size(89, 20);
             this.lblClearanceVal.TabIndex = 31;
             this.lblClearanceVal.Text = "Clearance: –";
             // 
@@ -643,9 +638,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblBacklashVal.AutoSize = true;
             this.lblBacklashVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblBacklashVal.Location = new System.Drawing.Point(12, 644);
+            this.lblBacklashVal.Location = new System.Drawing.Point(12, 515);
             this.lblBacklashVal.Name = "lblBacklashVal";
-            this.lblBacklashVal.Size = new System.Drawing.Size(84, 19);
+            this.lblBacklashVal.Size = new System.Drawing.Size(81, 20);
             this.lblBacklashVal.TabIndex = 32;
             this.lblBacklashVal.Text = "Backlash: –";
             // 
@@ -653,9 +648,9 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblHelixVal.AutoSize = true;
             this.lblHelixVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblHelixVal.Location = new System.Drawing.Point(12, 664);
+            this.lblHelixVal.Location = new System.Drawing.Point(12, 531);
             this.lblHelixVal.Name = "lblHelixVal";
-            this.lblHelixVal.Size = new System.Drawing.Size(84, 19);
+            this.lblHelixVal.Size = new System.Drawing.Size(58, 20);
             this.lblHelixVal.TabIndex = 33;
             this.lblHelixVal.Text = "Helix: –";
             // 
@@ -663,15 +658,16 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.lblError.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.lblError.ForeColor = System.Drawing.Color.Firebrick;
-            this.lblError.Location = new System.Drawing.Point(12, 687);
+            this.lblError.Location = new System.Drawing.Point(12, 550);
             this.lblError.Name = "lblError";
-            this.lblError.Size = new System.Drawing.Size(298, 75);
+            this.lblError.Size = new System.Drawing.Size(298, 60);
             this.lblError.TabIndex = 34;
             // 
             // splitContainerMain
             // 
             this.splitContainerMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitContainerMain.Location = new System.Drawing.Point(340, 28);
+            this.splitContainerMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.splitContainerMain.Name = "splitContainerMain";
             this.splitContainerMain.Orientation = System.Windows.Forms.Orientation.Horizontal;
             // 
@@ -684,20 +680,35 @@ namespace Bolsover.Gears.Gui.Views
             // 
             this.splitContainerMain.Panel2.Controls.Add(this.panelTableContainer);
             this.splitContainerMain.Panel2MinSize = 200;
-            this.splitContainerMain.Size = new System.Drawing.Size(860, 812);
-            this.splitContainerMain.SplitterDistance = 440;
+            this.splitContainerMain.Size = new System.Drawing.Size(860, 644);
+            this.splitContainerMain.SplitterDistance = 348;
+            this.splitContainerMain.SplitterWidth = 3;
             this.splitContainerMain.TabIndex = 1;
             // 
             // preview
             // 
+            this.preview.AddendumRadius = 0D;
             this.preview.BackColor = System.Drawing.Color.White;
+            this.preview.BaseRadius = 0D;
+            this.preview.DedendumRadius = 0D;
             this.preview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.preview.Gear2AddendumRadius = 0D;
+            this.preview.Gear2BaseRadius = 0D;
+            this.preview.Gear2CenterDistance = 0D;
+            this.preview.Gear2DedendumRadius = 0D;
+            this.preview.Gear2PitchRadius = 0D;
+            this.preview.HasSecondGear = false;
             this.preview.LineColor = System.Drawing.Color.MidnightBlue;
             this.preview.Location = new System.Drawing.Point(0, 0);
+            this.preview.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.preview.Mesh = mesh3D1;
             this.preview.MeshColor = System.Drawing.Color.FromArgb(((int)(((byte)(70)))), ((int)(((byte)(130)))), ((int)(((byte)(180)))));
+            this.preview.Mode3D = Bolsover.Gears.Gui.Render3DMode.Solid;
             this.preview.Name = "preview";
+            this.preview.PitchRadius = 0D;
+            this.preview.Polylines = ((System.Collections.Generic.List<System.Collections.Generic.List<Bolsover.Gears.Model.GearPoint>>)(resources.GetObject("preview.Polylines")));
             this.preview.ShowReferenceCircles = true;
-            this.preview.Size = new System.Drawing.Size(860, 440);
+            this.preview.Size = new System.Drawing.Size(860, 348);
             this.preview.TabIndex = 0;
             this.preview.ViewMode = Bolsover.Gears.Gui.PreviewViewMode.Mode2D;
             // 
@@ -707,9 +718,10 @@ namespace Bolsover.Gears.Gui.Views
             this.panelTableContainer.Controls.Add(this.lblTableTitle);
             this.panelTableContainer.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelTableContainer.Location = new System.Drawing.Point(0, 0);
+            this.panelTableContainer.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.panelTableContainer.Name = "panelTableContainer";
-            this.panelTableContainer.Padding = new System.Windows.Forms.Padding(6);
-            this.panelTableContainer.Size = new System.Drawing.Size(860, 368);
+            this.panelTableContainer.Padding = new System.Windows.Forms.Padding(6, 5, 6, 5);
+            this.panelTableContainer.Size = new System.Drawing.Size(860, 293);
             this.panelTableContainer.TabIndex = 0;
             // 
             // gridCalculations
@@ -730,12 +742,7 @@ namespace Bolsover.Gears.Gui.Views
             dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
             this.gridCalculations.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             this.gridCalculations.ColumnHeadersHeight = 30;
-            this.gridCalculations.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.colParamName,
-            this.colSymbol,
-            this.colFormula,
-            this.colValue,
-            this.colUnit});
+            this.gridCalculations.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] { this.colParamName, this.colSymbol, this.colFormula, this.colValue, this.colUnit });
             dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
             dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI", 9F);
@@ -747,76 +754,76 @@ namespace Bolsover.Gears.Gui.Views
             this.gridCalculations.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gridCalculations.EnableHeadersVisualStyles = false;
             this.gridCalculations.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(225)))), ((int)(((byte)(230)))), ((int)(((byte)(235)))));
-            this.gridCalculations.Location = new System.Drawing.Point(6, 34);
+            this.gridCalculations.Location = new System.Drawing.Point(6, 27);
+            this.gridCalculations.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.gridCalculations.Name = "gridCalculations";
             this.gridCalculations.ReadOnly = true;
             this.gridCalculations.RowHeadersVisible = false;
             this.gridCalculations.RowTemplate.Height = 30;
             this.gridCalculations.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.gridCalculations.Size = new System.Drawing.Size(848, 328);
+            this.gridCalculations.Size = new System.Drawing.Size(848, 261);
             this.gridCalculations.TabIndex = 1;
-            // 
-            // colParamName
-            // 
-            this.colParamName.FillWeight = 28F;
-            this.colParamName.HeaderText = "Parameter";
-            this.colParamName.Name = "colParamName";
-            this.colParamName.ReadOnly = true;
-            // 
-            // colSymbol
-            // 
-            this.colSymbol.FillWeight = 16F;
-            this.colSymbol.HeaderText = "Symbol (LaTeX)";
-            this.colSymbol.ImageLayout = System.Windows.Forms.DataGridViewImageCellLayout.Zoom;
-            this.colSymbol.Name = "colSymbol";
-            this.colSymbol.ReadOnly = true;
-            this.colSymbol.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // colFormula
-            // 
-            this.colFormula.FillWeight = 34F;
-            this.colFormula.HeaderText = "Source Formula (LaTeX)";
-            this.colFormula.ImageLayout = System.Windows.Forms.DataGridViewImageCellLayout.Zoom;
-            this.colFormula.Name = "colFormula";
-            this.colFormula.ReadOnly = true;
-            this.colFormula.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // colValue
-            // 
-            this.colValue.FillWeight = 14F;
-            this.colValue.HeaderText = "Value";
-            this.colValue.Name = "colValue";
-            this.colValue.ReadOnly = true;
-            // 
-            // colUnit
-            // 
-            this.colUnit.FillWeight = 8F;
-            this.colUnit.HeaderText = "Unit";
-            this.colUnit.Name = "colUnit";
-            this.colUnit.ReadOnly = true;
             // 
             // lblTableTitle
             // 
             this.lblTableTitle.Dock = System.Windows.Forms.DockStyle.Top;
             this.lblTableTitle.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.lblTableTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(55)))), ((int)(((byte)(72)))));
-            this.lblTableTitle.Location = new System.Drawing.Point(6, 6);
+            this.lblTableTitle.Location = new System.Drawing.Point(6, 5);
             this.lblTableTitle.Name = "lblTableTitle";
-            this.lblTableTitle.Size = new System.Drawing.Size(848, 28);
+            this.lblTableTitle.Size = new System.Drawing.Size(848, 22);
             this.lblTableTitle.TabIndex = 0;
             this.lblTableTitle.Text = "Calculated Gear Parameters (Elements of Metric Gear Technology)";
             this.lblTableTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
+            // colParamName
+            // 
+            this.colParamName.FillWeight = 35.16133F;
+            this.colParamName.HeaderText = "Parameter";
+            this.colParamName.Name = "colParamName";
+            this.colParamName.ReadOnly = true;
+            // 
+            // colSymbol
+            // 
+            this.colSymbol.FillWeight = 12.48969F;
+            this.colSymbol.HeaderText = "Symbol";
+            this.colSymbol.Name = "colSymbol";
+            this.colSymbol.ReadOnly = true;
+            this.colSymbol.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // colFormula
+            // 
+            this.colFormula.FillWeight = 19.17906F;
+            this.colFormula.HeaderText = "Formula";
+            this.colFormula.Name = "colFormula";
+            this.colFormula.ReadOnly = true;
+            this.colFormula.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // colValue
+            // 
+            this.colValue.FillWeight = 17.58067F;
+            this.colValue.HeaderText = "Value";
+            this.colValue.Name = "colValue";
+            this.colValue.ReadOnly = true;
+            // 
+            // colUnit
+            // 
+            this.colUnit.FillWeight = 10.0461F;
+            this.colUnit.HeaderText = "Unit";
+            this.colUnit.Name = "colUnit";
+            this.colUnit.ReadOnly = true;
+            // 
             // AlibreGearForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1200, 840);
+            this.ClientSize = new System.Drawing.Size(1200, 672);
             this.Controls.Add(this.splitContainerMain);
             this.Controls.Add(this.panelInputs);
             this.Controls.Add(this.menuStrip);
             this.MainMenuStrip = this.menuStrip;
-            this.MinimumSize = new System.Drawing.Size(950, 650);
+            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.MinimumSize = new System.Drawing.Size(950, 529);
             this.Name = "AlibreGearForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Involute Gear Design & Visualisation (2D / 3D)";
@@ -841,7 +848,6 @@ namespace Bolsover.Gears.Gui.Views
             ((System.ComponentModel.ISupportInitialize)(this.gridCalculations)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion
