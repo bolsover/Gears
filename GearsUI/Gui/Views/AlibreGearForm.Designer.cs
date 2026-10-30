@@ -70,7 +70,6 @@ namespace Bolsover.Gears.Gui.Views
             this.btnCalculate = new System.Windows.Forms.Button();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblStatus = new System.Windows.Forms.Label();
-            this.btnResetView = new System.Windows.Forms.Button();
             this.lblResultsHeader = new System.Windows.Forms.Label();
             this.lblPitch = new System.Windows.Forms.Label();
             this.lblBase = new System.Windows.Forms.Label();
@@ -281,7 +280,6 @@ namespace Bolsover.Gears.Gui.Views
             this.panelInputs.Controls.Add(this.btnCalculate);
             this.panelInputs.Controls.Add(this.progressBar);
             this.panelInputs.Controls.Add(this.lblStatus);
-            this.panelInputs.Controls.Add(this.btnResetView);
             this.panelInputs.Controls.Add(this.lblResultsHeader);
             this.panelInputs.Controls.Add(this.lblPitch);
             this.panelInputs.Controls.Add(this.lblBase);
@@ -581,104 +579,94 @@ namespace Bolsover.Gears.Gui.Views
             this.lblStatus.TabIndex = 25;
             this.lblStatus.Text = "Ready";
             // 
-            // btnResetView
-            // 
-            this.btnResetView.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.btnResetView.Location = new System.Drawing.Point(12, 520);
-            this.btnResetView.Name = "btnResetView";
-            this.btnResetView.Size = new System.Drawing.Size(298, 30);
-            this.btnResetView.TabIndex = 26;
-            this.btnResetView.Text = "Reset View / Camera";
-            this.btnResetView.UseVisualStyleBackColor = true;
-            // 
             // lblResultsHeader
             // 
             this.lblResultsHeader.AutoSize = true;
             this.lblResultsHeader.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblResultsHeader.Location = new System.Drawing.Point(12, 560);
+            this.lblResultsHeader.Location = new System.Drawing.Point(12, 522);
             this.lblResultsHeader.Name = "lblResultsHeader";
             this.lblResultsHeader.Size = new System.Drawing.Size(176, 20);
-            this.lblResultsHeader.TabIndex = 27;
+            this.lblResultsHeader.TabIndex = 26;
             this.lblResultsHeader.Text = "Summary Radii (mm)";
             // 
             // lblPitch
             // 
             this.lblPitch.AutoSize = true;
             this.lblPitch.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblPitch.Location = new System.Drawing.Point(12, 582);
+            this.lblPitch.Location = new System.Drawing.Point(12, 544);
             this.lblPitch.Name = "lblPitch";
             this.lblPitch.Size = new System.Drawing.Size(55, 19);
-            this.lblPitch.TabIndex = 28;
+            this.lblPitch.TabIndex = 27;
             this.lblPitch.Text = "Pitch: –";
             // 
             // lblBase
             // 
             this.lblBase.AutoSize = true;
             this.lblBase.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblBase.Location = new System.Drawing.Point(12, 602);
+            this.lblBase.Location = new System.Drawing.Point(12, 564);
             this.lblBase.Name = "lblBase";
             this.lblBase.Size = new System.Drawing.Size(51, 19);
-            this.lblBase.TabIndex = 29;
+            this.lblBase.TabIndex = 28;
             this.lblBase.Text = "Base: –";
             // 
             // lblAddendum
             // 
             this.lblAddendum.AutoSize = true;
             this.lblAddendum.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblAddendum.Location = new System.Drawing.Point(12, 622);
+            this.lblAddendum.Location = new System.Drawing.Point(12, 584);
             this.lblAddendum.Name = "lblAddendum";
             this.lblAddendum.Size = new System.Drawing.Size(92, 19);
-            this.lblAddendum.TabIndex = 30;
+            this.lblAddendum.TabIndex = 29;
             this.lblAddendum.Text = "Addendum: –";
             // 
             // lblDedendum
             // 
             this.lblDedendum.AutoSize = true;
             this.lblDedendum.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblDedendum.Location = new System.Drawing.Point(12, 642);
+            this.lblDedendum.Location = new System.Drawing.Point(12, 604);
             this.lblDedendum.Name = "lblDedendum";
             this.lblDedendum.Size = new System.Drawing.Size(91, 19);
-            this.lblDedendum.TabIndex = 31;
+            this.lblDedendum.TabIndex = 30;
             this.lblDedendum.Text = "Dedendum: –";
             // 
             // lblClearanceVal
             // 
             this.lblClearanceVal.AutoSize = true;
             this.lblClearanceVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblClearanceVal.Location = new System.Drawing.Point(12, 662);
+            this.lblClearanceVal.Location = new System.Drawing.Point(12, 624);
             this.lblClearanceVal.Name = "lblClearanceVal";
             this.lblClearanceVal.Size = new System.Drawing.Size(84, 19);
-            this.lblClearanceVal.TabIndex = 32;
+            this.lblClearanceVal.TabIndex = 31;
             this.lblClearanceVal.Text = "Clearance: –";
             // 
             // lblBacklashVal
             // 
             this.lblBacklashVal.AutoSize = true;
             this.lblBacklashVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblBacklashVal.Location = new System.Drawing.Point(12, 682);
+            this.lblBacklashVal.Location = new System.Drawing.Point(12, 644);
             this.lblBacklashVal.Name = "lblBacklashVal";
             this.lblBacklashVal.Size = new System.Drawing.Size(84, 19);
-            this.lblBacklashVal.TabIndex = 33;
+            this.lblBacklashVal.TabIndex = 32;
             this.lblBacklashVal.Text = "Backlash: –";
             // 
             // lblHelixVal
             // 
             this.lblHelixVal.AutoSize = true;
             this.lblHelixVal.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblHelixVal.Location = new System.Drawing.Point(12, 702);
+            this.lblHelixVal.Location = new System.Drawing.Point(12, 664);
             this.lblHelixVal.Name = "lblHelixVal";
             this.lblHelixVal.Size = new System.Drawing.Size(84, 19);
-            this.lblHelixVal.TabIndex = 34;
+            this.lblHelixVal.TabIndex = 33;
             this.lblHelixVal.Text = "Helix: –";
             // 
             // lblError
             // 
             this.lblError.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.lblError.ForeColor = System.Drawing.Color.Firebrick;
-            this.lblError.Location = new System.Drawing.Point(12, 725);
+            this.lblError.Location = new System.Drawing.Point(12, 687);
             this.lblError.Name = "lblError";
             this.lblError.Size = new System.Drawing.Size(298, 75);
-            this.lblError.TabIndex = 35;
+            this.lblError.TabIndex = 34;
             // 
             // splitContainerMain
             // 
@@ -905,7 +893,6 @@ namespace Bolsover.Gears.Gui.Views
         private System.Windows.Forms.Button btnCalculate;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label lblStatus;
-        private System.Windows.Forms.Button btnResetView;
         private System.Windows.Forms.Label lblResultsHeader;
         private System.Windows.Forms.Label lblPitch;
         private System.Windows.Forms.Label lblBase;

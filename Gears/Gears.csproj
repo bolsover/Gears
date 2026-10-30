@@ -159,12 +159,8 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="Builder\DisplayDataBuilderProvider.cs" />
         <Compile Include="Calculator\AlibreGearGenerator.cs" />
         <Compile Include="Builder\GearVariableBuilder.cs" />
-        <Compile Include="Builder\IDisplayDataBuilder.cs" />
-        <Compile Include="Builder\ProfileShiftedExternalInvolutePairDisplayBuilder.cs" />
-        <Compile Include="Builder\ProfileShiftedExternalNormalHelicalPairDisplayBuilder.cs" />
         <Compile Include="Calculator\ConversionUtils.cs" />
         <Compile Include="Calculator\CustomCalculations.cs" />
         <Compile Include="Calculator\GearCalculator.cs" />
@@ -172,16 +168,8 @@
         <Compile Include="Calculator\GearParameterCalculator.cs" />
         <Compile Include="Calculator\Geometry.cs" />
         <Compile Include="Calculator\IGearCalculator.cs" />
-        <Compile Include="Calculator\IToothProfileComputation.cs" />
         <Compile Include="Calculator\LaTeXUtils.cs" />
         <Compile Include="Calculator\NCalcLatexRenderer.cs" />
-        <Compile Include="Calculator\ToothProfileCalculator.cs" />
-        <Compile Include="Calculator\ToothProfileComputationProvider.cs" />
-        <Compile Include="Calculator\ToothProfileFeatureBuilder.cs" />
-        <Compile Include="Calculator\Strategies\ExternalAutomaticToothProfileComputation.cs" />
-        <Compile Include="Calculator\Strategies\ExternalManualToothProfileComputation.cs" />
-        <Compile Include="Calculator\Strategies\InternalAutomaticToothProfileComputation.cs" />
-        <Compile Include="Calculator\Strategies\InternalManualToothProfileComputation.cs" />
         <Compile Include="Data\GearVariableLoader.cs" />
         <Compile Include="Model\CalculationMode.cs" />
         <Compile Include="Model\ConvertImperial.cs" />

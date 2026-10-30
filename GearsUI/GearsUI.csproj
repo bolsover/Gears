@@ -168,13 +168,8 @@
   <ItemGroup>
     <Compile Include="Globals.cs" />
     <Compile Include="Gui\AlibreGearPreviewControl.cs" />
-    <Compile Include="Gui\GearControlProvider.cs" />
-    <Compile Include="Gui\Presenters\GearViewPresenter.cs" />
-    <Compile Include="Gui\ToothProfileControl.cs" />
-    <Compile Include="Gui\Views\GearView.cs" />
-    <Compile Include="Gui\Views\GearView.Designer.cs" />
-    <Compile Include="Gui\Views\GearForm.cs" />
-    <Compile Include="Gui\Views\GearForm.Designer.cs" />
+    <Compile Include="Gui\Presenters\AlibreGearPresenter.cs" />
+    <Compile Include="Gui\Views\IAlibreGearView.cs" />
     <Compile Include="Gui\Views\AlibreGearForm.cs" />
     <Compile Include="Gui\Views\AlibreGearForm.Designer.cs" />
     <Compile Include="Gui\Views\AddMeshedGearDialog.cs">
@@ -185,8 +180,6 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="Gui\Views\GearView.resx" />
-    <EmbeddedResource Include="Gui\Views\GearForm.resx" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

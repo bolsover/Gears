@@ -2,36 +2,152 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Windows.Forms;
 using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Gui.Presenters;
 using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Gui.Views
 {
     /// <summary>
     /// Interactive front-end for designing and visualising external and internal involute gears.
-    /// Provides editable parameters, calculation execution with a progress indicator,
-    /// LaTeX-formatted parameters table, and interactive 2D profile and 3D solid mesh visualisations.
+    /// Implements IAlibreGearView to provide UI interaction and rendering through the AlibreGearPresenter MVP strategy.
     /// </summary>
-    public partial class AlibreGearForm : Form
+    public partial class AlibreGearForm : Form, IAlibreGearView
     {
-        private List<List<GearPoint>> _currentPolylines = new();
-        private GearMesh3DBuilder.Mesh3D _currentMesh = new();
         private readonly Dictionary<string, Image> _latexImageCache = new();
 
-        private bool _hasMeshedGear = false;
-        private int _meshedTeeth = 24;
-        private double _meshedHelixAngle = 0.0;
-        private string _meshedHelicalDirection = "L";
-        private double _meshedClearance = 0.5;
-        private double _meshedBacklash = 0.0;
-        private double _meshedProfileShift = 0.0;
-        private double _meshedFaceWidth = 15.0;
-        private bool _meshedIsInternal = false;
-        private double _meshedRimThickness = 10.0;
-        private bool _meshedOptimalShift = false;
+        public AlibreGearPresenter Presenter { get; }
+
+        #region IAlibreGearView Parameter Inputs
+
+        public int Teeth
+        {
+            get => (int)numTeeth.Value;
+            set => numTeeth.Value = Math.Max(numTeeth.Minimum, Math.Min(numTeeth.Maximum, value));
+        }
+
+        public double Module
+        {
+            get => (double)numModule.Value;
+            set => numModule.Value = Math.Max(numModule.Minimum, Math.Min(numModule.Maximum, (decimal)value));
+        }
+
+        public double PressureAngle
+        {
+            get => (double)numPressureAngle.Value;
+            set => numPressureAngle.Value = Math.Max(numPressureAngle.Minimum, Math.Min(numPressureAngle.Maximum, (decimal)value));
+        }
+
+        public double HelixAngle
+        {
+            get => (double)numHelixAngle.Value;
+            set => numHelixAngle.Value = Math.Max(numHelixAngle.Minimum, Math.Min(numHelixAngle.Maximum, (decimal)value));
+        }
+
+        public string HelicalDirection
+        {
+            get => cboHelicalDirection.SelectedItem?.ToString().StartsWith("L", StringComparison.OrdinalIgnoreCase) == true ? "L" : "R";
+            set => cboHelicalDirection.SelectedIndex = string.Equals(value, "L", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        }
+
+        public double Clearance
+        {
+            get => (double)numClearance.Value;
+            set => numClearance.Value = Math.Max(numClearance.Minimum, Math.Min(numClearance.Maximum, (decimal)value));
+        }
+
+        public double Backlash
+        {
+            get => (double)numBacklash.Value;
+            set => numBacklash.Value = Math.Max(numBacklash.Minimum, Math.Min(numBacklash.Maximum, (decimal)value));
+        }
+
+        public double FaceWidth
+        {
+            get => (double)numFaceWidth.Value;
+            set => numFaceWidth.Value = Math.Max(numFaceWidth.Minimum, Math.Min(numFaceWidth.Maximum, (decimal)value));
+        }
+
+        public double ProfileShift
+        {
+            get => (double)numProfileShift.Value;
+            set => numProfileShift.Value = Math.Max(numProfileShift.Minimum, Math.Min(numProfileShift.Maximum, (decimal)value));
+        }
+
+        public bool OptimalShift
+        {
+            get => chkOptimalShift.Checked;
+            set => chkOptimalShift.Checked = value;
+        }
+
+        public bool IsInternal
+        {
+            get => chkInternal.Checked;
+            set => chkInternal.Checked = value;
+        }
+
+        public double RimThickness
+        {
+            get => (double)numRimThickness.Value;
+            set => numRimThickness.Value = Math.Max(numRimThickness.Minimum, Math.Min(numRimThickness.Maximum, (decimal)value));
+        }
+
+        public bool ShowFullGear
+        {
+            get => chkFullGear.Checked;
+            set => chkFullGear.Checked = value;
+        }
+
+        public bool ShowReferenceCircles
+        {
+            get => menuShowReferenceCircles.Checked;
+            set => menuShowReferenceCircles.Checked = value;
+        }
+
+        #endregion
+
+        #region IAlibreGearView UI Control States
+
+        public bool RimThicknessEnabled
+        {
+            set
+            {
+                numRimThickness.Enabled = value;
+                lblRimThickness.Enabled = value;
+            }
+        }
+
+        public string TableTitle
+        {
+            set => lblTableTitle.Text = value;
+        }
+
+        public string AddMeshedGearMenuText
+        {
+            set => menuAddMeshedGear.Text = value;
+        }
+
+        public bool RemoveMeshedGearMenuEnabled
+        {
+            set => menuRemoveMeshedGear.Enabled = value;
+        }
+
+        #endregion
+
+        #region IAlibreGearView Events
+
+        public event EventHandler CalculateRequested;
+        public event EventHandler ModuleChanged;
+        public event EventHandler InternalChanged;
+        public event EventHandler AddOrEditMeshedGearRequested;
+        public event EventHandler RemoveMeshedGearRequested;
+        public event EventHandler<ExportFormat> ExportRequested;
+        public event EventHandler<VisualisationModeEventArgs> VisualisationModeChanged;
+        public event EventHandler ReferenceCirclesChanged;
+        public event EventHandler ResetViewRequested;
+
+        #endregion
 
         public AlibreGearForm()
         {
@@ -51,338 +167,63 @@ namespace Bolsover.Gears.Gui.Views
             }
 
             // Parameter change listeners
-            numTeeth.ValueChanged += (s, e) => ExecuteCalculation();
-            numModule.ValueChanged += (s, e) =>
-            {
-                var m = (double)numModule.Value;
-                numClearance.Value = Math.Max(numClearance.Minimum, Math.Min(numClearance.Maximum, (decimal)(0.25 * m)));
-                ExecuteCalculation();
-            };
-            numPressureAngle.ValueChanged += (s, e) => ExecuteCalculation();
-            numHelixAngle.ValueChanged += (s, e) => ExecuteCalculation();
-            cboHelicalDirection.SelectedIndexChanged += (s, e) => ExecuteCalculation();
-            numClearance.ValueChanged += (s, e) => ExecuteCalculation();
-            numBacklash.ValueChanged += (s, e) => ExecuteCalculation();
-            numFaceWidth.ValueChanged += (s, e) => ExecuteCalculation();
-            numProfileShift.ValueChanged += (s, e) => ExecuteCalculation();
-            numRimThickness.ValueChanged += (s, e) => ExecuteCalculation();
-            chkOptimalShift.CheckedChanged += (s, e) => ExecuteCalculation();
-            chkFullGear.CheckedChanged += (s, e) => ExecuteCalculation();
-
-            chkInternal.CheckedChanged += OnInternalChanged;
+            numTeeth.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numModule.ValueChanged += (s, e) => ModuleChanged?.Invoke(this, EventArgs.Empty);
+            numPressureAngle.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numHelixAngle.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            cboHelicalDirection.SelectedIndexChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numClearance.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numBacklash.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numFaceWidth.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numProfileShift.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            numRimThickness.ValueChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            chkOptimalShift.CheckedChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            chkFullGear.CheckedChanged += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
+            chkInternal.CheckedChanged += (s, e) => InternalChanged?.Invoke(this, EventArgs.Empty);
 
             // Menu File options
-            menuExportDxf.Click += (s, e) => Export(ExportFormat.Dxf);
-            menuExportCsv.Click += (s, e) => Export(ExportFormat.Csv);
+            menuExportDxf.Click += (s, e) => ExportRequested?.Invoke(this, ExportFormat.Dxf);
+            menuExportCsv.Click += (s, e) => ExportRequested?.Invoke(this, ExportFormat.Csv);
             menuExit.Click += (s, e) => Close();
 
             // Menu Gear options
-            menuAddMeshedGear.Click += OnAddOrEditMeshedGear;
-            menuRemoveMeshedGear.Click += OnRemoveMeshedGear;
-            menuCalculate.Click += (s, e) => ExecuteCalculation();
+            menuAddMeshedGear.Click += (s, e) => AddOrEditMeshedGearRequested?.Invoke(this, EventArgs.Empty);
+            menuRemoveMeshedGear.Click += (s, e) => RemoveMeshedGearRequested?.Invoke(this, EventArgs.Empty);
+            menuCalculate.Click += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
 
             // Menu View options
-            menuView2D.Click += (s, e) => SetVisualisationMode(PreviewViewMode.Mode2D);
-            menuView3DSolid.Click += (s, e) => SetVisualisationMode(PreviewViewMode.Mode3D, Render3DMode.Solid);
-            menuView3DWireframe.Click += (s, e) => SetVisualisationMode(PreviewViewMode.Mode3D, Render3DMode.Wireframe);
+            menuView2D.Click += (s, e) => VisualisationModeChanged?.Invoke(this, new VisualisationModeEventArgs(PreviewViewMode.Mode2D));
+            menuView3DSolid.Click += (s, e) => VisualisationModeChanged?.Invoke(this, new VisualisationModeEventArgs(PreviewViewMode.Mode3D, Render3DMode.Solid));
+            menuView3DWireframe.Click += (s, e) => VisualisationModeChanged?.Invoke(this, new VisualisationModeEventArgs(PreviewViewMode.Mode3D, Render3DMode.Wireframe));
 
             menuShowReferenceCircles.CheckedChanged += (s, e) =>
             {
                 preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
                 preview.Invalidate();
+                ReferenceCirclesChanged?.Invoke(this, EventArgs.Empty);
             };
-            menuResetView.Click += (s, e) => preview.ResetView();
+            menuResetView.Click += (s, e) => ResetViewRequested?.Invoke(this, EventArgs.Empty);
 
             // Buttons
-            btnCalculate.Click += (s, e) => ExecuteCalculation();
-            btnResetView.Click += (s, e) => preview.ResetView();
+            btnCalculate.Click += (s, e) => CalculateRequested?.Invoke(this, EventArgs.Empty);
 
-            UpdateInternalControls();
-            ExecuteCalculation();
+            Presenter = new AlibreGearPresenter(this);
         }
 
-        private void SetVisualisationMode(PreviewViewMode viewMode, Render3DMode mode3D = Render3DMode.Solid)
-        {
-            menuView2D.Checked = (viewMode == PreviewViewMode.Mode2D);
-            menuView3DSolid.Checked = (viewMode == PreviewViewMode.Mode3D && mode3D == Render3DMode.Solid);
-            menuView3DWireframe.Checked = (viewMode == PreviewViewMode.Mode3D && mode3D == Render3DMode.Wireframe);
+        #region IAlibreGearView Methods
 
-            preview.ViewMode = viewMode;
-            if (viewMode == PreviewViewMode.Mode3D)
-            {
-                preview.Mode3D = mode3D;
-            }
-            preview.Invalidate();
-        }
-
-        private void OnAddOrEditMeshedGear(object sender, EventArgs e)
-        {
-            using var dialog = new AddMeshedGearDialog();
-            dialog.SetValues(
-                _meshedTeeth,
-                _meshedProfileShift,
-                _meshedFaceWidth,
-                _meshedIsInternal,
-                _meshedRimThickness,
-                _meshedOptimalShift,
-                (double)numModule.Value,
-                (double)numPressureAngle.Value,
-                _meshedClearance,
-                _meshedBacklash,
-                _meshedHelixAngle,
-                _meshedHelicalDirection);
-
-            if (dialog.ShowDialog(this) == DialogResult.OK)
-            {
-                _hasMeshedGear = true;
-                _meshedTeeth = dialog.Teeth;
-                _meshedHelixAngle = dialog.HelixAngle;
-                _meshedHelicalDirection = dialog.HelicalDirection;
-                _meshedClearance = dialog.Clearance;
-                _meshedBacklash = dialog.Backlash;
-                _meshedProfileShift = dialog.ProfileShift;
-                _meshedFaceWidth = dialog.FaceWidth;
-                _meshedIsInternal = dialog.IsInternal;
-                _meshedRimThickness = dialog.RimThickness;
-                _meshedOptimalShift = dialog.OptimalShift;
-
-                menuAddMeshedGear.Text = "Edit Meshed Gear…";
-                menuRemoveMeshedGear.Enabled = true;
-                lblTableTitle.Text = "Calculated Gear Pair Parameters (Elements of Metric Gear Technology)";
-                ExecuteCalculation();
-            }
-        }
-
-        private void OnRemoveMeshedGear(object sender, EventArgs e)
-        {
-            _hasMeshedGear = false;
-            menuAddMeshedGear.Text = "Add Meshed Gear…";
-            menuRemoveMeshedGear.Enabled = false;
-            lblTableTitle.Text = "Calculated Gear Parameters (Elements of Metric Gear Technology)";
-            ExecuteCalculation();
-        }
-
-        private void OnInternalChanged(object sender, EventArgs e)
-        {
-            UpdateInternalControls();
-            ExecuteCalculation();
-        }
-
-        private void UpdateInternalControls()
-        {
-            var internalGear = chkInternal.Checked;
-            numRimThickness.Enabled = internalGear;
-            lblRimThickness.Enabled = internalGear;
-        }
-
-        /// <summary>
-        /// Executes full gear geometry calculations, updates the progress indicator,
-        /// generates the 2D profile and 3D extruded mesh, and populates the LaTeX parameter table.
-        /// </summary>
-        public void ExecuteCalculation()
-        {
-            var z = (int)numTeeth.Value;
-            var m = (double)numModule.Value;
-            var alphaDeg = (double)numPressureAngle.Value;
-            var helixAngle = (double)numHelixAngle.Value;
-            var helicalDirection = cboHelicalDirection.SelectedItem?.ToString().StartsWith("L", StringComparison.OrdinalIgnoreCase) == true ? "L" : "R";
-            var clearance = (double)numClearance.Value;
-            var backlash = (double)numBacklash.Value;
-            var faceWidth = (double)numFaceWidth.Value;
-            var profileShift = (double)numProfileShift.Value;
-            var optimalShift = chkOptimalShift.Checked;
-            var internalGear = chkInternal.Checked;
-            var rimThickness = (double)numRimThickness.Value;
-
-            try
-            {
-                lblError.Text = string.Empty;
-                UpdateProgress(15, "Calculating geometric parameters...");
-
-                if (_hasMeshedGear)
-                {
-                    // 1. Calculate meshed gear pair parameters
-                    var pairData = GearParameterCalculator.CalculatePair(
-                        z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness,
-                        _meshedTeeth, _meshedFaceWidth, _meshedProfileShift, _meshedIsInternal, _meshedRimThickness,
-                        clearance, _meshedClearance,
-                        backlash, _meshedBacklash,
-                        helixAngle, _meshedHelixAngle,
-                        helicalDirection, _meshedHelicalDirection);
-
-                    UpdateProgress(40, "Generating involute profile curves...");
-
-                    // 2. Generate 2D tooth and gear profile for Gear 1
-                    var profile1 = internalGear
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash, helixAngle)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash, helixAngle);
-
-                    var tooth1 = AlibreGearGenerator.BuildToothOutline(profile1, internalGear);
-                    var polylines1 = chkFullGear.Checked
-                        ? AlibreGearGenerator.BuildFullGear(z, tooth1)
-                        : tooth1;
-
-                    // Generate 2D tooth and gear profile for Gear 2
-                    var profile2 = _meshedIsInternal
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedRimThickness, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash, _meshedHelixAngle)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(_meshedTeeth, m, alphaDeg, _meshedProfileShift, _meshedOptimalShift, null, _meshedClearance, _meshedBacklash, _meshedHelixAngle);
-
-                    var tooth2 = AlibreGearGenerator.BuildToothOutline(profile2, _meshedIsInternal);
-                    var polylines2 = chkFullGear.Checked
-                        ? AlibreGearGenerator.BuildFullGear(_meshedTeeth, tooth2)
-                        : tooth2;
-
-                    // Mesh alignment:
-                    // For external-external, rotate Gear 2 by (pi + pi / z2) so a tooth gap aligns with Gear 1's tooth at angle 0.
-                    // For internal-external (e.g. adding a meshed external gear to an internal gear), Gear 1 has a tooth gap at angle 0
-                    // and Gear 2 has a tooth at angle 0, so rotation is 0 without a 0.5 tooth offset.
-                    var aw = pairData.WorkingCentreDistance;
-                    var meshRotationAngle = AlibreGearGenerator.CalculateMeshRotationAngle(internalGear, _meshedIsInternal, _meshedTeeth);
-
-                    var cosM = Math.Cos(meshRotationAngle);
-                    var sinM = Math.Sin(meshRotationAngle);
-
-                    var transformedPolylines2 = new List<List<GearPoint>>(polylines2.Count);
-                    foreach (var polyline in polylines2)
-                    {
-                        var transformed = new List<GearPoint>(polyline.Count);
-                        foreach (var pt in polyline)
-                        {
-                            var xRot = pt.X * cosM - pt.Y * sinM;
-                            var yRot = pt.X * sinM + pt.Y * cosM;
-                            transformed.Add(new GearPoint(xRot + aw, yRot));
-                        }
-                        transformedPolylines2.Add(transformed);
-                    }
-
-                    _currentPolylines = new List<List<GearPoint>>(polylines1.Count + transformedPolylines2.Count);
-                    _currentPolylines.AddRange(polylines1);
-                    _currentPolylines.AddRange(transformedPolylines2);
-
-                    UpdateProgress(65, "Constructing 3D extruded solid mesh...");
-
-                    // 3. Generate 3D extruded meshes and combine
-                    var mesh1 = GearMesh3DBuilder.BuildGearMesh(profile1, z, faceWidth, internalGear, chkFullGear.Checked, rimThickness, helixAngle, helicalDirection);
-                    var mesh2 = GearMesh3DBuilder.BuildGearMesh(profile2, _meshedTeeth, _meshedFaceWidth, _meshedIsInternal, chkFullGear.Checked, _meshedRimThickness, _meshedHelixAngle, _meshedHelicalDirection);
-                    var transformedMesh2 = GearMesh3DBuilder.Transform(mesh2, aw, 0.0, 0.0, meshRotationAngle);
-                    _currentMesh = GearMesh3DBuilder.Combine(mesh1, transformedMesh2);
-
-                    UpdateProgress(85, "Rendering visual models and LaTeX tables...");
-
-                    // 4. Update preview control
-                    preview.Polylines = _currentPolylines;
-                    preview.Mesh = _currentMesh;
-                    preview.PitchRadius = pairData.Gear1.PitchDiameter / 2.0;
-                    preview.BaseRadius = pairData.Gear1.BaseDiameter / 2.0;
-                    preview.AddendumRadius = pairData.Gear1.TipDiameter / 2.0;
-                    preview.DedendumRadius = pairData.Gear1.RootDiameter / 2.0;
-
-                    preview.HasSecondGear = true;
-                    preview.Gear2CenterDistance = aw;
-                    preview.Gear2PitchRadius = pairData.Gear2.PitchDiameter / 2.0;
-                    preview.Gear2BaseRadius = pairData.Gear2.BaseDiameter / 2.0;
-                    preview.Gear2AddendumRadius = pairData.Gear2.TipDiameter / 2.0;
-                    preview.Gear2DedendumRadius = pairData.Gear2.RootDiameter / 2.0;
-
-                    preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
-                    UpdatePreviewViewMode();
-                    preview.Invalidate();
-
-                    // 5. Update summary radii labels
-                    UpdateResultLabelsForPair(pairData);
-
-                    // 6. Populate tabular calculated parameters with LaTeX formatting
-                    PopulateParameterTable(pairData.ParameterRows);
-
-                    UpdateProgress(100, "Meshed gear pair calculation completed successfully.");
-                }
-                else
-                {
-                    // 1. Calculate metric gear parameters
-                    var calcData = GearParameterCalculator.Calculate(
-                        z, m, alphaDeg, faceWidth, profileShift, internalGear, rimThickness, clearance, backlash, helixAngle, helicalDirection);
-
-                    UpdateProgress(40, "Generating involute profile curves...");
-
-                    // 2. Generate 2D tooth and gear profile
-                    var profile = internalGear
-                        ? AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, rimThickness, profileShift, optimalShift, null, clearance, backlash, helixAngle)
-                        : AlibreGearGenerator.GenerateExternalToothProfile(z, m, alphaDeg, profileShift, optimalShift, null, clearance, backlash, helixAngle);
-
-                    var tooth = AlibreGearGenerator.BuildToothOutline(profile, internalGear);
-                    _currentPolylines = chkFullGear.Checked
-                        ? AlibreGearGenerator.BuildFullGear(z, tooth)
-                        : tooth;
-
-                    UpdateProgress(65, "Constructing 3D extruded solid mesh...");
-
-                    // 3. Generate 3D extruded mesh
-                    _currentMesh = GearMesh3DBuilder.BuildGearMesh(profile, z, faceWidth, internalGear, chkFullGear.Checked, rimThickness, helixAngle, helicalDirection);
-
-                    UpdateProgress(85, "Rendering visual models and LaTeX tables...");
-
-                    // 4. Update preview control
-                    preview.Polylines = _currentPolylines;
-                    preview.Mesh = _currentMesh;
-                    preview.PitchRadius = calcData.PitchDiameter / 2.0;
-                    preview.BaseRadius = calcData.BaseDiameter / 2.0;
-                    preview.AddendumRadius = calcData.TipDiameter / 2.0;
-                    preview.DedendumRadius = calcData.RootDiameter / 2.0;
-
-                    preview.HasSecondGear = false;
-                    preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
-                    UpdatePreviewViewMode();
-                    preview.Invalidate();
-
-                    // 5. Update summary radii labels
-                    UpdateResultLabels(calcData);
-
-                    // 6. Populate tabular calculated parameters with LaTeX formatting
-                    PopulateParameterTable(calcData.ParameterRows);
-
-                    UpdateProgress(100, "Calculation completed successfully.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _currentPolylines = new List<List<GearPoint>>();
-                _currentMesh = new GearMesh3DBuilder.Mesh3D();
-                preview.Polylines = _currentPolylines;
-                preview.Mesh = _currentMesh;
-                preview.HasSecondGear = false;
-                preview.Invalidate();
-
-                ClearResultLabels();
-                lblError.Text = ex.Message;
-                UpdateProgress(0, "Error: " + ex.Message);
-            }
-        }
-
-        private void UpdatePreviewViewMode()
-        {
-            if (menuView3DWireframe.Checked)
-            {
-                preview.ViewMode = PreviewViewMode.Mode3D;
-                preview.Mode3D = Render3DMode.Wireframe;
-            }
-            else if (menuView3DSolid.Checked)
-            {
-                preview.ViewMode = PreviewViewMode.Mode3D;
-                preview.Mode3D = Render3DMode.Solid;
-            }
-            else
-            {
-                preview.ViewMode = PreviewViewMode.Mode2D;
-            }
-        }
-
-        private void UpdateProgress(int percentage, string message)
+        public void UpdateProgress(int percentage, string message)
         {
             progressBar.Value = Math.Max(0, Math.Min(100, percentage));
             lblStatus.Text = message;
         }
 
-        private void UpdateResultLabels(CalculatedGearData calcData)
+        public void SetErrorMessage(string message)
+        {
+            lblError.Text = message;
+        }
+
+        public void UpdateResultLabels(CalculatedGearData calcData)
         {
             lblPitch.Text = "Pitch (d): " + Fmt(calcData.PitchDiameter);
             lblBase.Text = "Base (db): " + Fmt(calcData.BaseDiameter);
@@ -395,7 +236,7 @@ namespace Bolsover.Gears.Gui.Views
                 : "Helix (β): Spur (0°)";
         }
 
-        private void UpdateResultLabelsForPair(CalculatedGearPairData pairData)
+        public void UpdateResultLabelsForPair(CalculatedGearPairData pairData)
         {
             lblPitch.Text = $"Pitch: d₁={Fmt(pairData.Gear1.PitchDiameter)}, d₂={Fmt(pairData.Gear2.PitchDiameter)}";
             lblBase.Text = $"Base: db₁={Fmt(pairData.Gear1.BaseDiameter)}, db₂={Fmt(pairData.Gear2.BaseDiameter)}";
@@ -406,7 +247,7 @@ namespace Bolsover.Gears.Gui.Views
             lblHelixVal.Text = $"Helix: β₁={pairData.Gear1HelixAngle:0.##}° ({pairData.Gear1HelicalDirection}), β₂={pairData.Gear2HelixAngle:0.##}° ({pairData.Gear2HelicalDirection})";
         }
 
-        private void ClearResultLabels()
+        public void ClearResultLabels()
         {
             lblPitch.Text = "Pitch: –";
             lblBase.Text = "Base: –";
@@ -417,7 +258,7 @@ namespace Bolsover.Gears.Gui.Views
             lblHelixVal.Text = "Helix: –";
         }
 
-        private void PopulateParameterTable(IEnumerable<GearParameterRow> parameterRows)
+        public void PopulateParameterTable(IEnumerable<GearParameterRow> parameterRows)
         {
             gridCalculations.Rows.Clear();
 
@@ -437,6 +278,167 @@ namespace Bolsover.Gears.Gui.Views
                 // Set tooltip text with LaTeX source strings
                 gridCalculations.Rows[rowIndex].Cells[1].ToolTipText = row.SymbolLatex;
                 gridCalculations.Rows[rowIndex].Cells[2].ToolTipText = row.FormulaLatex;
+            }
+        }
+
+        public void UpdatePreviewSingle(
+            List<List<GearPoint>> polylines,
+            GearMesh3DBuilder.Mesh3D mesh,
+            double pitchRadius,
+            double baseRadius,
+            double tipRadius,
+            double rootRadius)
+        {
+            preview.Polylines = polylines;
+            preview.Mesh = mesh;
+            preview.PitchRadius = pitchRadius;
+            preview.BaseRadius = baseRadius;
+            preview.AddendumRadius = tipRadius;
+            preview.DedendumRadius = rootRadius;
+
+            preview.HasSecondGear = false;
+            preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
+            UpdatePreviewViewMode();
+            preview.Invalidate();
+        }
+
+        public void UpdatePreviewPair(
+            List<List<GearPoint>> polylines,
+            GearMesh3DBuilder.Mesh3D mesh,
+            double g1Pitch,
+            double g1Base,
+            double g1Tip,
+            double g1Root,
+            double g2CenterDist,
+            double g2Pitch,
+            double g2Base,
+            double g2Tip,
+            double g2Root)
+        {
+            preview.Polylines = polylines;
+            preview.Mesh = mesh;
+            preview.PitchRadius = g1Pitch;
+            preview.BaseRadius = g1Base;
+            preview.AddendumRadius = g1Tip;
+            preview.DedendumRadius = g1Root;
+
+            preview.HasSecondGear = true;
+            preview.Gear2CenterDistance = g2CenterDist;
+            preview.Gear2PitchRadius = g2Pitch;
+            preview.Gear2BaseRadius = g2Base;
+            preview.Gear2AddendumRadius = g2Tip;
+            preview.Gear2DedendumRadius = g2Root;
+
+            preview.ShowReferenceCircles = menuShowReferenceCircles.Checked;
+            UpdatePreviewViewMode();
+            preview.Invalidate();
+        }
+
+        public void ClearPreview()
+        {
+            preview.Polylines = new List<List<GearPoint>>();
+            preview.Mesh = new GearMesh3DBuilder.Mesh3D();
+            preview.HasSecondGear = false;
+            preview.Invalidate();
+        }
+
+        public void SetVisualisationMode(PreviewViewMode viewMode, Render3DMode mode3D = Render3DMode.Solid)
+        {
+            menuView2D.Checked = (viewMode == PreviewViewMode.Mode2D);
+            menuView3DSolid.Checked = (viewMode == PreviewViewMode.Mode3D && mode3D == Render3DMode.Solid);
+            menuView3DWireframe.Checked = (viewMode == PreviewViewMode.Mode3D && mode3D == Render3DMode.Wireframe);
+
+            preview.ViewMode = viewMode;
+            if (viewMode == PreviewViewMode.Mode3D)
+            {
+                preview.Mode3D = mode3D;
+            }
+            preview.Invalidate();
+        }
+
+        public void ResetView()
+        {
+            preview.ResetView();
+        }
+
+        public bool ShowAddMeshedGearDialog(ref MeshedGearParameters meshedParams, double sharedModule, double sharedPressureAngle)
+        {
+            using var dialog = new AddMeshedGearDialog();
+            dialog.SetValues(
+                meshedParams.Teeth,
+                meshedParams.ProfileShift,
+                meshedParams.FaceWidth,
+                meshedParams.IsInternal,
+                meshedParams.RimThickness,
+                meshedParams.OptimalShift,
+                sharedModule,
+                sharedPressureAngle,
+                meshedParams.Clearance,
+                meshedParams.Backlash,
+                meshedParams.HelixAngle,
+                meshedParams.HelicalDirection);
+
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                meshedParams = new MeshedGearParameters
+                {
+                    Teeth = dialog.Teeth,
+                    HelixAngle = dialog.HelixAngle,
+                    HelicalDirection = dialog.HelicalDirection,
+                    Clearance = dialog.Clearance,
+                    Backlash = dialog.Backlash,
+                    ProfileShift = dialog.ProfileShift,
+                    FaceWidth = dialog.FaceWidth,
+                    IsInternal = dialog.IsInternal,
+                    RimThickness = dialog.RimThickness,
+                    OptimalShift = dialog.OptimalShift
+                };
+                return true;
+            }
+
+            return false;
+        }
+
+        public string ShowSaveFileDialog(string filter, string defaultFileName)
+        {
+            using var dialog = new SaveFileDialog();
+            dialog.Filter = filter;
+            dialog.FileName = defaultFileName;
+            return dialog.ShowDialog(this) == DialogResult.OK ? dialog.FileName : null;
+        }
+
+        public void ShowMessage(string message, string title, MessageBoxIcon icon)
+        {
+            MessageBox.Show(this, message, title, MessageBoxButtons.OK, icon);
+        }
+
+        /// <summary>
+        /// Explicit execution helper forwarding to the presenter for backward compatibility.
+        /// </summary>
+        public void ExecuteCalculation()
+        {
+            Presenter?.ExecuteCalculation();
+        }
+
+        #endregion
+
+        #region Private Helpers
+
+        private void UpdatePreviewViewMode()
+        {
+            if (menuView3DWireframe.Checked)
+            {
+                preview.ViewMode = PreviewViewMode.Mode3D;
+                preview.Mode3D = Render3DMode.Wireframe;
+            }
+            else if (menuView3DSolid.Checked)
+            {
+                preview.ViewMode = PreviewViewMode.Mode3D;
+                preview.Mode3D = Render3DMode.Solid;
+            }
+            else
+            {
+                preview.ViewMode = PreviewViewMode.Mode2D;
             }
         }
 
@@ -471,88 +473,6 @@ namespace Bolsover.Gears.Gui.Views
 
         private static string Fmt(double value) => value.ToString("0.###", CultureInfo.InvariantCulture) + " mm";
 
-        private enum ExportFormat
-        {
-            Dxf,
-            Csv
-        }
-
-        private void Export(ExportFormat format)
-        {
-            if (_currentPolylines == null || _currentPolylines.Count == 0)
-            {
-                MessageBox.Show(this, "There is no valid geometry to export.", "Export",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            var isDxf = format == ExportFormat.Dxf;
-            using var dialog = new SaveFileDialog();
-            dialog.Filter = isDxf ? "DXF files (*.dxf)|*.dxf" : "CSV files (*.csv)|*.csv";
-            dialog.FileName = isDxf ? "gear.dxf" : "gear.csv";
-            if (dialog.ShowDialog(this) != DialogResult.OK) return;
-
-            try
-            {
-                var content = isDxf ? BuildDxf(_currentPolylines) : BuildCsv(_currentPolylines);
-                File.WriteAllText(dialog.FileName, content);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, "Failed to write file: " + ex.Message, "Export",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Builds a minimal DXF document with each polyline emitted as an LWPOLYLINE entity.
-        /// </summary>
-        private static string BuildDxf(IEnumerable<List<GearPoint>> polylines)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("0").AppendLine("SECTION").AppendLine("2").AppendLine("ENTITIES");
-
-            foreach (var polyline in polylines)
-            {
-                if (polyline == null || polyline.Count < 2) continue;
-                sb.AppendLine("0").AppendLine("LWPOLYLINE");
-                sb.AppendLine("8").AppendLine("GEAR");
-                sb.AppendLine("90").AppendLine(polyline.Count.ToString(CultureInfo.InvariantCulture));
-                sb.AppendLine("70").AppendLine("0");
-                foreach (var p in polyline)
-                {
-                    sb.AppendLine("10").AppendLine(Coord(p.X));
-                    sb.AppendLine("20").AppendLine(Coord(p.Y));
-                }
-            }
-
-            sb.AppendLine("0").AppendLine("ENDSEC").AppendLine("0").AppendLine("EOF");
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// Builds a CSV of every point: segment index, point index, x, y.
-        /// </summary>
-        private static string BuildCsv(IReadOnlyList<List<GearPoint>> polylines)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("segment,point,x,y");
-            for (var s = 0; s < polylines.Count; s++)
-            {
-                var polyline = polylines[s];
-                if (polyline == null) continue;
-                for (var i = 0; i < polyline.Count; i++)
-                {
-                    sb.Append(s.ToString(CultureInfo.InvariantCulture)).Append(',')
-                        .Append(i.ToString(CultureInfo.InvariantCulture)).Append(',')
-                        .Append(Coord(polyline[i].X)).Append(',')
-                        .AppendLine(Coord(polyline[i].Y));
-                }
-            }
-
-            return sb.ToString();
-        }
-
-        private static string Coord(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
+        #endregion
     }
 }
