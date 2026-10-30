@@ -218,11 +218,33 @@ namespace UnitTests
         public void TestCalculateMeshRotationAngle_InternalExternal_ReturnsZero()
         {
             // Adding a meshed external gear to an internal gear: internal gear has gap at angle 0, external gear has tooth at angle 0
-            var angle1 = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: true, isInternal2: false, z2: 20);
-            Assert.AreEqual(0.0, angle1, 1e-9, "External gear inside internal gear must have 0 rotation angle (no 0.5 tooth offset).");
+            var angle1 = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: true, isInternal2: false, z1: 60, z2: 20);
+            Assert.AreEqual(0.0, angle1, 1e-9, "External gear inside internal gear must have 0 rotation angle.");
 
-            var angle2 = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: true, z2: 60);
-            Assert.AreEqual(0.0, angle2, 1e-9, "Internal gear meshed with external gear must have 0 rotation angle.");
+            var angle2 = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: true, isInternal2: false, z1: 59, z2: 20);
+            Assert.AreEqual(0.0, angle2, 1e-9, "External gear inside internal gear with odd teeth must have 0 rotation angle.");
+        }
+
+        [Test]
+        public void TestCalculateMeshRotationAngle_ExternalInternal_ParityHandling()
+        {
+            // Both even teeth: (20, 60) -> no parity difference -> 0.0
+            var angleEvenEven = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: true, z1: 20, z2: 60);
+            Assert.AreEqual(0.0, angleEvenEven, 1e-9, "External-internal pair with both even teeth must have 0 rotation angle.");
+
+            // Both odd teeth: (21, 59) -> no parity difference -> 0.0
+            var angleOddOdd = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: true, z1: 21, z2: 59);
+            Assert.AreEqual(0.0, angleOddOdd, 1e-9, "External-internal pair with both odd teeth must have 0 rotation angle.");
+
+            // Even-Odd teeth: (20, 59) -> odd parity difference -> pi / z2 (0.5 tooth offset)
+            var expectedEvenOdd = System.Math.PI / 59;
+            var angleEvenOdd = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: true, z1: 20, z2: 59);
+            Assert.AreEqual(expectedEvenOdd, angleEvenOdd, 1e-9, "External-internal pair with even-odd teeth must have 0.5 tooth offset (pi / z2).");
+
+            // Odd-Even teeth: (21, 60) -> odd parity difference -> pi / z2 (0.5 tooth offset)
+            var expectedOddEven = System.Math.PI / 60;
+            var angleOddEven = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: true, z1: 21, z2: 60);
+            Assert.AreEqual(expectedOddEven, angleOddEven, 1e-9, "External-internal pair with odd-even teeth must have 0.5 tooth offset (pi / z2).");
         }
 
         [Test]
@@ -230,7 +252,7 @@ namespace UnitTests
         {
             var z2 = 24;
             var expected = System.Math.PI + System.Math.PI / z2;
-            var angle = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: false, z2: z2);
+            var angle = AlibreGearGenerator.CalculateMeshRotationAngle(isInternal1: false, isInternal2: false, z1: 20, z2: z2);
             Assert.AreEqual(expected, angle, 1e-9, "External-external pair must rotate Gear 2 by (pi + pi/z2).");
         }
 

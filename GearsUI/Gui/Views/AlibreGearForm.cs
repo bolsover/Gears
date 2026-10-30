@@ -232,7 +232,7 @@ namespace Bolsover.Gears.Gui.Views
             lblClearanceVal.Text = "Clearance (c): " + Fmt(calcData.Clearance);
             lblBacklashVal.Text = "Backlash (jt): " + Fmt(calcData.Backlash);
             lblHelixVal.Text = calcData.HelixAngleDeg > 1e-6
-                ? $"Helix (β): {calcData.HelixAngleDeg:0.##}° ({calcData.HelicalDirection})"
+                ? $"Helix (β): {calcData.HelixAngleDeg.ToString("0.##")}° ({calcData.HelicalDirection})"
                 : "Helix (β): Spur (0°)";
         }
 
@@ -244,7 +244,7 @@ namespace Bolsover.Gears.Gui.Views
             lblDedendum.Text = $"Centre Dist (aw): {Fmt(pairData.WorkingCentreDistance)}";
             lblClearanceVal.Text = $"Clearance: c₁={Fmt(pairData.Gear1Clearance)}, c₂={Fmt(pairData.Gear2Clearance)}";
             lblBacklashVal.Text = $"Backlash: jt₁={Fmt(pairData.Gear1Backlash)}, jt₂={Fmt(pairData.Gear2Backlash)}, jn={Fmt(pairData.NormalBacklash)}";
-            lblHelixVal.Text = $"Helix: β₁={pairData.Gear1HelixAngle:0.##}° ({pairData.Gear1HelicalDirection}), β₂={pairData.Gear2HelixAngle:0.##}° ({pairData.Gear2HelicalDirection})";
+            lblHelixVal.Text = $"Helix: β₁={pairData.Gear1HelixAngle.ToString("0.##")}° ({pairData.Gear1HelicalDirection}), β₂={pairData.Gear2HelixAngle.ToString("0.##")}° ({pairData.Gear2HelicalDirection})";
         }
 
         public void ClearResultLabels()

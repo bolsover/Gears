@@ -89,12 +89,12 @@ namespace Bolsover.Gears.Gui.Views
             this.preview = new Bolsover.Gears.Gui.AlibreGearPreviewControl();
             this.panelTableContainer = new System.Windows.Forms.Panel();
             this.gridCalculations = new System.Windows.Forms.DataGridView();
-            this.lblTableTitle = new System.Windows.Forms.Label();
             this.colParamName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSymbol = new System.Windows.Forms.DataGridViewImageColumn();
             this.colFormula = new System.Windows.Forms.DataGridViewImageColumn();
             this.colValue = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lblTableTitle = new System.Windows.Forms.Label();
             this.menuStrip.SuspendLayout();
             this.panelInputs.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numTeeth)).BeginInit();
@@ -764,18 +764,6 @@ namespace Bolsover.Gears.Gui.Views
             this.gridCalculations.Size = new System.Drawing.Size(848, 261);
             this.gridCalculations.TabIndex = 1;
             // 
-            // lblTableTitle
-            // 
-            this.lblTableTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblTableTitle.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
-            this.lblTableTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(55)))), ((int)(((byte)(72)))));
-            this.lblTableTitle.Location = new System.Drawing.Point(6, 5);
-            this.lblTableTitle.Name = "lblTableTitle";
-            this.lblTableTitle.Size = new System.Drawing.Size(848, 22);
-            this.lblTableTitle.TabIndex = 0;
-            this.lblTableTitle.Text = "Calculated Gear Parameters (Elements of Metric Gear Technology)";
-            this.lblTableTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
             // colParamName
             // 
             this.colParamName.FillWeight = 35.16133F;
@@ -812,6 +800,18 @@ namespace Bolsover.Gears.Gui.Views
             this.colUnit.HeaderText = "Unit";
             this.colUnit.Name = "colUnit";
             this.colUnit.ReadOnly = true;
+            // 
+            // lblTableTitle
+            // 
+            this.lblTableTitle.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblTableTitle.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+            this.lblTableTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(55)))), ((int)(((byte)(72)))));
+            this.lblTableTitle.Location = new System.Drawing.Point(6, 5);
+            this.lblTableTitle.Name = "lblTableTitle";
+            this.lblTableTitle.Size = new System.Drawing.Size(848, 22);
+            this.lblTableTitle.TabIndex = 0;
+            this.lblTableTitle.Text = "Calculated Gear Parameters (Elements of Metric Gear Technology)";
+            this.lblTableTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // AlibreGearForm
             // 

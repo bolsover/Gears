@@ -73,8 +73,8 @@ namespace Bolsover.Gears.Gui.Views
             numRimThickness.Value = Math.Max(numRimThickness.Minimum, Math.Min(numRimThickness.Maximum, (decimal)rimThickness));
             chkOptimalShift.Checked = optimalShift;
 
-            lblModuleVal.Text = $"{sharedModule:0.###} mm";
-            lblPressureAngleVal.Text = $"{sharedPressureAngle:0.##}°";
+            lblModuleVal.Text = $"{sharedModule.ToString("0.###")} mm";
+            lblPressureAngleVal.Text = $"{sharedPressureAngle.ToString("0.##")}°";
 
             UpdateInternalControls();
         }

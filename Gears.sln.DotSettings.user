@@ -38,7 +38,7 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AThrowHelper_002Ecs_002Fl_003AC_0021_003FUsers_003FDavidBolsover_003FAppData_003FRoaming_003FJetBrains_003FRider2025_002E2_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003F3020f90f960f433086d545c4e07afdfd531820_003F31_003F6617818c_003FThrowHelper_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003A_005F_005FError_002Ecs_002Fl_003AC_0021_003FUsers_003FDavidBolsover_003FAppData_003FRoaming_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003F4a26704d10e145e2890fa38a6cc0df67531820_003Fe6_003F444e2b38_003F_005F_005FError_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/PencilsConfiguration/Storage/@EntryValue">ThisComputer</s:String>
-	<s:String x:Key="/Default/dotCover/Editor/HighlightingSourceSnapshotLocation/@EntryValue">C:\Users\DavidBolsover\AppData\Local\JetBrains\Rider2026.3\resharper-host\temp\Rider\vAny\CoverageData\_Gears.-248529831\Snapshot\snapshot.utdcvr</s:String>
+	
 	
 	
 	

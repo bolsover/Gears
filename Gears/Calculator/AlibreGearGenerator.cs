@@ -41,18 +41,41 @@ namespace Bolsover.Gears.Calculator
         /// <summary>
         /// Calculates the rotation angle in radians required to align Gear 2 with Gear 1 for meshing.
         /// For external-external pairs, Gear 2 is rotated by (pi + pi / z2) to align a tooth gap with Gear 1's tooth at angle 0.
-        /// For internal-external pairs (e.g. adding a meshed external gear to an internal gear), Gear 1 has a tooth gap at angle 0
-        /// and Gear 2 has a tooth at angle 0, so the required rotation angle is 0.
+        /// For internal-external pairs (Gear 1 internal, Gear 2 external), contact is at angle 0 where Gear 1 has a tooth gap
+        /// and Gear 2 has a tooth, requiring 0 rotation.
+        /// For external-internal pairs (Gear 1 external, Gear 2 internal), contact is at angle pi (-r1, 0).
+        /// When (z1 - z2) is odd, an additional 0.5 tooth pitch rotation (pi / z2) is required to align tooth with tooth gap.
         /// </summary>
-        public static double CalculateMeshRotationAngle(bool isInternal1, bool isInternal2, int z2)
+        public static double CalculateMeshRotationAngle(bool isInternal1, bool isInternal2, int z1, int z2)
         {
-            if (isInternal1 || isInternal2)
+            if (isInternal1 && isInternal2)
             {
                 return 0.0;
             }
 
+            if (isInternal1 && !isInternal2)
+            {
+                // Internal Gear 1 meshed with External Gear 2: contact is at angle 0 (+r1).
+                // Gear 1 has a tooth gap at angle 0 and Gear 2 has a tooth at angle 0, so rotation is 0.
+                return 0.0;
+            }
+
+            if (!isInternal1 && isInternal2)
+            {
+                // External Gear 1 meshed with Internal Gear 2: contact is at angle pi (-r1).
+                // If (z1 - z2) is odd, tooth/gap parity requires a 0.5 tooth offset (pi / z2) to mesh properly.
+                return (Math.Abs(z1 - z2) % 2 != 0 && z2 > 0) ? Math.PI / z2 : 0.0;
+            }
+
+            // External-External pair:
             return z2 > 0 ? Math.PI + Math.PI / z2 : 0.0;
         }
+
+        /// <summary>
+        /// Overload for backwards compatibility.
+        /// </summary>
+        public static double CalculateMeshRotationAngle(bool isInternal1, bool isInternal2, int z2)
+            => CalculateMeshRotationAngle(isInternal1, isInternal2, 0, z2);
 
         /// <summary>
         /// Involute function: tan(angle) - angle.

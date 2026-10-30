@@ -215,10 +215,12 @@ namespace Bolsover.Gears.Gui.Presenters
 
                     // Mesh alignment:
                     // For external-external, rotate Gear 2 by (pi + pi / z2) so a tooth gap aligns with Gear 1's tooth at angle 0.
-                    // For internal-external (e.g. adding a meshed external gear to an internal gear), Gear 1 has a tooth gap at angle 0
-                    // and Gear 2 has a tooth at angle 0, so rotation is 0 without a 0.5 tooth offset.
+                    // For internal-external (Gear 1 internal, Gear 2 external), contact is at angle 0 where Gear 1 has a tooth gap
+                    // and Gear 2 has a tooth, requiring 0 rotation.
+                    // For external-internal (Gear 1 external, Gear 2 internal), contact is at angle pi (-r1, 0).
+                    // When (z1 - z2) is odd, an additional 0.5 tooth pitch rotation (pi / z2) is required to align tooth with tooth gap.
                     var aw = pairData.WorkingCentreDistance;
-                    var meshRotationAngle = AlibreGearGenerator.CalculateMeshRotationAngle(internalGear, MeshedGear.IsInternal, MeshedGear.Teeth);
+                    var meshRotationAngle = AlibreGearGenerator.CalculateMeshRotationAngle(internalGear, MeshedGear.IsInternal, z, MeshedGear.Teeth);
 
                     var cosM = Math.Cos(meshRotationAngle);
                     var sinM = Math.Sin(meshRotationAngle);

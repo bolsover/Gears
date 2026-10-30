@@ -287,6 +287,43 @@ namespace UnitTests
         }
 
         [Test]
+        public void TestPresenter_AddMeshedInternalGear_CalculatesAndUpdatesPreview()
+        {
+            var fakeView = new FakeAlibreGearView
+            {
+                Teeth = 21, // Odd tooth count
+                Module = 2.0,
+                PressureAngle = 20.0,
+                DialogResultToReturn = true,
+                DialogParamsToReturn = new MeshedGearParameters
+                {
+                    Teeth = 60, // Even tooth count -> (21 - 60) odd parity
+                    ProfileShift = 0.0,
+                    FaceWidth = 15.0,
+                    IsInternal = true,
+                    RimThickness = 10.0,
+                    Clearance = 0.5,
+                    Backlash = 0.0,
+                    HelixAngle = 0.0,
+                    HelicalDirection = "R"
+                }
+            };
+
+            var presenter = new AlibreGearPresenter(fakeView);
+            fakeView.FireAddOrEditMeshed();
+
+            Assert.IsTrue(presenter.HasMeshedGear);
+            Assert.IsTrue(fakeView.LastHasSecondGear);
+            Assert.IsNotNull(fakeView.LastPairData);
+            Assert.AreEqual(21, fakeView.LastPairData.Gear1.Teeth);
+            Assert.AreEqual(60, fakeView.LastPairData.Gear2.Teeth);
+            Assert.IsNotNull(presenter.CurrentPolylines);
+            Assert.Greater(presenter.CurrentPolylines.Count, 0);
+            Assert.IsNotNull(presenter.CurrentMesh);
+            Assert.Greater(presenter.CurrentMesh.Vertices.Count, 0);
+        }
+
+        [Test]
         public void TestPresenter_SetVisualisationMode()
         {
             var fakeView = new FakeAlibreGearView();

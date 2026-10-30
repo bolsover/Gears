@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 using Bolsover.Gears.Calculator;
 using Bolsover.Gears.Model;
 
@@ -48,6 +49,10 @@ namespace Bolsover.Gears.Gui
         private GearMesh3DBuilder.Mesh3D _mesh = new GearMesh3DBuilder.Mesh3D();
         private PreviewViewMode _viewMode = PreviewViewMode.Mode2D;
         private Render3DMode _mode3D = Render3DMode.Solid;
+        private Color _meshColor = Color.FromArgb(70, 130, 180);
+
+        private ElementHost _elementHost3D;
+        private HelixGearViewport _helixViewport;
 
         // 2D Navigation state
         private double _userZoom2D = 1.0;
@@ -87,7 +92,7 @@ namespace Bolsover.Gears.Gui
             set
             {
                 _viewMode = value;
-                Invalidate();
+                UpdateViewportVisibility();
             }
         }
 
@@ -100,6 +105,10 @@ namespace Bolsover.Gears.Gui
             set
             {
                 _mode3D = value;
+                if (_viewMode == PreviewViewMode.Mode3D && _helixViewport != null)
+                {
+                    _helixViewport.SetMesh(_mesh, _meshColor, _mode3D);
+                }
                 Invalidate();
             }
         }
@@ -126,6 +135,10 @@ namespace Bolsover.Gears.Gui
             set
             {
                 _mesh = value ?? new GearMesh3DBuilder.Mesh3D();
+                if (_viewMode == PreviewViewMode.Mode3D && _helixViewport != null)
+                {
+                    _helixViewport.SetMesh(_mesh, _meshColor, _mode3D);
+                }
                 Invalidate();
             }
         }
@@ -138,12 +151,25 @@ namespace Bolsover.Gears.Gui
         /// <summary>
         /// Base color used for 3D shaded rendering.
         /// </summary>
-        public Color MeshColor { get; set; } = Color.FromArgb(70, 130, 180);
+        public Color MeshColor
+        {
+            get => _meshColor;
+            set
+            {
+                _meshColor = value;
+                if (_viewMode == PreviewViewMode.Mode3D && _helixViewport != null)
+                {
+                    _helixViewport.SetMesh(_mesh, _meshColor, _mode3D);
+                }
+                Invalidate();
+            }
+        }
 
         public AlibreGearPreviewControl()
         {
             DoubleBuffered = true;
             BackColor = Color.White;
+            InitializeHardware3DViewport();
             Resize += (s, e) => Invalidate();
             MouseWheel += HandleMouseWheelZoom;
             MouseDown += HandleMouseDown;
@@ -152,18 +178,54 @@ namespace Bolsover.Gears.Gui
             DoubleClick += (s, e) => ResetView();
         }
 
+        private void InitializeHardware3DViewport()
+        {
+            _helixViewport = new HelixGearViewport();
+            _elementHost3D = new ElementHost
+            {
+                Dock = DockStyle.Fill,
+                Child = _helixViewport,
+                Visible = false
+            };
+            Controls.Add(_elementHost3D);
+        }
+
+        private void UpdateViewportVisibility()
+        {
+            if (_elementHost3D == null) return;
+
+            if (_viewMode == PreviewViewMode.Mode3D)
+            {
+                _elementHost3D.Visible = true;
+                _elementHost3D.BringToFront();
+                _helixViewport?.SetMesh(_mesh, _meshColor, _mode3D);
+            }
+            else
+            {
+                _elementHost3D.Visible = false;
+                Invalidate();
+            }
+        }
+
         /// <summary>
         /// Resets zoom, pan, and rotation so the geometry re-fits the control.
         /// </summary>
         public void ResetView()
         {
-            _userZoom2D = 1.0;
-            _userPan2D = PointF.Empty;
-            _yawDeg = -35.0;
-            _pitchDeg = 25.0;
-            _userZoom3D = 1.0;
-            _userPan3D = PointF.Empty;
-            Invalidate();
+            if (_viewMode == PreviewViewMode.Mode3D && _helixViewport != null)
+            {
+                _helixViewport.ResetCamera();
+            }
+            else
+            {
+                _userZoom2D = 1.0;
+                _userPan2D = PointF.Empty;
+                _yawDeg = -35.0;
+                _pitchDeg = 25.0;
+                _userZoom3D = 1.0;
+                _userPan3D = PointF.Empty;
+                Invalidate();
+            }
         }
 
         private void HandleMouseDown(object sender, MouseEventArgs e)

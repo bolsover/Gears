@@ -48,6 +48,9 @@
     <Reference Include="CSharpMath.Evaluation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\CSharpMath.Evaluation.0.5.1\lib\netstandard2.0\CSharpMath.Evaluation.dll</HintPath>
     </Reference>
+    <Reference Include="CommunityToolkit.Diagnostics, Version=8.3.0.0, Culture=neutral, PublicKeyToken=4aff67a105548ee2, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommunityToolkit.Diagnostics.8.3.2\lib\netstandard2.0\CommunityToolkit.Diagnostics.dll</HintPath>
+    </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
     </Reference>
@@ -128,7 +131,9 @@
     <Reference Include="Parlot, Version=1.3.5.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
       <HintPath>..\packages\Parlot.1.3.5\lib\net472\Parlot.dll</HintPath>
     </Reference>
+    <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.6.0\lib\net462\System.Buffers.dll</HintPath>
@@ -184,7 +189,9 @@
   <ItemGroup>
     <Compile Include="ConsoleIO.cs" />
     <Compile Include="FormulaRegressionTests.cs" />
-    <Compile Include="FormulaTests.cs" />
+    <Compile Include="FormulaTests.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="NCalcLatexRendererTests.cs" />
     <Compile Include="NCalcTests.cs" />
     <Compile Include="NewtonRaphsonTest.cs" />
@@ -194,6 +201,7 @@
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearLoading.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />
+    <Compile Include="TestHelixMeshAdapter.cs" />
     <Compile Include="TestGearParameterCalculator.cs" />
     <Compile Include="TestProfileShiftedInternalExternalHelicalPair.cs" />
     <Compile Include="TestExternalInvolutePair.cs" />
