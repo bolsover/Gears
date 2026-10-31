@@ -11,7 +11,10 @@ namespace Bolsover.Gears.Calculator.Assemblies
     {
         private static readonly Dictionary<MeshType, IMeshSolver> Solvers = new Dictionary<MeshType, IMeshSolver>
         {
-            { MeshType.Parallel, new ParallelAxisMeshSolver() }
+            { MeshType.Parallel, new ParallelAxisMeshSolver() },
+            { MeshType.Rack, new RackMeshSolver() },
+            { MeshType.Bevel, new BevelMeshSolver() },
+            { MeshType.Worm, new WormMeshSolver() }
         };
 
         public static IMeshSolver Get(MeshType meshType)

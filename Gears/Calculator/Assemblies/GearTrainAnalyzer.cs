@@ -52,11 +52,11 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 if (speeds.TryGetValue(shaft, out var speed))
                 {
                     double? ratio = Math.Abs(speed) > 1e-12 ? GearPrecision.Round(inputSpeedRpm / speed) : (double?)null;
-                    shaftRows.Add(new ShaftSpeedRow(shaft.Id, GearPrecision.Round(speed), ratio));
+                    shaftRows.Add(new ShaftSpeedRow(shaft.Id, GearPrecision.Round(speed), ratio, IsLinearShaft(shaft)));
                 }
                 else
                 {
-                    shaftRows.Add(new ShaftSpeedRow(shaft.Id, null, null));
+                    shaftRows.Add(new ShaftSpeedRow(shaft.Id, null, null, IsLinearShaft(shaft)));
                     warnings.Add($"Shaft '{shaft.Id}' is not connected to input shaft '{inputShaft.Id}' by a meshing relation.");
                 }
             }
@@ -69,7 +69,9 @@ namespace Bolsover.Gears.Calculator.Assemblies
                     var gear = mount.Component;
                     double? speed = speeds.TryGetValue(shaft, out var s) ? GearPrecision.Round(s) : (double?)null;
                     double? velocity = speed.HasValue
-                        ? GearPrecision.Round(Math.PI * gear.PitchDiameter * Math.Abs(speed.Value) / 60000.0)
+                        ? GearPrecision.Round(gear.IsLinear
+                            ? Math.Abs(speed.Value) / 60000.0
+                            : Math.PI * gear.PitchDiameter * Math.Abs(speed.Value) / 60000.0)
                         : (double?)null;
                     gearRows.Add(new GearSpeedRow(
                         gear.Id,
@@ -115,16 +117,7 @@ namespace Bolsover.Gears.Calculator.Assemblies
         public static double SpeedFactor(GearMeshRelation relation)
         {
             if (relation == null) throw new ArgumentNullException(nameof(relation));
-            var g1 = relation.Driver as InvoluteGearComponent;
-            var g2 = relation.Driven as InvoluteGearComponent;
-            if (g1 == null || g2 == null)
-            {
-                throw new NotSupportedException(
-                    $"The speed ratio of '{relation.Driver.Id}' and '{relation.Driven.Id}' cannot be calculated: only involute gears are supported.");
-            }
-
-            var sign = g1.IsInternal != g2.IsInternal ? 1.0 : -1.0;
-            return sign * g1.Teeth / g2.Teeth;
+            return MeshSolvers.Get(relation.MeshType).SpeedFactor(relation.Driver, relation.Driven);
         }
 
         private static Dictionary<Shaft, double> PropagateSpeeds(GearAssembly assembly, Shaft inputShaft, double inputSpeedRpm)
@@ -186,6 +179,11 @@ namespace Bolsover.Gears.Calculator.Assemblies
             }
 
             return speeds;
+        }
+
+        private static bool IsLinearShaft(Shaft shaft)
+        {
+            return shaft.Mounts.Any(m => m.Component.IsLinear);
         }
 
         private static string DescribeRole(GearAssembly assembly, Shaft shaft, Shaft inputShaft, GearComponent gear)

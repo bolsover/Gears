@@ -8,16 +8,23 @@ namespace Bolsover.Gears.Model.Assemblies
     /// <summary>Speed of one shaft in a gear train. Speeds are signed: positive turns like the input shaft.</summary>
     public sealed class ShaftSpeedRow
     {
-        public ShaftSpeedRow(string shaftId, double? speedRpm, double? ratioToInput)
+        public ShaftSpeedRow(string shaftId, double? speedRpm, double? ratioToInput, bool isLinear = false)
         {
             ShaftId = shaftId;
             SpeedRpm = speedRpm;
             RatioToInput = ratioToInput;
+            IsLinear = isLinear;
         }
 
         public string ShaftId { get; }
 
-        /// <summary>Shaft speed (rpm); null when the shaft is not connected to the input shaft.</summary>
+        /// <summary>True for the carrier of a rack: the speed is then a linear speed in mm/min instead of rpm.</summary>
+        public bool IsLinear { get; }
+
+        /// <summary>The unit of <see cref="SpeedRpm"/>: "rpm", or "mm/min" for a rack carrier.</summary>
+        public string Unit => IsLinear ? "mm/min" : "rpm";
+
+        /// <summary>Shaft speed (rpm, or mm/min when <see cref="IsLinear"/>); null when the shaft is not connected to the input shaft.</summary>
         public double? SpeedRpm { get; }
 
         /// <summary>Input speed divided by this shaft's speed (greater than 1 is a speed reduction); null when unknown.</summary>
@@ -147,7 +154,7 @@ namespace Bolsover.Gears.Model.Assemblies
             foreach (var s in Shafts)
             {
                 sb.AppendLine(
-                    $"  {s.ShaftId}: {Format(s.SpeedRpm, ci)} rpm ({s.Direction}), ratio to input {Format(s.RatioToInput, ci)}");
+                    $"  {s.ShaftId}: {Format(s.SpeedRpm, ci)} {s.Unit} ({s.Direction}), ratio to input {Format(s.RatioToInput, ci)}");
             }
 
             sb.AppendLine();

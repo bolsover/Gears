@@ -58,5 +58,19 @@ namespace Bolsover.Gears.Calculator.Assemblies
             var ratio = GearPrecision.Round((double)g2.Teeth / g1.Teeth);
             return new MeshResult(centreDistance, drivenPhase, ratio, pair);
         }
+
+        public double SpeedFactor(GearComponent driver, GearComponent driven)
+        {
+            var g1 = driver as InvoluteGearComponent;
+            var g2 = driven as InvoluteGearComponent;
+            if (g1 == null || g2 == null)
+            {
+                throw new NotSupportedException(
+                    $"The speed ratio of '{driver?.Id}' and '{driven?.Id}' cannot be calculated: only involute gears mesh on parallel axes.");
+            }
+
+            var sign = g1.IsInternal != g2.IsInternal ? 1.0 : -1.0;
+            return sign * g1.Teeth / g2.Teeth;
+        }
     }
 }

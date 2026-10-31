@@ -160,6 +160,8 @@
     <Compile Include="TestAlibreGearPresenter.cs" />
     <Compile Include="TestGearAssembly.cs" />
     <Compile Include="TestGearTrain.cs" />
+    <Compile Include="TestGearTrainPhases3To7.cs" />
+    <Compile Include="TestGearTrainEditorPhases3To7.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearLoading.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />

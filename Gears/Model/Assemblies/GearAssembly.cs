@@ -230,6 +230,12 @@ namespace Bolsover.Gears.Model.Assemblies
             // and the driven angle is turned back by theta. For theta = 0 the result is the solver's unchanged.
             var theta = relation.CentreLineAngleDeg * Math.PI / 180.0;
             var solved = solver.Solve(relation.Driver, relation.Driven, driverMount.PhaseRad - theta);
+            if (solved.DrivenFrame != null)
+            {
+                SolveFramed(relation, solved, theta, driverMount, driverShaft, drivenMount, drivenShaft, placed);
+                return;
+            }
+
             var result = Math.Abs(theta) < 1e-15
                 ? solved
                 : new MeshResult(solved.CentreDistance, solved.DrivenPhaseRad + theta, solved.GearRatio, solved.PairData);
@@ -264,6 +270,54 @@ namespace Bolsover.Gears.Model.Assemblies
 
             // The shaft is already turned by an earlier relation (compound gear): clock this gear onto the shaft.
             drivenMount.PhaseOffsetRad = result.DrivenPhaseRad - drivenShaft.RotationRad;
+            relation.Result = result;
+        }
+
+        /// <summary>
+        /// Places the driven shaft from the frame returned by the solver (rack, bevel and worm meshes). The solver's frame is
+        /// relative to the driver gear with the line of centres along X; the whole pair is then turned by theta about the
+        /// driver axis, which is a rigid motion, so the solved phase needs no further correction.
+        /// </summary>
+        private static void SolveFramed(
+            GearMeshRelation relation,
+            MeshResult result,
+            double theta,
+            ShaftMount driverMount,
+            Shaft driverShaft,
+            ShaftMount drivenMount,
+            Shaft drivenShaft,
+            ISet<Shaft> placed)
+        {
+            var gearFrame = driverShaft.Placement.ToTransform()
+                .Compose(Transform3D.Translate(new Vector3D(0, 0, driverMount.AxialOffset)))
+                .Compose(Transform3D.RotationZ(theta))
+                .Compose(result.DrivenFrame.ToTransform())
+                .Compose(Transform3D.Translate(new Vector3D(0, 0, -drivenMount.AxialOffset)));
+
+            var origin = GearPrecision.Round(gearFrame.Translation);
+            var zAxis = gearFrame.TransformDirection(Vector3D.UnitZ);
+            var xAxis = gearFrame.TransformDirection(Vector3D.UnitX);
+
+            if (placed.Contains(drivenShaft))
+            {
+                var existing = drivenShaft.Placement;
+                var originError = (existing.Origin - origin).Length;
+                var axisError = existing.ZAxis.Cross(zAxis).Length;
+                if (originError > 10 * GearPrecision.Tolerance || axisError > 1e-6)
+                {
+                    throw new InvalidOperationException(
+                        $"Shaft '{drivenShaft.Id}' is over-constrained: meshing '{relation.Driven.Id}' with '{relation.Driver.Id}' " +
+                        $"requires its origin at {origin} and axis {zAxis}, but it is already placed at {existing.Origin} with axis {existing.ZAxis}.");
+                }
+
+                drivenMount.PhaseOffsetRad = result.DrivenPhaseRad - drivenShaft.RotationRad;
+                relation.Result = result;
+                return;
+            }
+
+            drivenShaft.Placement = new Placement3D(origin, zAxis, xAxis);
+            placed.Add(drivenShaft);
+            drivenShaft.RotationRad = result.DrivenPhaseRad - drivenMount.PhaseOffsetRad;
             relation.Result = result;
         }
     }

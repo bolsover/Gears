@@ -70,5 +70,20 @@ namespace Bolsover.Gears.Model.Assemblies
 
         /// <summary>Builds the component geometry in local coordinates.</summary>
         public abstract GearGeometry BuildGeometry();
+
+        /// <summary>Short description of the kind of component, for example "Spur gear" or "Bevel gear".</summary>
+        public virtual string TypeName => "Gear";
+
+        /// <summary>True when the component moves along a line instead of turning (a rack).</summary>
+        public virtual bool IsLinear => false;
+
+        /// <summary>False when the shaft carrying only this kind of component should not be drawn (a rack carrier).</summary>
+        public virtual bool NeedsShaftMesh => true;
+
+        /// <summary>
+        /// Motion of the component in its local frame for a given phase: a rotation about the axis by the phase
+        /// (radians), or for a linear component a translation by the phase (mm).
+        /// </summary>
+        public virtual Transform3D GetLocalMotion(double phase) => Transform3D.RotationZ(phase);
     }
 }

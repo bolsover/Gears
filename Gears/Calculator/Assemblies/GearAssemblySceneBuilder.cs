@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 
@@ -22,9 +23,12 @@ namespace Bolsover.Gears.Calculator.Assemblies
             var scene = new AssemblyScene();
             foreach (var shaft in assembly.Shafts)
             {
+                var drawShaft = shaft.Mounts.Count == 0 || shaft.Mounts.Any(m => m.Component.NeedsShaftMesh);
                 scene.Add(new SceneShaftItem(
                     shaft,
-                    TransformMesh(ShaftMeshBuilder.Build(shaft), shaft.Placement.ToTransform())));
+                    drawShaft
+                        ? TransformMesh(ShaftMeshBuilder.Build(shaft), shaft.Placement.ToTransform())
+                        : new GearMesh3DBuilder.Mesh3D()));
 
                 foreach (var mount in shaft.Mounts)
                 {
@@ -32,7 +36,7 @@ namespace Bolsover.Gears.Calculator.Assemblies
 
                     var localToWorld = shaft.Placement.ToTransform()
                         .Compose(Transform3D.Translate(new Vector3D(0, 0, mount.AxialOffset)))
-                        .Compose(Transform3D.RotationZ(mount.PhaseRad));
+                        .Compose(mount.Component.GetLocalMotion(mount.PhaseRad));
 
                     scene.Add(new SceneItem(
                         mount.Component,

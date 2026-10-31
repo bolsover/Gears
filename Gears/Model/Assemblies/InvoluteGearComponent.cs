@@ -43,6 +43,11 @@ namespace Bolsover.Gears.Model.Assemblies
 
         public bool IsHelical => HelixAngleDeg > 1e-6;
 
+        public override string TypeName => IsInternal ? "Internal gear" : (IsHelical ? "Helical gear" : "Spur gear");
+
+        /// <summary>An internal gear has an open bore, so a shaft cylinder is not drawn through it.</summary>
+        public override bool NeedsShaftMesh => !IsInternal;
+
         public override int ToothCount => Teeth;
 
         /// <summary>Reference (pitch) diameter: module times teeth, divided by the cosine of the helix angle.</summary>

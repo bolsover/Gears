@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using Bolsover.Gears.Calculator.Assemblies;
 using Bolsover.Gears.Gui.Views;
@@ -14,6 +15,14 @@ namespace Bolsover.Gears.Gui.Presenters
         Assembly,
         Shaft,
         Gear
+    }
+
+    /// <summary>The kind of gear that a new train starts with.</summary>
+    public enum GearFamily
+    {
+        Spur,
+        Bevel,
+        Worm
     }
 
     /// <summary>One node of the assembly tree: assembly, then shafts, then the gears mounted on each shaft.</summary>
@@ -51,6 +60,7 @@ namespace Bolsover.Gears.Gui.Presenters
         private readonly HashSet<GearComponent> _hidden = new HashSet<GearComponent>();
         private int _gearCounter;
         private int _shaftCounter;
+        private double _planetaryInputRad;
 
         public GearTrainPresenter(IGearTrainView view)
         {
@@ -71,25 +81,133 @@ namespace Bolsover.Gears.Gui.Presenters
 
         public ISet<GearComponent> HiddenGears => _hidden;
 
+        /// <summary>The planetary stage being edited; null while an ordinary gear train is shown.</summary>
+        public PlanetaryGearSet Planetary { get; private set; }
+
+        /// <summary>The planetary member that is turned from outside (the input angle and speed refer to it).</summary>
+        public PlanetaryMember PlanetaryInput { get; set; } = PlanetaryMember.Sun;
+
+        /// <summary>Current input angle in radians: that of the input shaft, or of the input member of a planetary stage.</summary>
+        public double InputAngleRad => Planetary != null ? _planetaryInputRad : (InputShaft?.RotationRad ?? 0.0);
+
         /// <summary>The shaft that is turned from outside: the first shaft of the assembly.</summary>
         public Shaft InputShaft => Assembly.Shafts.Count > 0 ? Assembly.Shafts[0] : null;
 
         /// <summary>Starts a new train with one shaft carrying one 20 tooth gear (module 2 mm, 20 degree pressure angle).</summary>
-        public void NewTrain()
+        public void NewTrain() => NewTrain(GearFamily.Spur);
+
+        /// <summary>Starts a new train with one shaft carrying one gear of the given family (a 20 tooth spur or bevel gear, or a worm).</summary>
+        public void NewTrain(GearFamily family)
         {
-            Assembly = new GearAssembly();
-            _hidden.Clear();
-            _gearCounter = 0;
-            _shaftCounter = 0;
-            Scene = null;
-            Report = null;
+            ResetState();
+
+            GearComponent first;
+            switch (family)
+            {
+                case GearFamily.Bevel:
+                    first = new BevelGearComponent("Bevel " + (++_gearCounter)) { Teeth = 20, FaceWidth = 10.0 };
+                    break;
+                case GearFamily.Worm:
+                    first = new WormComponent("Worm " + (++_gearCounter));
+                    break;
+                default:
+                    first = CreateGear(null, 20);
+                    break;
+            }
 
             var shaft = CreateShaft();
-            var gear = CreateGear(null, 20);
-            shaft.Mount(gear, 0.0);
+            shaft.Mount(first, 0.0);
             Assembly.AddShaft(shaft);
 
-            Selected = gear;
+            Selected = first;
+            Refresh();
+        }
+
+        /// <summary>Replaces the train by a planetary stage (sun, planets, ring and carrier plate).</summary>
+        public void NewPlanetary(PlanetaryGearSet set = null)
+        {
+            ResetState();
+            Planetary = set ?? new PlanetaryGearSet("Planetary");
+            PlanetaryInput = Planetary.Fixed == PlanetaryMember.Sun ? PlanetaryMember.Carrier : PlanetaryMember.Sun;
+            _planetaryInputRad = 0.0;
+            Refresh();
+        }
+
+        /// <summary>
+        /// Replaces the train by a loaded assembly. Shafts and gears keep their identifiers; new ones are numbered after the highest existing number.
+        /// </summary>
+        public void LoadAssembly(GearAssembly assembly)
+        {
+            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+            ResetState();
+            Assembly = assembly;
+            _gearCounter = MaxSuffix(assembly.Components.Select(c => c.Id));
+            _shaftCounter = MaxSuffix(assembly.Shafts.Select(s => s.Id));
+            Selected = assembly.Components.FirstOrDefault();
+            Refresh();
+        }
+
+        /// <summary>Saves the train as JSON. Problems are shown as a message; returns false when saving failed.</summary>
+        public bool Save(string path)
+        {
+            var ok = Guard(() => AssemblySerializer.Save(Assembly, path));
+            if (ok) _view.ShowMessage("Saved " + path, false);
+            return ok;
+        }
+
+        /// <summary>Loads a train from JSON. Problems are shown as a message and the current train stays; returns false when loading failed.</summary>
+        public bool Load(string path)
+        {
+            GearAssembly loaded = null;
+            if (!Guard(() => loaded = AssemblySerializer.Load(path))) return false;
+            if (!Guard(() => LoadAssembly(loaded))) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Exports the current scene as STL (any extension but .obj) or Wavefront OBJ (.obj), with all gears and, optionally,
+        /// the shafts. Returns false when there is nothing to export or writing failed.
+        /// </summary>
+        public bool Export(string path, bool includeShafts = false)
+        {
+            if (Scene == null || Scene.Items.Count == 0)
+            {
+                _view.ShowMessage("There is nothing to export: the train has not been solved.", true);
+                return false;
+            }
+
+            var ok = Guard(() =>
+            {
+                if (string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase))
+                {
+                    MeshExporter.WriteObj(Scene, path, includeShafts);
+                }
+                else
+                {
+                    MeshExporter.WriteStl(Scene, path, includeShafts);
+                }
+            });
+
+            if (ok) _view.ShowMessage("Exported " + path, false);
+            return ok;
+        }
+
+        /// <summary>Turns the input by <paramref name="seconds"/> at <paramref name="speedRpm"/> and rebuilds the scene (one animation frame).</summary>
+        public void AdvanceAnimation(double seconds, double speedRpm)
+        {
+            if (Assembly.Shafts.Count == 0) return;
+
+            if (Planetary != null)
+            {
+                var turn = 2.0 * Math.PI;
+                var angle = _planetaryInputRad + speedRpm * turn / 60.0 * seconds;
+                _planetaryInputRad = angle - turn * Math.Floor(angle / turn);
+            }
+            else
+            {
+                new GearTrainAnimator(Assembly) { SpeedRpm = speedRpm }.Advance(seconds);
+            }
+
             Refresh();
         }
 
@@ -99,6 +217,7 @@ namespace Bolsover.Gears.Gui.Presenters
         /// </summary>
         public InvoluteGearComponent AddGearToShaft(Shaft shaft, int teeth = 20)
         {
+            EnsureNotPlanetary();
             if (shaft == null) throw new ArgumentNullException(nameof(shaft));
             if (!Assembly.Shafts.Contains(shaft)) throw new ArgumentException("The shaft is not part of the assembly.", nameof(shaft));
 
@@ -134,6 +253,7 @@ namespace Bolsover.Gears.Gui.Presenters
         /// <param name="centreLineAngleDeg">Direction of the new shaft from the driver shaft; null spaces branches 60 degrees apart.</param>
         public InvoluteGearComponent AddMeshedGear(GearComponent driver, int teeth = 0, double? centreLineAngleDeg = null)
         {
+            EnsureNotPlanetary();
             var driverGear = driver as InvoluteGearComponent
                              ?? throw new ArgumentException("Only involute gears can be meshed.", nameof(driver));
             var driverMount = Assembly.FindMount(driverGear, out var driverShaft)
@@ -169,11 +289,98 @@ namespace Bolsover.Gears.Gui.Presenters
         }
 
         /// <summary>
+        /// Adds a gear that meshes with <paramref name="driver"/> on a new shaft, for any mesh type: an involute gear on parallel
+        /// axes, a rack for a pinion, a bevel gear for a bevel gear (same shaft angle) or a worm wheel for a worm.
+        /// The mate takes module, pressure angle and face width from the driver.
+        /// </summary>
+        /// <param name="driver">The gear to mesh with; it must be mounted in the assembly and suit the mesh type.</param>
+        /// <param name="meshType">The kind of mesh.</param>
+        /// <param name="teeth">Number of teeth of the mate (of the rack: number of rack teeth); zero or less chooses a default.</param>
+        /// <param name="centreLineAngleDeg">Direction of the new shaft from the driver shaft; null spaces branches 60 degrees apart.</param>
+        public GearComponent AddMate(GearComponent driver, MeshType meshType, int teeth = 0, double? centreLineAngleDeg = null)
+        {
+            EnsureNotPlanetary();
+            if (driver == null) throw new ArgumentNullException(nameof(driver));
+            if (meshType == MeshType.Parallel) return AddMeshedGear(driver, teeth, centreLineAngleDeg);
+
+            var driverMount = Assembly.FindMount(driver, out var driverShaft)
+                              ?? throw new ArgumentException("The driver gear is not mounted in the assembly.", nameof(driver));
+
+            GearComponent mate;
+            switch (meshType)
+            {
+                case MeshType.Rack:
+                {
+                    var pinion = driver as InvoluteGearComponent
+                                 ?? throw new ArgumentException("Only an involute pinion can drive a rack.", nameof(driver));
+                    mate = new RackComponent("Rack " + (++_gearCounter))
+                    {
+                        Teeth = teeth > 0 ? teeth : 12,
+                        Module = pinion.Module,
+                        PressureAngleDeg = pinion.PressureAngleDeg,
+                        FaceWidth = pinion.FaceWidth
+                    };
+                    break;
+                }
+                case MeshType.Bevel:
+                {
+                    var bevel = driver as BevelGearComponent
+                                ?? throw new ArgumentException("Only a bevel gear can mesh with a bevel gear.", nameof(driver));
+                    mate = new BevelGearComponent("Bevel " + (++_gearCounter))
+                    {
+                        Teeth = teeth > 0 ? teeth : Math.Max(5, bevel.Teeth * 2),
+                        Module = bevel.Module,
+                        PressureAngleDeg = bevel.PressureAngleDeg,
+                        FaceWidth = bevel.FaceWidth,
+                        ShaftAngleDeg = bevel.ShaftAngleDeg
+                    };
+                    break;
+                }
+                case MeshType.Worm:
+                {
+                    var worm = driver as WormComponent
+                               ?? throw new ArgumentException("Only a worm can drive a worm wheel.", nameof(driver));
+                    mate = new WormWheelComponent("Wheel " + (++_gearCounter))
+                    {
+                        Teeth = teeth > 0 ? teeth : 30,
+                        Module = worm.Module,
+                        PressureAngleDeg = worm.PressureAngleDeg
+                    };
+                    break;
+                }
+                default:
+                    throw new ArgumentException("Unsupported mesh type " + meshType + ".", nameof(meshType));
+            }
+
+            var shaft = CreateShaft();
+            shaft.Mount(mate, driverMount.AxialOffset);
+
+            var branches = Assembly.Relations.Count(r => driverShaft.Mounts.Any(m => ReferenceEquals(m.Component, r.Driver)));
+            var angle = centreLineAngleDeg ?? branches * 60.0;
+
+            Assembly.AddShaft(shaft);
+            try
+            {
+                Assembly.AddRelation(driver, mate, meshType, angle);
+            }
+            catch
+            {
+                Assembly.RemoveShaft(shaft);
+                throw;
+            }
+
+            Selected = mate;
+            Refresh();
+            return mate;
+        }
+
+        /// <summary>
         /// Removes the selected gear or shaft together with everything that hangs off it: a gear that drives other
         /// gears takes those branches with it, and a driven gear takes its whole shaft and the shaft's branches.
         /// </summary>
         public void RemoveSelected()
         {
+            EnsureNotPlanetary();
             if (Selected is Shaft shaft)
             {
                 RemoveShaftBranch(shaft, new HashSet<Shaft>());
@@ -219,9 +426,17 @@ namespace Bolsover.Gears.Gui.Presenters
         /// <summary>Turns the input shaft to the given angle (degrees) and rebuilds the scene.</summary>
         public void SetInputAngle(double degrees)
         {
+            var rad = degrees * Math.PI / 180.0;
+            if (Planetary != null)
+            {
+                _planetaryInputRad = rad;
+                Refresh();
+                return;
+            }
+
             var input = InputShaft;
             if (input == null) return;
-            input.RotationRad = degrees * Math.PI / 180.0;
+            input.RotationRad = rad;
             Refresh();
         }
 
@@ -232,12 +447,20 @@ namespace Bolsover.Gears.Gui.Presenters
         public void Refresh()
         {
             string error = null;
-            if (Assembly.Shafts.Count > 0)
+            if (Planetary != null) error = RebuildPlanetary();
+
+            if (error != null)
+            {
+                // Keep the previous scene and report; the message explains what is wrong.
+            }
+            else if (Assembly.Shafts.Count > 0)
             {
                 try
                 {
                     var scene = GearAssemblySceneBuilder.Build(Assembly);
-                    var report = GearTrainAnalyzer.Analyze(Assembly, null, _view.InputSpeedRpm);
+                    var report = Planetary != null
+                        ? CreatePlanetaryReport()
+                        : GearTrainAnalyzer.Analyze(Assembly, null, _view.InputSpeedRpm);
                     Scene = scene;
                     Report = report;
                 }
@@ -262,6 +485,11 @@ namespace Bolsover.Gears.Gui.Presenters
                 {
                     _view.ShowMessage("Warning: " + string.Join(" ", Report.Warnings), false);
                 }
+                else if (Planetary != null)
+                {
+                    _view.ShowMessage(
+                        $"Planetary stage: {Planetary.Fixed} fixed, {PlanetaryInput} is the input.", false);
+                }
                 else
                 {
                     _view.ShowMessage("Gear train solved.", false);
@@ -277,7 +505,7 @@ namespace Bolsover.Gears.Gui.Presenters
         /// Gives <paramref name="source"/>'s module and pressure angle to every gear that meshes with it, directly or
         /// through a chain of meshes, because meshing gears must share both.
         /// </summary>
-        internal void ApplyMeshCommon(InvoluteGearComponent source)
+        internal void ApplyMeshCommon(GearComponent source)
         {
             var visited = new HashSet<GearComponent> { source };
             var queue = new Queue<GearComponent>();
@@ -300,6 +528,146 @@ namespace Bolsover.Gears.Gui.Presenters
         }
 
         internal bool IsInputShaft(Shaft shaft) => ReferenceEquals(shaft, InputShaft);
+
+        private void EnsureNotPlanetary()
+        {
+            if (Planetary != null)
+            {
+                throw new InvalidOperationException(
+                    "A planetary stage is edited through its properties. Start a new train to add other gears.");
+            }
+        }
+
+        private void ResetState()
+        {
+            Assembly = new GearAssembly();
+            Planetary = null;
+            _hidden.Clear();
+            _gearCounter = 0;
+            _shaftCounter = 0;
+            Scene = null;
+            Report = null;
+            Selected = null;
+        }
+
+        private static int MaxSuffix(IEnumerable<string> ids)
+        {
+            var max = 0;
+            foreach (var id in ids)
+            {
+                var index = id.LastIndexOf(' ');
+                if (index >= 0 && int.TryParse(id.Substring(index + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number > max)
+                {
+                    max = number;
+                }
+            }
+
+            return max;
+        }
+
+        private bool Guard(Action action)
+        {
+            try
+            {
+                action();
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException
+                                       || ex is InvalidOperationException || ex is ArgumentException || ex is NotSupportedException)
+            {
+                _view.ShowMessage(ex.Message, true);
+                return false;
+            }
+        }
+
+        /// <summary>Poses the planetary stage for the current input angle and replaces the assembly; returns an error message or null.</summary>
+        private string RebuildPlanetary()
+        {
+            try
+            {
+                var set = Planetary;
+                if (PlanetaryInput == set.Fixed)
+                {
+                    PlanetaryInput = set.Fixed == PlanetaryMember.Sun ? PlanetaryMember.Carrier : PlanetaryMember.Sun;
+                }
+
+                set.SolveAngles(PlanetaryInput, _planetaryInputRad);
+                var assembly = set.BuildAssembly();
+
+                var selectedGearId = (Selected as GearComponent)?.Id;
+                var selectedShaftId = (Selected as Shaft)?.Id;
+                var hiddenIds = new HashSet<string>(_hidden.Select(g => g.Id));
+
+                Assembly = assembly;
+                _hidden.Clear();
+                foreach (var gear in assembly.Components.Where(c => hiddenIds.Contains(c.Id))) _hidden.Add(gear);
+
+                Selected = selectedGearId != null
+                    ? assembly.Components.FirstOrDefault(c => c.Id == selectedGearId)
+                    : (object)assembly.Shafts.FirstOrDefault(s => s.Id == selectedShaftId);
+                return null;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is NotSupportedException)
+            {
+                return ex.Message;
+            }
+        }
+
+        private GearTrainReport CreatePlanetaryReport()
+        {
+            var set = Planetary;
+            var inputRpm = _view.InputSpeedRpm;
+            var output = (PlanetaryMember)(3 - (int)PlanetaryInput - (int)set.Fixed);
+            var speeds = set.Analyze(PlanetaryInput, inputRpm, output);
+
+            double SpeedOf(Shaft shaft)
+            {
+                if (shaft.Id == set.Id + ".SunShaft") return speeds.SunRpm;
+                if (shaft.Id == set.Id + ".RingShaft") return speeds.RingRpm;
+                if (shaft.Id == set.Id + ".Carrier") return speeds.CarrierRpm;
+                return speeds.PlanetRpm;
+            }
+
+            var shaftRows = new List<ShaftSpeedRow>();
+            foreach (var shaft in Assembly.Shafts)
+            {
+                var speed = SpeedOf(shaft);
+                double? ratio = Math.Abs(speed) > 1e-12 ? GearPrecision.Round(inputRpm / speed) : (double?)null;
+                shaftRows.Add(new ShaftSpeedRow(shaft.Id, speed, ratio));
+            }
+
+            var gearRows = new List<GearSpeedRow>();
+            foreach (var shaft in Assembly.Shafts)
+            {
+                foreach (var mount in shaft.Mounts)
+                {
+                    var gear = mount.Component;
+                    var speed = SpeedOf(shaft);
+                    var role = gear.Id == set.Id + ".Sun" ? "Sun" : gear.Id == set.Id + ".Ring" ? "Ring" : "Planet";
+                    gearRows.Add(new GearSpeedRow(
+                        gear.Id,
+                        shaft.Id,
+                        role,
+                        gear.ToothCount,
+                        GearPrecision.Round(gear.PitchDiameter),
+                        speed,
+                        GearPrecision.Round(Math.PI * gear.PitchDiameter * Math.Abs(speed) / 60000.0)));
+                }
+            }
+
+            // Stage ratios are relative to the carrier, as for a gear train with a fixed carrier.
+            var stages = new List<GearStageRow>
+            {
+                new GearStageRow(set.Id + ".Sun", set.Id + ".Planet1", GearPrecision.Round((double)set.PlanetTeeth / set.SunTeeth),
+                    GearPrecision.Round(-(double)set.SunTeeth / set.PlanetTeeth), set.CentreDistance),
+                new GearStageRow(set.Id + ".Planet1", set.Id + ".Ring", GearPrecision.Round((double)set.RingTeeth / set.PlanetTeeth),
+                    GearPrecision.Round((double)set.PlanetTeeth / set.RingTeeth), set.CentreDistance)
+            };
+
+            var outputShaftId = set.Id + (output == PlanetaryMember.Sun ? ".SunShaft" : output == PlanetaryMember.Ring ? ".RingShaft" : ".Carrier");
+            var inputShaftId = set.Id + (PlanetaryInput == PlanetaryMember.Sun ? ".SunShaft" : PlanetaryInput == PlanetaryMember.Ring ? ".RingShaft" : ".Carrier");
+            return new GearTrainReport(inputShaftId, inputRpm, outputShaftId, speeds.OverallRatio, shaftRows, gearRows, stages, new List<string>());
+        }
 
         private InvoluteGearComponent CreateGear(InvoluteGearComponent template, int teeth)
         {
@@ -373,6 +741,20 @@ namespace Bolsover.Gears.Gui.Presenters
 
         private object CreateProperties(object selected)
         {
+            if (Planetary != null) return new PlanetaryNodeProperties(this, Planetary);
+
+            if (selected is RackComponent || selected is BevelGearComponent || selected is WormComponent || selected is WormWheelComponent)
+            {
+                var component = (GearComponent)selected;
+                var componentMount = Assembly.FindMount(component, out _);
+                if (componentMount == null) return null;
+                var relation = Assembly.FindDrivingRelation(component);
+                if (component is RackComponent rack) return new RackNodeProperties(this, rack, componentMount, relation);
+                if (component is BevelGearComponent bevel) return new BevelNodeProperties(this, bevel, componentMount, relation);
+                if (component is WormComponent worm) return new WormNodeProperties(this, worm, componentMount, relation);
+                return new WormWheelNodeProperties(this, (WormWheelComponent)component, componentMount, relation);
+            }
+
             if (selected is InvoluteGearComponent gear)
             {
                 var mount = Assembly.FindMount(gear, out _);

@@ -38,7 +38,11 @@ namespace Bolsover.Gears.Gui.Views
         private readonly NumericUpDown _numAngle = new NumericUpDown { Minimum = -360, Maximum = 360, DecimalPlaces = 1, Value = 0, Width = 70 };
         private readonly ToolStripButton _btnWireframe = new ToolStripButton("Wireframe") { CheckOnClick = true };
         private readonly ToolStripButton _btnShafts = new ToolStripButton("Shafts") { CheckOnClick = true, Checked = true };
+        private readonly ToolStripButton _btnAnimate = new ToolStripButton("Animate") { CheckOnClick = true };
+        private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
+        private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
+        private bool _syncingAngle;
         private bool _updating;
         private AssemblyScene _scene;
         private object _selected;
@@ -83,6 +87,25 @@ namespace Bolsover.Gears.Gui.Views
             var btnAddMeshed = new ToolStripButton("Add meshed gear");
             var btnRemove = new ToolStripButton("Remove");
             var btnFit = new ToolStripButton("Fit view");
+
+            var ddStart = new ToolStripDropDownButton("Start with");
+            ddStart.DropDownItems.Add("Spur gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Spur)));
+            ddStart.DropDownItems.Add("Bevel gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel)));
+            ddStart.DropDownItems.Add("Worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm)));
+            ddStart.DropDownItems.Add("Planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()));
+
+            var ddMate = new ToolStripDropDownButton("Add mate");
+            ddMate.DropDownItems.Add("Rack for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack)));
+            ddMate.DropDownItems.Add("Bevel gear for the selected bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)));
+            ddMate.DropDownItems.Add("Worm wheel for the selected worm", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Worm)));
+
+            var ddFile = new ToolStripDropDownButton("File");
+            ddFile.DropDownItems.Add("Save gear train…", null, (s, e) => SaveTrain());
+            ddFile.DropDownItems.Add("Load gear train…", null, (s, e) => LoadTrain());
+            ddFile.DropDownItems.Add(new ToolStripSeparator());
+            ddFile.DropDownItems.Add("Export STL…", null, (s, e) => ExportScene(false));
+            ddFile.DropDownItems.Add("Export OBJ…", null, (s, e) => ExportScene(true));
+
             btnNew.Click += (s, e) => _presenter.NewTrain();
             btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
@@ -91,11 +114,13 @@ namespace Bolsover.Gears.Gui.Views
             _btnWireframe.Click += (s, e) => RenderScene();
             _btnShafts.Click += (s, e) => RenderScene();
 
+            toolbar.LayoutStyle = ToolStripLayoutStyle.Flow;
             toolbar.Items.AddRange(new ToolStripItem[]
             {
-                btnNew, btnAddGear, btnAddMeshed, btnRemove, new ToolStripSeparator(),
+                btnNew, ddStart, btnAddGear, btnAddMeshed, ddMate, btnRemove, ddFile, new ToolStripSeparator(),
                 new ToolStripLabel("Input speed (rpm)"), new ToolStripControlHost(_numSpeed),
                 new ToolStripLabel("Input angle (deg)"), new ToolStripControlHost(_numAngle), new ToolStripSeparator(),
+                _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed), new ToolStripSeparator(),
                 _btnWireframe, _btnShafts, btnFit, new ToolStripSeparator(), _status
             });
 
@@ -177,7 +202,87 @@ namespace Bolsover.Gears.Gui.Views
             _viewport.ItemPicked += tag => _presenter.Select(tag);
 
             _numSpeed.ValueChanged += (s, e) => _presenter.Refresh();
-            _numAngle.ValueChanged += (s, e) => _presenter.SetInputAngle((double)_numAngle.Value);
+            _numAngle.ValueChanged += (s, e) =>
+            {
+                if (_syncingAngle) return;
+                _presenter.SetInputAngle((double)_numAngle.Value);
+            };
+
+            _btnAnimate.CheckedChanged += (s, e) => _animationTimer.Enabled = _btnAnimate.Checked;
+            _animationTimer.Tick += (s, e) => AnimationTick();
+            FormClosed += (s, e) =>
+            {
+                _animationTimer.Stop();
+                _animationTimer.Dispose();
+            };
+        }
+
+        private void AnimationTick()
+        {
+            // Stop on the first problem so that an error message does not scroll away behind new frames.
+            _animationTimer.Stop();
+            try
+            {
+                _presenter.AdvanceAnimation(_animationTimer.Interval / 1000.0, (double)_numAnimSpeed.Value);
+
+                var degrees = _presenter.InputAngleRad * 180.0 / Math.PI;
+                degrees -= 360.0 * Math.Floor(degrees / 360.0);
+                _syncingAngle = true;
+                try
+                {
+                    _numAngle.Value = (decimal)Math.Max(0.0, Math.Min(360.0, Math.Round(degrees, 1)));
+                }
+                finally
+                {
+                    _syncingAngle = false;
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
+            {
+                ShowMessage(ex.Message, true);
+                _btnAnimate.Checked = false;
+            }
+            finally
+            {
+                if (_btnAnimate.Checked && !IsDisposed) _animationTimer.Start();
+            }
+        }
+
+        private void AddMateToSelectedGear(MeshType meshType)
+        {
+            if (!(_selected is GearComponent driver))
+            {
+                ShowMessage("Select the gear that the new gear should mesh with.", true);
+                return;
+            }
+
+            _presenter.AddMate(driver, meshType);
+        }
+
+        private void SaveTrain()
+        {
+            using (var dialog = new SaveFileDialog { Filter = "Gear train (*.json)|*.json", DefaultExt = "json", Title = "Save gear train" })
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK) _presenter.Save(dialog.FileName);
+            }
+        }
+
+        private void LoadTrain()
+        {
+            using (var dialog = new OpenFileDialog { Filter = "Gear train (*.json)|*.json", Title = "Load gear train" })
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK) _presenter.Load(dialog.FileName);
+            }
+        }
+
+        private void ExportScene(bool obj)
+        {
+            var filter = obj ? "Wavefront OBJ (*.obj)|*.obj" : "STL (*.stl)|*.stl";
+            var extension = obj ? "obj" : "stl";
+            using (var dialog = new SaveFileDialog { Filter = filter, DefaultExt = extension, Title = "Export 3D model" })
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK) _presenter.Export(dialog.FileName, _btnShafts.Checked);
+            }
         }
 
         private void RunCommand(Action command)

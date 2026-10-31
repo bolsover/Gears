@@ -3,12 +3,21 @@ using System;
 namespace Bolsover.Gears.Model.Assemblies
 {
     /// <summary>
-    /// The kind of meshing between two gears. Further kinds (rack, bevel, worm, planetary) are added in later phases.
+    /// The kind of meshing between two gears. Planetary sets are modelled by <see cref="PlanetaryGearSet"/>.
     /// </summary>
     public enum MeshType
     {
         /// <summary>Spur or helical gears on parallel shafts (external-external or external-internal).</summary>
-        Parallel
+        Parallel,
+
+        /// <summary>An involute pinion driving a straight rack (the rack is the driven component).</summary>
+        Rack,
+
+        /// <summary>Straight bevel gears (Tredgold approximation) on intersecting shafts.</summary>
+        Bevel,
+
+        /// <summary>A worm driving a worm wheel on crossed shafts.</summary>
+        Worm
     }
 
     /// <summary>
