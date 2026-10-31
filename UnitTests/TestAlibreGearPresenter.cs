@@ -436,5 +436,105 @@ namespace UnitTests
             Assert.IsNotEmpty(fakeView.LastErrorMessage);
             Assert.IsNull(fakeView.LastPolylines);
         }
+
+        [Test]
+        public void TestAlibreGearPreviewControl_RuntimeProperties_AreHiddenFromDesigner()
+        {
+            var type = typeof(AlibreGearPreviewControl);
+            var propertiesToCheck = new[]
+            {
+                nameof(AlibreGearPreviewControl.Polylines),
+                nameof(AlibreGearPreviewControl.Mesh),
+                nameof(AlibreGearPreviewControl.PitchRadius),
+                nameof(AlibreGearPreviewControl.BaseRadius),
+                nameof(AlibreGearPreviewControl.AddendumRadius),
+                nameof(AlibreGearPreviewControl.DedendumRadius),
+                nameof(AlibreGearPreviewControl.HasSecondGear),
+                nameof(AlibreGearPreviewControl.Gear2CenterDistance),
+                nameof(AlibreGearPreviewControl.Gear2PitchRadius),
+                nameof(AlibreGearPreviewControl.Gear2BaseRadius),
+                nameof(AlibreGearPreviewControl.Gear2AddendumRadius),
+                nameof(AlibreGearPreviewControl.Gear2DedendumRadius)
+            };
+
+            foreach (var propName in propertiesToCheck)
+            {
+                var prop = type.GetProperty(propName);
+                Assert.IsNotNull(prop, $"Property {propName} should exist.");
+                var browsable = prop.GetCustomAttributes(typeof(System.ComponentModel.BrowsableAttribute), false)
+                    .Cast<System.ComponentModel.BrowsableAttribute>().FirstOrDefault();
+                var designerSerialization = prop.GetCustomAttributes(typeof(System.ComponentModel.DesignerSerializationVisibilityAttribute), false)
+                    .Cast<System.ComponentModel.DesignerSerializationVisibilityAttribute>().FirstOrDefault();
+
+                Assert.IsNotNull(designerSerialization, $"Property {propName} should have DesignerSerializationVisibilityAttribute.");
+                Assert.AreEqual(System.ComponentModel.DesignerSerializationVisibility.Hidden, designerSerialization.Visibility);
+                Assert.IsNotNull(browsable, $"Property {propName} should have BrowsableAttribute.");
+                Assert.IsFalse(browsable.Browsable);
+            }
+        }
+
+        [Test]
+        public void TestAlibreGearForm_ResxReader_LoadsWithoutGenericTypeExceptions()
+        {
+            var resxCandidatePaths = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "GearsUI", "Gui", "Views", "AlibreGearForm.resx"),
+                Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "GearsUI", "Gui", "Views", "AlibreGearForm.resx"),
+                Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "GearsUI", "Gui", "Views", "AlibreGearForm.resx")
+            };
+
+            var resx = resxCandidatePaths.Select(Path.GetFullPath).FirstOrDefault(File.Exists);
+            if (resx != null)
+            {
+                using var reader = new System.Resources.ResXResourceReader(resx);
+                Assert.DoesNotThrow(() =>
+                {
+                    var dict = reader.GetEnumerator();
+                    while (dict.MoveNext())
+                    {
+                        Assert.IsNotNull(dict.Key);
+                    }
+                });
+            }
+        }
+
+        [Test]
+        public void TestAlibreGearForm_DesignerFile_IsLinkedWithDependentUpon()
+        {
+            var csprojCandidatePaths = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "GearsUI", "GearsUI.csproj"),
+                Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "GearsUI", "GearsUI.csproj"),
+                Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "GearsUI", "GearsUI.csproj")
+            };
+
+            var csprojPath = csprojCandidatePaths.Select(Path.GetFullPath).FirstOrDefault(File.Exists);
+            Assert.IsNotNull(csprojPath, "GearsUI.csproj should exist.");
+
+            var doc = new System.Xml.XmlDocument();
+            doc.Load(csprojPath);
+
+            var nsManager = new System.Xml.XmlNamespaceManager(doc.NameTable);
+            nsManager.AddNamespace("ms", "http://schemas.microsoft.com/developer/msbuild/2003");
+
+            var compileNode = doc.SelectSingleNode("//ms:Compile[@Include='Gui\\Views\\AlibreGearForm.Designer.cs']", nsManager)
+                              ?? doc.SelectSingleNode("//Compile[@Include='Gui\\Views\\AlibreGearForm.Designer.cs']");
+
+            Assert.IsNotNull(compileNode, "Compile item for AlibreGearForm.Designer.cs must exist in GearsUI.csproj.");
+
+            var dependentUponNode = compileNode.SelectSingleNode("ms:DependentUpon", nsManager)
+                                   ?? compileNode.SelectSingleNode("DependentUpon");
+
+            Assert.IsNotNull(dependentUponNode, "AlibreGearForm.Designer.cs must have a DependentUpon element.");
+            Assert.AreEqual("AlibreGearForm.cs", dependentUponNode.InnerText.Trim(), "AlibreGearForm.Designer.cs must have <DependentUpon>AlibreGearForm.cs</DependentUpon> for IDE design view support.");
+        }
+
+        [Test]
+        public void TestAlibreGearForm_PanelInputs_IsTableLayoutPanel()
+        {
+            var field = typeof(AlibreGearForm).GetField("panelInputs", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Assert.IsNotNull(field, "panelInputs field should exist in AlibreGearForm.");
+            Assert.AreEqual(typeof(TableLayoutPanel), field.FieldType, "panelInputs field type must be TableLayoutPanel.");
+        }
     }
 }

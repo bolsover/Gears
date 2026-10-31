@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -71,16 +72,45 @@ namespace Bolsover.Gears.Gui
 
         // Reference Circles in 2D
         public bool ShowReferenceCircles { get; set; } = true;
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double PitchRadius { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double BaseRadius { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double AddendumRadius { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double DedendumRadius { get; set; }
 
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool HasSecondGear { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double Gear2CenterDistance { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double Gear2PitchRadius { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double Gear2BaseRadius { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double Gear2AddendumRadius { get; set; }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public double Gear2DedendumRadius { get; set; }
 
         /// <summary>
@@ -116,6 +146,8 @@ namespace Bolsover.Gears.Gui
         /// <summary>
         /// The 2D polylines to render in gear/world coordinates.
         /// </summary>
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public List<List<GearPoint>> Polylines
         {
             get => _polylines;
@@ -129,6 +161,8 @@ namespace Bolsover.Gears.Gui
         /// <summary>
         /// The 3D mesh geometry to render in 3D mode.
         /// </summary>
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public GearMesh3DBuilder.Mesh3D Mesh
         {
             get => _mesh;
