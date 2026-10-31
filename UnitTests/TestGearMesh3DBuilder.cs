@@ -503,29 +503,68 @@ namespace UnitTests
             var profile = AlibreGearGenerator.GenerateInternalToothProfile(z, m, alphaDeg, thickness, 0.0, false);
             var toothOutline = AlibreGearGenerator.BuildToothOutline(profile, true);
 
-            for (var i = 0; i < toothOutline.Count - 1; i++)
+            // toothOutline contains 5 inner profile segments (LowerArc2, Involute1, UpperArc, Involute2, LowerArc1)
+            // plus 1 external arc segment (ExternalArc) representing the outer rim
+            Assert.AreEqual(6, toothOutline.Count);
+
+            // 1. Verify single tooth inner profile continuity (LowerArc2 -> Involute1 -> UpperArc -> Involute2 -> LowerArc1)
+            for (var i = 0; i < 4; i++)
             {
                 var endPt = toothOutline[i][toothOutline[i].Count - 1];
                 var startPt = toothOutline[i + 1][0];
 
-                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Internal segment {i} end must match segment {i + 1} start");
-                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Internal segment {i} end must match segment {i + 1} start");
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Internal inner segment {i} end must match segment {i + 1} start");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Internal inner segment {i} end must match segment {i + 1} start");
             }
 
+            // 2. Verify full gear continuity and closure for both inner teeth loop and outer rim circle
             var fullGear = AlibreGearGenerator.BuildFullGear(z, toothOutline);
-            for (var i = 0; i < fullGear.Count - 1; i++)
-            {
-                var endPt = fullGear[i][fullGear[i].Count - 1];
-                var startPt = fullGear[i + 1][0];
+            Assert.AreEqual(z * toothOutline.Count, fullGear.Count);
 
-                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Internal full gear segment {i} end must match segment {i + 1} start");
-                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Internal full gear segment {i} end must match segment {i + 1} start");
+            var segmentsPerTooth = toothOutline.Count;
+
+            // Verify inner loop continuity across all teeth
+            for (var k = 0; k < z; k++)
+            {
+                var baseIdx = k * segmentsPerTooth;
+
+                // Within tooth k
+                for (var j = 0; j < 4; j++)
+                {
+                    var endPt = fullGear[baseIdx + j][fullGear[baseIdx + j].Count - 1];
+                    var startPt = fullGear[baseIdx + j + 1][0];
+                    Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Tooth {k} inner segment {j} end must match segment {j + 1} start");
+                    Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Tooth {k} inner segment {j} end must match segment {j + 1} start");
+                }
+
+                // Across teeth (tooth k LowerArc1 to tooth k+1 LowerArc2)
+                var nextToothBaseIdx = ((k + 1) % z) * segmentsPerTooth;
+                var toothEndPt = fullGear[baseIdx + 4][fullGear[baseIdx + 4].Count - 1];
+                var nextToothStartPt = fullGear[nextToothBaseIdx][0];
+                Assert.AreEqual(toothEndPt.X, nextToothStartPt.X, 1e-4, $"Tooth {k} LowerArc1 end must match tooth {k + 1} LowerArc2 start");
+                Assert.AreEqual(toothEndPt.Y, nextToothStartPt.Y, 1e-4, $"Tooth {k} LowerArc1 end must match tooth {k + 1} LowerArc2 start");
             }
 
-            var firstPt = fullGear[0][0];
-            var lastPt = fullGear[fullGear.Count - 1][fullGear[fullGear.Count - 1].Count - 1];
-            Assert.AreEqual(firstPt.X, lastPt.X, 1e-4, "Internal full gear perimeter must close seamlessly");
-            Assert.AreEqual(firstPt.Y, lastPt.Y, 1e-4, "Internal full gear perimeter must close seamlessly");
+            // Verify outer rim circle continuity and closure across all teeth
+            var expectedRimRadius = profile.Parameters["dedendumRadius"] + thickness;
+            for (var k = 0; k < z; k++)
+            {
+                var currentRimArc = fullGear[k * segmentsPerTooth + 5];
+                var nextRimArc = fullGear[((k + 1) % z) * segmentsPerTooth + 5];
+
+                var endPt = currentRimArc[currentRimArc.Count - 1];
+                var startPt = nextRimArc[0];
+
+                Assert.AreEqual(endPt.X, startPt.X, 1e-4, $"Tooth {k} ExternalArc end must match tooth {k + 1} ExternalArc start");
+                Assert.AreEqual(endPt.Y, startPt.Y, 1e-4, $"Tooth {k} ExternalArc end must match tooth {k + 1} ExternalArc start");
+
+                // Verify every point on the outer rim is at the expected rim radius
+                foreach (var pt in currentRimArc)
+                {
+                    var r = System.Math.Sqrt(pt.X * pt.X + pt.Y * pt.Y);
+                    Assert.AreEqual(expectedRimRadius, r, 1e-4, "Outer rim point radius must match dedendumRadius + thickness");
+                }
+            }
         }
     }
 }

@@ -467,6 +467,7 @@ namespace Bolsover.Gears.Calculator
                 AddIfAny(segments, p.UpperArc);
                 AddIfAny(segments, p.Involute2);
                 AddIfAny(segments, p.LowerArc1);
+                AddIfAny(segments, p.ExternalArc);
             }
             else
             {

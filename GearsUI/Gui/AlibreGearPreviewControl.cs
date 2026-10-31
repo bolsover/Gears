@@ -410,20 +410,28 @@ namespace Bolsover.Gears.Gui
                 }
             }
 
-            if (ShowReferenceCircles && AddendumRadius > 0)
+            if (ShowReferenceCircles)
             {
-                any = true;
-                minX = Math.Min(minX, -AddendumRadius);
-                minY = Math.Min(minY, -AddendumRadius);
-                maxX = Math.Max(maxX, AddendumRadius);
-                maxY = Math.Max(maxY, AddendumRadius);
-
-                if (HasSecondGear && Gear2AddendumRadius > 0)
+                var maxR1 = Math.Max(AddendumRadius, DedendumRadius);
+                if (maxR1 > 0)
                 {
-                    minX = Math.Min(minX, Gear2CenterDistance - Gear2AddendumRadius);
-                    minY = Math.Min(minY, -Gear2AddendumRadius);
-                    maxX = Math.Max(maxX, Gear2CenterDistance + Gear2AddendumRadius);
-                    maxY = Math.Max(maxY, Gear2AddendumRadius);
+                    any = true;
+                    minX = Math.Min(minX, -maxR1);
+                    minY = Math.Min(minY, -maxR1);
+                    maxX = Math.Max(maxX, maxR1);
+                    maxY = Math.Max(maxY, maxR1);
+                }
+
+                if (HasSecondGear)
+                {
+                    var maxR2 = Math.Max(Gear2AddendumRadius, Gear2DedendumRadius);
+                    if (maxR2 > 0)
+                    {
+                        minX = Math.Min(minX, Gear2CenterDistance - maxR2);
+                        minY = Math.Min(minY, -maxR2);
+                        maxX = Math.Max(maxX, Gear2CenterDistance + maxR2);
+                        maxY = Math.Max(maxY, maxR2);
+                    }
                 }
             }
 

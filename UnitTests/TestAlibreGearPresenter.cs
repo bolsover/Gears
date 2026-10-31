@@ -239,6 +239,51 @@ namespace UnitTests
             Assert.AreEqual(100, fakeView.LastProgressPercentage);
             Assert.IsNotNull(fakeView.LastCalcData);
             Assert.IsTrue(fakeView.LastCalcData.IsInternal);
+
+            // Verify outer rim circle is present in 2D polylines
+            Assert.IsNotNull(presenter.CurrentPolylines);
+            Assert.AreEqual(40 * 6, presenter.CurrentPolylines.Count);
+
+            var expectedRimRadius = fakeView.LastCalcData.RootDiameter / 2.0 + 12.0;
+            var maxRadius = 0.0;
+            foreach (var polyline in presenter.CurrentPolylines)
+            {
+                foreach (var pt in polyline)
+                {
+                    var r = Math.Sqrt(pt.X * pt.X + pt.Y * pt.Y);
+                    if (r > maxRadius) maxRadius = r;
+                }
+            }
+
+            Assert.AreEqual(expectedRimRadius, maxRadius, 1e-4, "Maximum polyline radius must match internal gear outer rim radius");
+        }
+
+        [Test]
+        public void TestPresenter_InternalGearSingleTooth_IncludesOuterRimArc()
+        {
+            var fakeView = new FakeAlibreGearView
+            {
+                Teeth = 30,
+                Module = 2.0,
+                IsInternal = true,
+                RimThickness = 8.0,
+                ShowFullGear = false
+            };
+
+            var presenter = new AlibreGearPresenter(fakeView);
+
+            Assert.IsNotNull(presenter.CurrentPolylines);
+            Assert.AreEqual(6, presenter.CurrentPolylines.Count, "Single internal tooth outline must have 6 segments (5 inner + 1 outer rim arc)");
+
+            var expectedRimRadius = fakeView.LastCalcData.RootDiameter / 2.0 + 8.0;
+            var outerRimSegment = presenter.CurrentPolylines[5];
+            Assert.Greater(outerRimSegment.Count, 1);
+
+            foreach (var pt in outerRimSegment)
+            {
+                var r = Math.Sqrt(pt.X * pt.X + pt.Y * pt.Y);
+                Assert.AreEqual(expectedRimRadius, r, 1e-4, "Single tooth outer rim arc radius must match rootRadius + rimThickness");
+            }
         }
 
         [Test]

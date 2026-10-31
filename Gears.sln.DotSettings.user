@@ -60,6 +60,7 @@
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FGearControlForm/@EntryIndexedValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FGearControlForm/@EntryIndexRemoved">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FGearControlView/@EntryIndexedValue">False</s:Boolean>
+	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FViews_002FAlibreGearForm/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/Initialized/@EntryValue">True</s:Boolean>
 	
 	
