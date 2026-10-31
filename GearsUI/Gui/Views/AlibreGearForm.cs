@@ -186,6 +186,11 @@ namespace Bolsover.Gears.Gui.Views
             menuExportCsv.Click += (s, e) => ExportRequested?.Invoke(this, ExportFormat.Csv);
             menuExit.Click += (s, e) => Close();
 
+            // Multi-shaft gear train editor (added in code so the designer file stays unchanged)
+            var menuGearTrain = new ToolStripMenuItem("Gear &Train…");
+            menuGearTrain.Click += (s, e) => new GearTrainForm().Show(this);
+            menuStrip.Items.Add(menuGearTrain);
+
             // Menu Gear options
             menuAddMeshedGear.Click += (s, e) => AddOrEditMeshedGearRequested?.Invoke(this, EventArgs.Empty);
             menuRemoveMeshedGear.Click += (s, e) => RemoveMeshedGearRequested?.Invoke(this, EventArgs.Empty);

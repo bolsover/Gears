@@ -4,10 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Calculator.Assemblies;
 using Bolsover.Gears.Gui;
 using Bolsover.Gears.Gui.Presenters;
 using Bolsover.Gears.Gui.Views;
 using Bolsover.Gears.Model;
+using Bolsover.Gears.Model.Assemblies;
 using NUnit.Framework;
 
 namespace UnitTests
@@ -535,6 +537,113 @@ namespace UnitTests
             var field = typeof(AlibreGearForm).GetField("panelInputs", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             Assert.IsNotNull(field, "panelInputs field should exist in AlibreGearForm.");
             Assert.AreEqual(typeof(TableLayoutPanel), field.FieldType, "panelInputs field type must be TableLayoutPanel.");
+        }
+
+        [TestCase(30, false, 0.0, "R", "L")]
+        [TestCase(31, false, 0.0, "R", "L")]
+        [TestCase(40, true, 0.0, "R", "L")]
+        [TestCase(41, true, 0.0, "R", "L")]
+        [TestCase(30, false, 15.0, "R", "L")]
+        public void TestGearAssembly_Pair_MatchesPresenterPairOutput(int teeth2, bool internal2, double helixAngle, string direction1, string direction2)
+        {
+            // Two decimal places of tolerance headroom: the assembly layer rounds the shaft origin and every vertex to 7 decimal places.
+            const double tolerance = 2e-7;
+
+            var view = new FakeAlibreGearView { HelixAngle = helixAngle, HelicalDirection = direction1 };
+            var presenter = new AlibreGearPresenter(view);
+            presenter.MeshedGear = new MeshedGearParameters
+            {
+                Teeth = teeth2,
+                HelixAngle = helixAngle,
+                HelicalDirection = direction2,
+                Clearance = view.Clearance,
+                Backlash = view.Backlash,
+                ProfileShift = view.ProfileShift,
+                FaceWidth = view.FaceWidth,
+                IsInternal = internal2,
+                RimThickness = view.RimThickness,
+                OptimalShift = false
+            };
+            presenter.HasMeshedGear = true;
+            presenter.ExecuteCalculation();
+            Assert.IsTrue(string.IsNullOrEmpty(view.LastErrorMessage), "The presenter must calculate the pair without error: " + view.LastErrorMessage);
+
+            var meshed = presenter.MeshedGear;
+            var gear1 = new InvoluteGearComponent("g1")
+            {
+                Teeth = view.Teeth,
+                Module = view.Module,
+                PressureAngleDeg = view.PressureAngle,
+                HelixAngleDeg = view.HelixAngle,
+                HelicalDirection = view.HelicalDirection,
+                Clearance = view.Clearance,
+                Backlash = view.Backlash,
+                ProfileShift = view.ProfileShift,
+                FaceWidth = view.FaceWidth,
+                IsInternal = view.IsInternal,
+                RimThickness = view.RimThickness,
+                OptimalShift = view.OptimalShift,
+                ShowFullGear = view.ShowFullGear
+            };
+            var gear2 = new InvoluteGearComponent("g2")
+            {
+                Teeth = meshed.Teeth,
+                Module = view.Module,
+                PressureAngleDeg = view.PressureAngle,
+                HelixAngleDeg = meshed.HelixAngle,
+                HelicalDirection = meshed.HelicalDirection,
+                Clearance = meshed.Clearance,
+                Backlash = meshed.Backlash,
+                ProfileShift = meshed.ProfileShift,
+                FaceWidth = meshed.FaceWidth,
+                IsInternal = meshed.IsInternal,
+                RimThickness = meshed.RimThickness,
+                OptimalShift = meshed.OptimalShift,
+                ShowFullGear = view.ShowFullGear
+            };
+
+            var assembly = new GearAssembly();
+            var shaft1 = assembly.AddShaft(new Shaft("s1"));
+            var shaft2 = assembly.AddShaft(new Shaft("s2"));
+            shaft1.Mount(gear1);
+            shaft2.Mount(gear2);
+            assembly.AddRelation(gear1, gear2);
+
+            var scene = GearAssemblySceneBuilder.Build(assembly);
+
+            Assert.AreEqual(presenter.CurrentCalculatedGearPairData.WorkingCentreDistance, assembly.Relations[0].Result.CentreDistance, tolerance);
+
+            var expectedPolylines = presenter.CurrentPolylines;
+            var actualPolylines = scene.CombinedPolylines();
+            Assert.AreEqual(expectedPolylines.Count, actualPolylines.Count, "Polyline count");
+            for (var s = 0; s < expectedPolylines.Count; s++)
+            {
+                Assert.AreEqual(expectedPolylines[s].Count, actualPolylines[s].Count, "Point count of polyline " + s);
+                for (var i = 0; i < expectedPolylines[s].Count; i++)
+                {
+                    Assert.AreEqual(expectedPolylines[s][i].X, actualPolylines[s][i].X, tolerance, $"X of polyline {s} point {i}");
+                    Assert.AreEqual(expectedPolylines[s][i].Y, actualPolylines[s][i].Y, tolerance, $"Y of polyline {s} point {i}");
+                }
+            }
+
+            var expectedMesh = presenter.CurrentMesh;
+            var actualMesh = scene.CombinedMesh();
+            Assert.AreEqual(expectedMesh.Vertices.Count, actualMesh.Vertices.Count, "Vertex count");
+            CollectionAssert.AreEqual(expectedMesh.TriangleIndices, actualMesh.TriangleIndices, "Triangle indices");
+            for (var i = 0; i < expectedMesh.Vertices.Count; i++)
+            {
+                Assert.AreEqual(expectedMesh.Vertices[i].X, actualMesh.Vertices[i].X, tolerance, "Vertex X " + i);
+                Assert.AreEqual(expectedMesh.Vertices[i].Y, actualMesh.Vertices[i].Y, tolerance, "Vertex Y " + i);
+                Assert.AreEqual(expectedMesh.Vertices[i].Z, actualMesh.Vertices[i].Z, tolerance, "Vertex Z " + i);
+            }
+
+            Assert.AreEqual(expectedMesh.Normals.Count, actualMesh.Normals.Count, "Normal count");
+            for (var i = 0; i < expectedMesh.Normals.Count; i++)
+            {
+                Assert.AreEqual(expectedMesh.Normals[i].X, actualMesh.Normals[i].X, tolerance, "Normal X " + i);
+                Assert.AreEqual(expectedMesh.Normals[i].Y, actualMesh.Normals[i].Y, tolerance, "Normal Y " + i);
+                Assert.AreEqual(expectedMesh.Normals[i].Z, actualMesh.Normals[i].Z, tolerance, "Normal Z " + i);
+            }
         }
     }
 }
