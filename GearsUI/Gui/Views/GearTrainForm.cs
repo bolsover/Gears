@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
+using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Calculator.Assemblies;
 using Bolsover.Gears.Gui.Presenters;
+using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Gui.Views
@@ -23,6 +27,15 @@ namespace Bolsover.Gears.Gui.Views
         private readonly DataGridView _gearsGrid = CreateGrid();
         private readonly DataGridView _shaftsGrid = CreateGrid();
         private readonly DataGridView _stagesGrid = CreateGrid();
+        private readonly DataGridView _gearParamsGrid = CreateParameterGrid();
+        private readonly DataGridView _meshParamsGrid = CreateParameterGrid();
+        private readonly Label _gearParamsTitle = CreateTitleLabel();
+        private readonly Label _meshParamsTitle = CreateTitleLabel();
+        private readonly DataGridView _imperialGearGrid = CreateImperialGrid();
+        private readonly DataGridView _imperialMeshGrid = CreateImperialGrid();
+        private readonly Label _imperialGearTitle = CreateTitleLabel();
+        private readonly Label _imperialMeshTitle = CreateTitleLabel();
+        private readonly Dictionary<string, Image> _latexImageCache = new Dictionary<string, Image>();
         private readonly TextBox _summary = new TextBox
         {
             Dock = DockStyle.Fill,
@@ -77,6 +90,47 @@ namespace Bolsover.Gears.Gui.Views
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
                 BackgroundColor = SystemColors.Window
             };
+        }
+
+        private static Label CreateTitleLabel()
+        {
+            return new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+            };
+        }
+
+        /// <summary>A grid for calculated parameters: name, rendered symbol, rendered formula, value and unit.</summary>
+        private static DataGridView CreateParameterGrid()
+        {
+            var grid = CreateGrid();
+            grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colName", HeaderText = "Parameter" });
+            grid.Columns.Add(new DataGridViewImageColumn { Name = "colSymbol", HeaderText = "Symbol", ImageLayout = DataGridViewImageCellLayout.Normal });
+            grid.Columns.Add(new DataGridViewImageColumn { Name = "colFormula", HeaderText = "Formula", ImageLayout = DataGridViewImageCellLayout.Normal });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colValue", HeaderText = "Value" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colUnit", HeaderText = "Unit" });
+            grid.Columns["colValue"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            return grid;
+        }
+
+        /// <summary>A grid for the imperial reference: name, symbol, formula, metric value and unit, imperial value and unit.</summary>
+        private static DataGridView CreateImperialGrid()
+        {
+            var grid = CreateGrid();
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colName", HeaderText = "Parameter" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colSymbol", HeaderText = "Symbol" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colFormula", HeaderText = "Conversion" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colMetric", HeaderText = "Metric value" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colMetricUnit", HeaderText = "Metric unit" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colImperial", HeaderText = "Imperial value" });
+            grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colImperialUnit", HeaderText = "Imperial unit" });
+            grid.Columns["colMetric"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            grid.Columns["colImperial"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            return grid;
         }
 
         private void BuildLayout()
@@ -138,6 +192,9 @@ namespace Bolsover.Gears.Gui.Views
             AddTab(tabs, "Gears", _gearsGrid);
             AddTab(tabs, "Shafts", _shaftsGrid);
             AddTab(tabs, "Stages", _stagesGrid);
+            AddTab(tabs, "Gear parameters", CreateParameterPanel(_gearParamsTitle, _gearParamsGrid));
+            AddTab(tabs, "Mesh parameters", CreateParameterPanel(_meshParamsTitle, _meshParamsGrid));
+            AddTab(tabs, "Imperial reference", CreateImperialPanel());
 
             var rightSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
             rightSplit.Panel1.Controls.Add(_host);
@@ -157,6 +214,23 @@ namespace Bolsover.Gears.Gui.Views
                 SetSplitter(rightSplit, (int)(rightSplit.Height * 0.62));
                 _presenter.NewTrain();
             };
+        }
+
+        private Control CreateImperialPanel()
+        {
+            var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
+            split.Panel1.Controls.Add(CreateParameterPanel(_imperialGearTitle, _imperialGearGrid));
+            split.Panel2.Controls.Add(CreateParameterPanel(_imperialMeshTitle, _imperialMeshGrid));
+            split.HandleCreated += (s, e) => SetSplitter(split, (int)(split.Height * 0.6));
+            return split;
+        }
+
+        private static Control CreateParameterPanel(Label title, DataGridView grid)
+        {
+            var panel = new Panel { Dock = DockStyle.Fill };
+            panel.Controls.Add(grid);
+            panel.Controls.Add(title);
+            return panel;
         }
 
         private static void AddTab(TabControl tabs, string title, Control content)
@@ -219,6 +293,8 @@ namespace Bolsover.Gears.Gui.Views
             {
                 _animationTimer.Stop();
                 _animationTimer.Dispose();
+                foreach (var image in _latexImageCache.Values) image?.Dispose();
+                _latexImageCache.Clear();
             };
         }
 
@@ -372,6 +448,8 @@ namespace Bolsover.Gears.Gui.Views
             {
                 _updating = false;
             }
+
+            ShowParameters();
         }
 
         public void ShowSelection(object selectedTag)
@@ -386,6 +464,8 @@ namespace Bolsover.Gears.Gui.Views
             {
                 _updating = false;
             }
+
+            ShowParameters();
         }
 
         public void ShowProperties(object properties)
@@ -409,6 +489,7 @@ namespace Bolsover.Gears.Gui.Views
                 _gearsGrid.DataSource = null;
                 _shaftsGrid.DataSource = null;
                 _stagesGrid.DataSource = null;
+                ShowParameters();
                 return;
             }
 
@@ -416,6 +497,7 @@ namespace Bolsover.Gears.Gui.Views
             _gearsGrid.DataSource = report.Gears.ToList();
             _shaftsGrid.DataSource = report.Shafts.ToList();
             _stagesGrid.DataSource = report.Stages.ToList();
+            ShowParameters();
         }
 
         public void ShowMessage(string message, bool isError)
@@ -425,6 +507,128 @@ namespace Bolsover.Gears.Gui.Views
         }
 
         #endregion
+
+        /// <summary>Fills the gear and mesh parameter tables for the selected gear (a shaft or nothing clears them).</summary>
+        private void ShowParameters()
+        {
+            var gear = _selected as GearComponent;
+            if (gear == null)
+            {
+                FillParameterTable(_gearParamsGrid, _gearParamsTitle, GearParameterTable.Empty, "Select a gear to see its parameters, symbols and formulae.");
+                FillParameterTable(_meshParamsGrid, _meshParamsTitle, GearParameterTable.Empty, "Select a gear to see the parameters of its mesh.");
+                FillImperialTable(_imperialGearGrid, _imperialGearTitle, ImperialTable.Empty, "Select a gear to see its module as diametral pitch and circular pitch, and its lengths in inches.");
+                FillImperialTable(_imperialMeshGrid, _imperialMeshTitle, ImperialTable.Empty, "Select a gear to see the lengths of its mesh in inches.");
+                return;
+            }
+
+            GearParameterTable gearTable;
+            try
+            {
+                gearTable = GearParameterTables.ForGear(gear);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
+            {
+                gearTable = GearParameterTable.Empty;
+                _gearParamsTitle.Text = ex.Message;
+            }
+
+            FillParameterTable(_gearParamsGrid, _gearParamsTitle, gearTable, _gearParamsTitle.Text);
+
+            var relation = GearParameterTables.FindMeshFor(_presenter.Assembly, gear);
+            var meshTable = GearParameterTables.ForMesh(relation);
+            FillParameterTable(_meshParamsGrid, _meshParamsTitle, meshTable,
+                relation == null ? $"{gear.Name} does not mesh with another gear." : "This mesh has no involute pair parameters.");
+
+            ImperialTable imperialGear;
+            try
+            {
+                imperialGear = ImperialReference.ForGear(gear);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
+            {
+                imperialGear = ImperialTable.Empty;
+                _imperialGearTitle.Text = ex.Message;
+            }
+
+            FillImperialTable(_imperialGearGrid, _imperialGearTitle, imperialGear, _imperialGearTitle.Text);
+            FillImperialTable(_imperialMeshGrid, _imperialMeshTitle, ImperialReference.ForMesh(relation),
+                relation == null ? $"{gear.Name} does not mesh with another gear." : "This mesh has no involute pair parameters.");
+        }
+
+        /// <summary>
+        /// Fills an imperial reference table. The design stays metric; the inch values, diametral pitch and circular pitch are for reference.
+        /// </summary>
+        private static void FillImperialTable(DataGridView grid, Label title, ImperialTable table, string emptyText)
+        {
+            grid.SuspendLayout();
+            try
+            {
+                grid.Rows.Clear();
+                title.Text = table.Rows.Count > 0 ? table.Title + " - imperial reference (metric values remain the design values)" : emptyText;
+                foreach (var row in table.Rows)
+                {
+                    grid.Rows.Add(
+                        row.Name,
+                        row.Symbol,
+                        row.Formula,
+                        row.MetricValue.ToString("0.#######", CultureInfo.InvariantCulture),
+                        row.MetricUnit,
+                        row.ImperialValue.ToString("0.#######", CultureInfo.InvariantCulture),
+                        row.ImperialUnit);
+                }
+            }
+            finally
+            {
+                grid.ResumeLayout();
+            }
+        }
+
+        private void FillParameterTable(DataGridView grid, Label title, GearParameterTable table, string emptyText)
+        {
+            grid.SuspendLayout();
+            try
+            {
+                grid.Rows.Clear();
+                title.Text = table.Rows.Count > 0 ? table.Title : emptyText;
+                foreach (var row in table.Rows)
+                {
+                    var index = grid.Rows.Add(
+                        row.ParameterName,
+                        GetLatexImage(row.SymbolLatex),
+                        GetLatexImage(row.FormulaLatex),
+                        row.Value.ToString("0.#######", CultureInfo.InvariantCulture),
+                        row.Unit);
+                    grid.Rows[index].Cells["colSymbol"].ToolTipText = row.SymbolLatex;
+                    grid.Rows[index].Cells["colFormula"].ToolTipText = row.FormulaLatex;
+                }
+            }
+            finally
+            {
+                grid.ResumeLayout();
+            }
+        }
+
+        private Image GetLatexImage(string latex)
+        {
+            if (string.IsNullOrWhiteSpace(latex)) return null;
+            if (_latexImageCache.TryGetValue(latex, out var cached)) return cached;
+
+            try
+            {
+                if (LaTeXUtils.TryParse(latex, out _))
+                {
+                    var image = LaTeXUtils.CreateImageFromLatex(latex);
+                    if (image != null) _latexImageCache[latex] = image;
+                    return image;
+                }
+            }
+            catch
+            {
+                // A formula the renderer cannot handle is shown as a blank cell; the tooltip still has the source.
+            }
+
+            return null;
+        }
 
         private TreeNode CreateNode(TrainTreeNode model)
         {

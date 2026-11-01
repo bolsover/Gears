@@ -86,3 +86,31 @@ Select an involute gear in the editor to change these in the property grid. Mesh
 * Bevel and worm geometry is an approximation intended for visualisation, DXF and STL hand-off, not a stress calculation.
 * Helical racks, enveloping worm wheels and idler bevel gears are not supported.
 * A planetary stage is edited through its properties; other gears cannot be added to it.
+
+
+## Gear and mesh parameter tables
+
+The Gear Train form has two tabs that list every calculated parameter, with its symbol, formula, value and unit. They use the same table as the single gear editor (`AlibreGearForm`), so the symbols and formulae are identical.
+
+- **Gear parameters** shows the table of the selected gear: module, pressure angle, tooth count, profile shift, pitch, base, tip and root diameters, addendum, dedendum, tooth thickness, and for helical gears the normal and transverse values. Select a gear in the tree or in the 3D view.
+- **Mesh parameters** shows the table of the mesh that drives the selected gear, or the first mesh it drives: standard and working centre distance, working pressure angle, centre distance increment factor, working involute function, contact ratios, gear ratio and, for a fixed centre distance, the working circular backlash.
+
+Both tables update when you change a gear property or the centre distance. Symbols and formulae are drawn from LaTeX; hover over a cell to see the LaTeX source. Gear families other than involute spur and helical gears show their basic geometry only, and bevel, worm and rack meshes have no involute pair table.
+
+
+## Imperial reference
+
+All design parameters and calculations are metric. The **Imperial reference** tab of the Gear Train form shows the imperial equivalents of the selected gear and of its mesh, for reference only. Nothing shown in inches changes the design.
+
+| Quantity | Formula |
+|---|---|
+| Diametral pitch (D.P.), teeth per inch | `P = 25.4 / m` |
+| Module from D.P. | `m = 25.4 / P` |
+| Circular pitch (C.P.) in mm | `p = pi * m` |
+| Circular pitch (C.P.) in inches | `p = pi / P = pi * m / 25.4` |
+| Length in inches | `inches = mm / 25.4` |
+
+* The gear table starts with the diametral pitch and circular pitch of the module. A helical gear shows both the normal values (from `m_n`) and the transverse values (from `m_t = m_n / cos(beta)`); a worm shows the axial values.
+* Every other length of the gear table (pitch, base, tip and root diameters, addendum, dedendum, face width, clearance, backlash and so on) follows, in millimetres and inches. The pitch diameter in inches equals `N / P`.
+* The lower table converts the lengths of the mesh (standard and working centre distance, working pitch diameters and so on).
+* The conversions are in `ImperialUnits` and `ImperialReference` (`Gears\Calculator\Assemblies\ImperialUnits.cs`). The values follow the relationships in *Elements of Metric Gear Technology*.

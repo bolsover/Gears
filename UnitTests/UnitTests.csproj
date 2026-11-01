@@ -161,6 +161,7 @@
     <Compile Include="TestGearAssembly.cs" />
     <Compile Include="TestGearTrain.cs" />
     <Compile Include="TestGearAdjustments.cs" />
+    <Compile Include="TestImperialUnits.cs" />
     <Compile Include="TestGearTrainPhases3To7.cs" />
     <Compile Include="TestGearTrainEditorPhases3To7.cs" />
     <Compile Include="TestConversionUtils.cs" />
