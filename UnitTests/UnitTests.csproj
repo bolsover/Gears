@@ -35,6 +35,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AlibreAddOn">
+      <HintPath>..\..\..\..\AlibreLib\AlibreAddOn.dll</HintPath>
+    </Reference>
+    <Reference Include="AlibreX">
+      <HintPath>..\..\..\..\AlibreLib\AlibreX.dll</HintPath>
+    </Reference>
     <Reference Include="CommunityToolkit.Diagnostics, Version=8.3.0.0, Culture=neutral, PublicKeyToken=4aff67a105548ee2, processorArchitecture=MSIL">
       <HintPath>..\packages\CommunityToolkit.Diagnostics.8.3.2\lib\netstandard2.0\CommunityToolkit.Diagnostics.dll</HintPath>
     </Reference>
@@ -154,6 +160,7 @@
     <Compile Include="TestAlibreGearPresenter.cs" />
     <Compile Include="TestGearAssembly.cs" />
     <Compile Include="TestGearTrain.cs" />
+    <Compile Include="TestGearAdjustments.cs" />
     <Compile Include="TestGearTrainPhases3To7.cs" />
     <Compile Include="TestGearTrainEditorPhases3To7.cs" />
     <Compile Include="TestConversionUtils.cs" />

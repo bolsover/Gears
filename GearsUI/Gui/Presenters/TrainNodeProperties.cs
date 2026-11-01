@@ -164,6 +164,73 @@ namespace Bolsover.Gears.Gui.Presenters
         [Category("Position")]
         [DisplayName("Driven by")]
         public string DrivenBy => _relation?.Driver.Name;
+
+        [Category("Mesh")]
+        [DisplayName("Centre distance (mm)")]
+        [Description("Working distance between this gear's shaft and its driver's shaft. Entering a value fixes it; 0 goes back to the " +
+                     "distance that follows from the profile shifts. A larger distance raises the working pressure angle; it adds backlash to an " +
+                     "external pair and takes backlash away from an internal pair.")]
+        public double CentreDistance
+        {
+            get => _relation?.CentreDistanceOverride ?? _relation?.Result?.CentreDistance ?? 0.0;
+            set
+            {
+                if (_relation != null) _relation.CentreDistanceOverride = value > 0.0 ? value : (double?)null;
+            }
+        }
+
+        [Category("Mesh")]
+        [DisplayName("Fixed centre distance")]
+        [Description("True while the centre distance is held at a chosen value; set to False to derive it from the profile shifts again.")]
+        public bool CentreDistanceFixed
+        {
+            get => _relation?.CentreDistanceOverride.HasValue == true;
+            set
+            {
+                if (_relation == null) return;
+                if (value)
+                {
+                    if (!_relation.CentreDistanceOverride.HasValue && _relation.Result != null)
+                    {
+                        _relation.CentreDistanceOverride = _relation.Result.CentreDistance;
+                    }
+                }
+                else
+                {
+                    _relation.CentreDistanceOverride = null;
+                }
+            }
+        }
+
+        [Category("Mesh")]
+        [DisplayName("Standard centre distance (mm)")]
+        [Description("Centre distance of the pair without profile shift.")]
+        public double StandardCentreDistance => _relation?.Result?.PairData?.StandardCentreDistance ?? 0.0;
+
+        [Category("Mesh")]
+        [DisplayName("Working pressure angle (deg)")]
+        public double WorkingPressureAngle => _relation?.Result?.PairData?.WorkingPressureAngleDeg ?? 0.0;
+
+        [Category("Mesh")]
+        [DisplayName("Working backlash (mm)")]
+        [Description("Circular backlash on the working pitch circles; negative means the teeth jam.")]
+        public double WorkingBacklash => _relation?.Result?.PairData?.WorkingCircularBacklash ?? 0.0;
+
+        [Category("Mesh")]
+        [DisplayName("Contact ratio")]
+        public double ContactRatio => _relation?.Result?.PairData?.ContactRatio ?? 0.0;
+
+        [Category("Mesh")]
+        [DisplayName("Sum of profile shifts")]
+        [Description("Profile shift of this gear plus that of its driver (for an internal pair: internal minus external).")]
+        public double ProfileShiftSum
+        {
+            get
+            {
+                var pair = _relation?.Result?.PairData;
+                return pair != null ? pair.SumProfileShift : 0.0;
+            }
+        }
     }
 
     /// <summary>Properties that every kind of gear shares in the property grid.</summary>

@@ -33,6 +33,12 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
+        <Reference Include="AlibreAddOn">
+          <HintPath>..\..\..\..\AlibreLib\AlibreAddOn.dll</HintPath>
+        </Reference>
+        <Reference Include="AlibreX">
+          <HintPath>..\..\..\..\AlibreLib\AlibreX.dll</HintPath>
+        </Reference>
         <Reference Include="ExtendedNumerics.BigDecimal, Version=3000.0.3.40, Culture=neutral, PublicKeyToken=65f1315a45ad8949, processorArchitecture=MSIL">
           <HintPath>..\packages\ExtendedNumerics.BigDecimal.3000.0.3.40\lib\net48\ExtendedNumerics.BigDecimal.dll</HintPath>
         </Reference>
@@ -155,6 +161,8 @@
         <Compile Include="Calculator\Assemblies\ShaftMeshBuilder.cs" />
         <Compile Include="Model\Assemblies\GearTrainReport.cs" />
         <Compile Include="Calculator\Assemblies\IMeshSolver.cs" />
+        <Compile Include="Calculator\Assemblies\IAdjustableCentreSolver.cs" />
+        <Compile Include="Calculator\Assemblies\ProfileShiftFitter.cs" />
         <Compile Include="Calculator\Assemblies\MeshSolvers.cs" />
         <Compile Include="Calculator\Assemblies\ParallelAxisMeshSolver.cs" />
         <Compile Include="Model\Assemblies\AssemblyScene.cs" />

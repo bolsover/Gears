@@ -86,6 +86,10 @@ namespace Bolsover.Gears.Gui.Views
             var btnAddGear = new ToolStripButton("Add gear to shaft");
             var btnAddMeshed = new ToolStripButton("Add meshed gear");
             var btnRemove = new ToolStripButton("Remove");
+            var btnFitShift = new ToolStripButton("Fit profile shift")
+            {
+                ToolTipText = "Give the selected driven gear the profile shift that makes its mesh run at the current centre distance."
+            };
             var btnFit = new ToolStripButton("Fit view");
 
             var ddStart = new ToolStripDropDownButton("Start with");
@@ -110,6 +114,7 @@ namespace Bolsover.Gears.Gui.Views
             btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
             btnRemove.Click += (s, e) => _presenter.RemoveSelected();
+            btnFitShift.Click += (s, e) => RunCommand(FitProfileShiftOfSelectedGear);
             btnFit.Click += (s, e) => _viewport.FitView();
             _btnWireframe.Click += (s, e) => RenderScene();
             _btnShafts.Click += (s, e) => RenderScene();
@@ -117,7 +122,7 @@ namespace Bolsover.Gears.Gui.Views
             toolbar.LayoutStyle = ToolStripLayoutStyle.Flow;
             toolbar.Items.AddRange(new ToolStripItem[]
             {
-                btnNew, ddStart, btnAddGear, btnAddMeshed, ddMate, btnRemove, ddFile, new ToolStripSeparator(),
+                btnNew, ddStart, btnAddGear, btnAddMeshed, ddMate, btnFitShift, btnRemove, ddFile, new ToolStripSeparator(),
                 new ToolStripLabel("Input speed (rpm)"), new ToolStripControlHost(_numSpeed),
                 new ToolStripLabel("Input angle (deg)"), new ToolStripControlHost(_numAngle), new ToolStripSeparator(),
                 _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed), new ToolStripSeparator(),
@@ -257,6 +262,17 @@ namespace Bolsover.Gears.Gui.Views
             }
 
             _presenter.AddMate(driver, meshType);
+        }
+
+        private void FitProfileShiftOfSelectedGear()
+        {
+            if (!(_selected is GearComponent driven))
+            {
+                ShowMessage("Select the driven gear whose profile shift should be fitted to the centre distance.", true);
+                return;
+            }
+
+            _presenter.FitProfileShiftToCentreDistance(driven);
         }
 
         private void SaveTrain()

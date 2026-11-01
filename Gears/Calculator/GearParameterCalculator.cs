@@ -72,6 +72,17 @@ namespace Bolsover.Gears.Calculator
         public double Gear2Backlash => Gear2?.Backlash ?? 0.0;
         public double TotalBacklash => Gear1Backlash + Gear2Backlash;
         public double NormalBacklash { get; set; }
+
+        /// <summary>
+        /// Circular backlash measured on the working pitch circles at the working centre distance (mm). Without a centre
+        /// distance override and with zero profile shift it equals <see cref="TotalBacklash"/>. For an external pair, moving the
+        /// shafts apart increases it and moving them closer reduces it; for an internal pair it is the other way round.
+        /// A negative value means the teeth jam.
+        /// </summary>
+        public double WorkingCircularBacklash { get; set; }
+
+        /// <summary>True when the working centre distance was set by the caller instead of being derived from the profile shifts.</summary>
+        public bool CentreDistanceOverridden { get; set; }
         public double Gear1HelixAngle => Gear1?.HelixAngleDeg ?? 0.0;
         public double Gear2HelixAngle => Gear2?.HelixAngleDeg ?? 0.0;
         public string Gear1HelicalDirection => Gear1?.HelicalDirection ?? "R";
@@ -238,7 +249,8 @@ namespace Bolsover.Gears.Calculator
             double? clearance1 = null, double? clearance2 = null,
             double? backlash1 = null, double? backlash2 = null,
             double? helixAngle1 = null, double? helixAngle2 = null,
-            string helicalDirection1 = "R", string helicalDirection2 = "L")
+            string helicalDirection1 = "R", string helicalDirection2 = "L",
+            double? workingCentreDistance = null)
         {
             var beta1 = helixAngle1 ?? 0.0;
             var beta2 = helixAngle2 ?? beta1;
@@ -311,13 +323,36 @@ namespace Bolsover.Gears.Calculator
                 }
             }
 
+            var aWorking = aStd * (Math.Cos(alphaTRad) / Math.Cos(alphaWRad));
+
+            if (workingCentreDistance.HasValue)
+            {
+                // The caller fixes the centre distance: the working pressure angle follows from a_w cos(alpha_wt) = a cos(alpha_t).
+                aWorking = workingCentreDistance.Value;
+                if (double.IsNaN(aWorking) || double.IsInfinity(aWorking) || aWorking <= 0.0 || aStd <= 0.0)
+                {
+                    throw new InvalidOperationException(
+                        $"The centre distance must be a positive number (got {aWorking}); the standard centre distance is {aStd}.");
+                }
+
+                var cosAlphaW = aStd * Math.Cos(alphaTRad) / aWorking;
+                if (cosAlphaW > 1.0 + 1e-12)
+                {
+                    throw new InvalidOperationException(
+                        $"A centre distance of {aWorking} mm is too small for these gears: the base circles ({aStd * Math.Cos(alphaTRad):0.#######} mm apart) would overlap.");
+                }
+
+                alphaWRad = Math.Acos(Math.Min(1.0, cosAlphaW));
+                invAlphaW = Math.Tan(alphaWRad) - alphaWRad;
+                pairData.WorkingInvoluteFunction = invAlphaW;
+                pairData.CentreDistanceOverridden = true;
+            }
+
             pairData.WorkingPressureAngleRad = alphaWRad;
             pairData.WorkingPressureAngleDeg = alphaWRad * 180.0 / Math.PI;
 
-            var y = (sumZ / (2.0 * cosBeta)) * ((Math.Cos(alphaTRad) / Math.Cos(alphaWRad)) - 1.0);
+            var y = (aWorking - aStd) / m;
             pairData.CentreDistanceIncrementFactor = y;
-
-            var aWorking = aStd * (Math.Cos(alphaTRad) / Math.Cos(alphaWRad));
             pairData.WorkingCentreDistance = aWorking;
 
             var dw1 = gear1.PitchDiameter * (Math.Cos(alphaTRad) / Math.Cos(alphaWRad));
@@ -360,7 +395,10 @@ namespace Bolsover.Gears.Calculator
             pairData.AxialContactRatio = axialContactRatio;
             pairData.ContactRatio = contactRatio + axialContactRatio;
             pairData.GearRatio = z1 > 0 ? (double)z2 / z1 : 0.0;
-            pairData.NormalBacklash = pairData.TotalBacklash * Math.Cos(alphaWRad) * cosBeta;
+            pairData.WorkingCircularBacklash = CalculateWorkingBacklash(gear1, gear2, isInternal1, isInternal2, alphaTRad, alphaWRad, dw1, dw2, cosBeta);
+            pairData.NormalBacklash = pairData.CentreDistanceOverridden
+                ? pairData.WorkingCircularBacklash * Math.Cos(alphaWRad) * cosBeta
+                : pairData.TotalBacklash * Math.Cos(alphaWRad) * cosBeta;
 
             // Populate pair tabular rows
             if (beta1 > 1e-6 || beta2 > 1e-6)
@@ -412,6 +450,10 @@ namespace Bolsover.Gears.Calculator
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Tooth Thickness", "s_2", "m(\\frac{\\pi}{2} + 2 x_2 \\tan\\alpha) - j_{t2}", gear2.ToothThickness, "mm"));
             if (isInternal1) pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Rim Thickness", "s_{rim1}", "s_{rim1}", rimThickness1, "mm"));
             if (isInternal2) pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Rim Thickness", "s_{rim2}", "s_{rim2}", rimThickness2, "mm"));
+            if (pairData.CentreDistanceOverridden)
+            {
+                pairData.ParameterRows.Add(new GearParameterRow("Working Circular Backlash", "j_{tw}", "j_{tw}", pairData.WorkingCircularBacklash, "mm"));
+            }
 
             pairData.ParameterRows.Add(new GearParameterRow("Standard Centre Distance", "a", (beta1 > 1e-6 || beta2 > 1e-6) ? (isInternalPair ? "\\frac{m_t(z_2 - z_1)}{2}" : "\\frac{m_t(z_1 + z_2)}{2}") : (isInternalPair ? "\\frac{m(z_2 - z_1)}{2}" : "\\frac{m(z_1 + z_2)}{2}"), aStd, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Working Centre Distance", "a_w", (beta1 > 1e-6 || beta2 > 1e-6) ? "a \\frac{\\cos\\alpha_t}{\\cos\\alpha_{wt}}" : "a + y \\cdot m", aWorking, "mm"));
@@ -431,6 +473,42 @@ namespace Bolsover.Gears.Calculator
             pairData.ParameterRows.Add(new GearParameterRow("Gear Ratio", "i", "\\frac{z_2}{z_1}", pairData.GearRatio, "-"));
 
             return pairData;
+        }
+
+        /// <summary>
+        /// Circular backlash on the working pitch circles: the space width of one gear minus the tooth thickness of the
+        /// other, both carried from the reference circle to the working circle with the involute function.
+        /// For an external pair this is p_w - s_w1 - s_w2; for an internal pair it is the internal gear's space width
+        /// minus the external gear's tooth thickness.
+        /// </summary>
+        private static double CalculateWorkingBacklash(
+            CalculatedGearData gear1, CalculatedGearData gear2, bool isInternal1, bool isInternal2,
+            double alphaTRad, double alphaWRad, double dw1, double dw2, double cosBeta)
+        {
+            var delta = (Math.Tan(alphaTRad) - alphaTRad) - (Math.Tan(alphaWRad) - alphaWRad);
+            var alphaRad = gear1.PressureAngleRad;
+
+            double WidthOnWorkingCircle(CalculatedGearData g, bool internalGear, double dw)
+            {
+                // Tooth thickness for an external gear; space width for an internal gear (it behaves like an external tooth).
+                var width = internalGear
+                    ? (g.Module * (Math.PI / 2.0 + 2.0 * g.ProfileShift * Math.Tan(alphaRad)) + g.Backlash) / cosBeta
+                    : g.ToothThickness;
+                return dw * (width / g.PitchDiameter + delta);
+            }
+
+            var w1 = WidthOnWorkingCircle(gear1, isInternal1, dw1);
+            var w2 = WidthOnWorkingCircle(gear2, isInternal2, dw2);
+
+            if (isInternal1 != isInternal2)
+            {
+                var space = isInternal1 ? w1 : w2;
+                var tooth = isInternal1 ? w2 : w1;
+                return space - tooth;
+            }
+
+            var workingPitch = Math.PI * dw1 / gear1.Teeth;
+            return workingPitch - w1 - w2;
         }
     }
 }

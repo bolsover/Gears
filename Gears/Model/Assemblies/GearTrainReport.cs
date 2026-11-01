@@ -71,12 +71,30 @@ namespace Bolsover.Gears.Model.Assemblies
     public sealed class GearStageRow
     {
         public GearStageRow(string driverId, string drivenId, double toothRatio, double speedRatio, double centreDistance)
+            : this(driverId, drivenId, toothRatio, speedRatio, centreDistance, null, null, null, false)
+        {
+        }
+
+        public GearStageRow(
+            string driverId,
+            string drivenId,
+            double toothRatio,
+            double speedRatio,
+            double centreDistance,
+            double? workingPressureAngleDeg,
+            double? workingBacklash,
+            double? contactRatio,
+            bool centreDistanceFixed)
         {
             DriverId = driverId;
             DrivenId = drivenId;
             ToothRatio = toothRatio;
             SpeedRatio = speedRatio;
             CentreDistance = centreDistance;
+            WorkingPressureAngleDeg = workingPressureAngleDeg;
+            WorkingBacklash = workingBacklash;
+            ContactRatio = contactRatio;
+            CentreDistanceFixed = centreDistanceFixed;
         }
 
         public string DriverId { get; }
@@ -90,6 +108,18 @@ namespace Bolsover.Gears.Model.Assemblies
 
         /// <summary>Working centre distance (mm).</summary>
         public double CentreDistance { get; }
+
+        /// <summary>True when the centre distance was set by the user instead of being derived from the profile shifts.</summary>
+        public bool CentreDistanceFixed { get; }
+
+        /// <summary>Working (transverse) pressure angle in degrees; null for meshes that have no involute pair data.</summary>
+        public double? WorkingPressureAngleDeg { get; }
+
+        /// <summary>Circular backlash on the working pitch circles (mm); negative means the teeth jam. Null when not available.</summary>
+        public double? WorkingBacklash { get; }
+
+        /// <summary>Total contact ratio; null when not available.</summary>
+        public double? ContactRatio { get; }
     }
 
     /// <summary>
@@ -146,7 +176,14 @@ namespace Bolsover.Gears.Model.Assemblies
             {
                 sb.AppendLine(
                     $"  {s.DriverId} -> {s.DrivenId}: tooth ratio {s.ToothRatio.ToString("0.0000000", ci)}, " +
-                    $"speed ratio {s.SpeedRatio.ToString("0.0000000", ci)}, centre distance {s.CentreDistance.ToString("0.0000000", ci)} mm");
+                    $"speed ratio {s.SpeedRatio.ToString("0.0000000", ci)}, centre distance {s.CentreDistance.ToString("0.0000000", ci)} mm" +
+                    (s.CentreDistanceFixed ? " (fixed)" : string.Empty));
+                if (s.WorkingPressureAngleDeg.HasValue)
+                {
+                    sb.AppendLine(
+                        $"      working pressure angle {Format(s.WorkingPressureAngleDeg, ci)} deg, " +
+                        $"working backlash {Format(s.WorkingBacklash, ci)} mm, contact ratio {Format(s.ContactRatio, ci)}");
+                }
             }
 
             sb.AppendLine();

@@ -56,6 +56,24 @@ The editor (menu *Gear Train*) starts a train with a spur gear, a bevel gear, a 
 The *File* menu saves and loads a train as JSON and exports the scene as STL or OBJ. *Animate* turns the input shaft
 at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
 
+### Clearance, backlash, profile shift and centre distance
+
+Select an involute gear in the editor to change these in the property grid. Meshing involute gears (spur, helical, internal) use all four:
+
+* **Clearance** and **Backlash** (per gear) and **Profile shift** `x` (per gear) change the tooth profile. Backlash thins the tooth; the working
+  backlash of a pair is the circular backlash measured on the working pitch circles.
+* **Centre distance (mm)** of a driven gear sets the distance to its driver's shaft. Entering a value fixes it (*Fixed centre distance* turns on);
+  entering 0, or turning the flag off, goes back to the distance that follows from the profile shifts.
+  With a fixed distance `a_w` the working pressure angle follows from `a_w cos(alpha_wt) = a cos(alpha_t)`, and the working pitch diameters,
+  contact ratio and backlash are recalculated. For an unshifted pair without backlash the working backlash is `2 a_w (inv alpha_w - inv alpha)`:
+  a larger distance adds backlash to an external pair and takes it away from an internal pair.
+  A distance below `a cos(alpha_t)` is rejected because the base circles would overlap.
+* **Fit profile shift** (toolbar) gives the selected driven gear the profile shift that makes the mesh run at the current centre distance with no
+  fixed distance, so the distance follows from the profile shifts. The driver is not changed.
+* The *Mesh* group of the property grid and the *Stages* tab show the standard and working centre distance, the working pressure angle, the working
+  backlash and the contact ratio. The report warns when the working backlash is negative (the teeth jam) or the contact ratio is below 1.
+* A fixed centre distance is saved in the JSON file. Only parallel-axis meshes support it; rack, bevel and worm meshes report an error.
+
 ## Files and export
 
 * **JSON**: `AssemblySerializer` stores shafts (placement, size, input rotation), gears with their parameters and mounts, and relations.

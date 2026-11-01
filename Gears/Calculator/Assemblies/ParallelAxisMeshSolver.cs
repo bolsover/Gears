@@ -9,11 +9,16 @@ namespace Bolsover.Gears.Calculator.Assemblies
     /// <see cref="AlibreGearGenerator.CalculateMeshRotationAngle(bool, bool, int, int)"/> for the tooth phase,
     /// so the result is identical to the existing gear pair preview.
     /// </summary>
-    public sealed class ParallelAxisMeshSolver : IMeshSolver
+    public sealed class ParallelAxisMeshSolver : IAdjustableCentreSolver
     {
         public MeshType MeshType => MeshType.Parallel;
 
         public MeshResult Solve(GearComponent driver, GearComponent driven, double driverPhaseRad)
+        {
+            return Solve(driver, driven, driverPhaseRad, null);
+        }
+
+        public MeshResult Solve(GearComponent driver, GearComponent driven, double driverPhaseRad, double? workingCentreDistance)
         {
             var g1 = driver as InvoluteGearComponent
                      ?? throw new InvalidOperationException($"Gear '{driver?.Id}' is not an involute gear and cannot mesh on parallel axes.");
@@ -41,7 +46,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 g1.Clearance, g2.Clearance,
                 g1.Backlash, g2.Backlash,
                 g1.HelixAngleDeg, g2.HelixAngleDeg,
-                g1.HelicalDirection, g2.HelicalDirection);
+                g1.HelicalDirection, g2.HelicalDirection,
+                workingCentreDistance);
 
             var centreDistance = GearPrecision.Round(pair.WorkingCentreDistance);
 

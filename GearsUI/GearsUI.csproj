@@ -34,6 +34,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AlibreAddOn">
+      <HintPath>..\..\..\..\AlibreLib\AlibreAddOn.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="AlibreX">
+      <HintPath>..\..\..\..\AlibreLib\AlibreX.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="ExtendedNumerics.BigDecimal, Version=3000.0.3.40, Culture=neutral, PublicKeyToken=65f1315a45ad8949, processorArchitecture=MSIL">
       <HintPath>..\packages\ExtendedNumerics.BigDecimal.3000.0.3.40\lib\net48\ExtendedNumerics.BigDecimal.dll</HintPath>
     </Reference>

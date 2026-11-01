@@ -61,7 +61,8 @@ namespace Bolsover.Gears.Model.Assemblies
                     Driver = relation.Driver.Id,
                     Driven = relation.Driven.Id,
                     MeshType = relation.MeshType.ToString(),
-                    CentreLineAngleDeg = relation.CentreLineAngleDeg
+                    CentreLineAngleDeg = relation.CentreLineAngleDeg,
+                    CentreDistance = relation.CentreDistanceOverride
                 });
             }
 
@@ -139,7 +140,8 @@ namespace Bolsover.Gears.Model.Assemblies
                     throw new InvalidDataException($"Unknown mesh type '{relationDto.MeshType}'.");
                 }
 
-                assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg);
+                var added = assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg);
+                added.CentreDistanceOverride = relationDto.CentreDistance;
             }
 
             return assembly;
@@ -350,6 +352,9 @@ namespace Bolsover.Gears.Model.Assemblies
             public string Driven { get; set; }
             public string MeshType { get; set; }
             public double CentreLineAngleDeg { get; set; }
+
+            /// <summary>Fixed working centre distance (mm); absent when the distance follows from the profile shifts.</summary>
+            public double? CentreDistance { get; set; }
         }
     }
 }

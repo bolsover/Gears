@@ -44,6 +44,14 @@ namespace Bolsover.Gears.Model.Assemblies
         /// </summary>
         public double CentreLineAngleDeg { get; set; }
 
+        /// <summary>
+        /// Working centre distance (mm) chosen by the user, or null to derive it from the gears' profile shifts. Only
+        /// parallel-axis meshes support it. A value other than the derived distance changes the working pressure angle,
+        /// the working backlash and the contact ratio of the pair (a larger distance adds backlash to an external pair
+        /// and removes it from an internal pair).
+        /// </summary>
+        public double? CentreDistanceOverride { get; set; }
+
         /// <summary>The solved centre distance, phase and pair data; null until the assembly has been solved.</summary>
         public MeshResult Result { get; internal set; }
     }

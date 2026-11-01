@@ -88,12 +88,38 @@ namespace Bolsover.Gears.Calculator.Assemblies
             foreach (var relation in assembly.Relations)
             {
                 var factor = SpeedFactor(relation);
+                var pair = relation.Result?.PairData;
                 stageRows.Add(new GearStageRow(
                     relation.Driver.Id,
                     relation.Driven.Id,
                     GearPrecision.Round((double)relation.Driven.ToothCount / relation.Driver.ToothCount),
                     GearPrecision.Round(factor),
-                    relation.Result != null ? relation.Result.CentreDistance : 0.0));
+                    relation.Result != null ? relation.Result.CentreDistance : 0.0,
+                    pair != null ? GearPrecision.Round(pair.WorkingPressureAngleDeg) : (double?)null,
+                    pair != null ? GearPrecision.Round(pair.WorkingCircularBacklash) : (double?)null,
+                    pair != null ? GearPrecision.Round(pair.ContactRatio) : (double?)null,
+                    relation.CentreDistanceOverride.HasValue));
+
+                if (pair != null)
+                {
+                    if (pair.WorkingCircularBacklash < -GearPrecision.Tolerance)
+                    {
+                        var internalPair = pair.Gear1 != null && pair.Gear2 != null && pair.Gear1.IsInternal != pair.Gear2.IsInternal;
+                        warnings.Add(
+                            $"'{relation.Driver.Id}' and '{relation.Driven.Id}' have a negative working backlash " +
+                            $"({GearPrecision.Round(pair.WorkingCircularBacklash)} mm): the teeth jam. " +
+                            (internalPair
+                                ? "Reduce the centre distance or increase the backlash."
+                                : "Increase the centre distance or the backlash."));
+                    }
+
+                    if (pair.ContactRatio < 1.0)
+                    {
+                        warnings.Add(
+                            $"'{relation.Driver.Id}' and '{relation.Driven.Id}' have a contact ratio below 1 " +
+                            $"({GearPrecision.Round(pair.ContactRatio)}): the mesh is not continuous.");
+                    }
+                }
             }
 
             double? overall = null;

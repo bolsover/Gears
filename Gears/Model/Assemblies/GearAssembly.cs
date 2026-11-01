@@ -229,7 +229,21 @@ namespace Bolsover.Gears.Model.Assemblies
             // pair is turned by theta, which is a rigid motion: the driver angle seen by the solver is phi1 - theta
             // and the driven angle is turned back by theta. For theta = 0 the result is the solver's unchanged.
             var theta = relation.CentreLineAngleDeg * Math.PI / 180.0;
-            var solved = solver.Solve(relation.Driver, relation.Driven, driverMount.PhaseRad - theta);
+            MeshResult solved;
+            if (solver is IAdjustableCentreSolver adjustable)
+            {
+                solved = adjustable.Solve(relation.Driver, relation.Driven, driverMount.PhaseRad - theta, relation.CentreDistanceOverride);
+            }
+            else if (relation.CentreDistanceOverride.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"The centre distance between '{relation.Driver.Id}' and '{relation.Driven.Id}' cannot be set: " +
+                    $"{relation.MeshType} meshes do not support a fixed centre distance.");
+            }
+            else
+            {
+                solved = solver.Solve(relation.Driver, relation.Driven, driverMount.PhaseRad - theta);
+            }
             if (solved.DrivenFrame != null)
             {
                 SolveFramed(relation, solved, theta, driverMount, driverShaft, drivenMount, drivenShaft, placed);

@@ -423,6 +423,42 @@ namespace Bolsover.Gears.Gui.Presenters
             if (Scene != null) _view.ShowScene(Scene, Selected, _hidden);
         }
 
+        /// <summary>
+        /// Sets the working centre distance between a driven gear and its driver (mm); zero or less goes back to the distance
+        /// that follows from the profile shifts. Only parallel-axis meshes support it.
+        /// </summary>
+        public void SetCentreDistance(GearComponent driven, double centreDistance)
+        {
+            EnsureNotPlanetary();
+            var relation = Assembly.FindDrivingRelation(driven)
+                           ?? throw new ArgumentException("The gear is not driven by another gear.", nameof(driven));
+            relation.CentreDistanceOverride = centreDistance > 0.0 ? centreDistance : (double?)null;
+            Refresh();
+        }
+
+        /// <summary>
+        /// Gives the driven gear the profile shift at which its mesh runs at the current centre distance (a fixed distance if one
+        /// is set, otherwise the solved one) without a fixed distance, so that the distance follows from the profile shifts.
+        /// The driver's profile shift is not changed.
+        /// </summary>
+        public void FitProfileShiftToCentreDistance(GearComponent driven)
+        {
+            EnsureNotPlanetary();
+            var gear = driven as InvoluteGearComponent
+                       ?? throw new ArgumentException("Only involute gears have a profile shift.", nameof(driven));
+            var relation = Assembly.FindDrivingRelation(gear)
+                           ?? throw new InvalidOperationException($"'{gear.Name}' is not driven by another gear, so there is no centre distance to fit.");
+            var driver = relation.Driver as InvoluteGearComponent
+                         ?? throw new InvalidOperationException($"'{relation.Driver.Name}' is not an involute gear.");
+            var target = relation.CentreDistanceOverride ?? relation.Result?.CentreDistance
+                         ?? throw new InvalidOperationException("The train has not been solved yet.");
+
+            var shift = Bolsover.Gears.Calculator.Assemblies.ProfileShiftFitter.RequiredDrivenProfileShift(driver, gear, target);
+            gear.ProfileShift = GearPrecision.Round(shift);
+            relation.CentreDistanceOverride = null;
+            Refresh();
+        }
+
         /// <summary>Turns the input shaft to the given angle (degrees) and rebuilds the scene.</summary>
         public void SetInputAngle(double degrees)
         {
