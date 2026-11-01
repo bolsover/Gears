@@ -55,6 +55,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
         /// Lofts a closed outline between two planes. The outline is scaled about the Z axis by
         /// <paramref name="scaleTop"/> in the plane z = <paramref name="zTop"/> and by <paramref name="scaleBottom"/> in the
         /// plane z = <paramref name="zBottom"/>. Equal scales give a straight extrusion.
+        /// Every vertex is also moved along X by <paramref name="shearPerZ"/> times its z, which turns a straight extrusion into the
+        /// sheared solid of a helical rack tooth (zero gives no shear).
         /// </summary>
         /// <param name="starShaped">True when every point of the outline can be seen from the axis (gears): the caps are
         /// fans from the axis. False uses ear clipping, which suits any simple polygon but is slower.</param>
@@ -64,7 +66,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
             double scaleTop,
             double zBottom,
             double scaleBottom,
-            bool starShaped)
+            bool starShaped,
+            double shearPerZ = 0.0)
         {
             var mesh = new GearMesh3DBuilder.Mesh3D();
             if (outline == null || outline.Count < 3) return mesh;
@@ -78,33 +81,34 @@ namespace Bolsover.Gears.Calculator.Assemblies
             {
                 var j = (i + 1) % n;
                 var baseIndex = mesh.Vertices.Count;
-                mesh.Vertices.Add(new GearPoint3D(pts[i].X * scaleTop, pts[i].Y * scaleTop, zTop));
-                mesh.Vertices.Add(new GearPoint3D(pts[i].X * scaleBottom, pts[i].Y * scaleBottom, zBottom));
-                mesh.Vertices.Add(new GearPoint3D(pts[j].X * scaleBottom, pts[j].Y * scaleBottom, zBottom));
-                mesh.Vertices.Add(new GearPoint3D(pts[j].X * scaleTop, pts[j].Y * scaleTop, zTop));
+                mesh.Vertices.Add(new GearPoint3D(pts[i].X * scaleTop + shearPerZ * zTop, pts[i].Y * scaleTop, zTop));
+                mesh.Vertices.Add(new GearPoint3D(pts[i].X * scaleBottom + shearPerZ * zBottom, pts[i].Y * scaleBottom, zBottom));
+                mesh.Vertices.Add(new GearPoint3D(pts[j].X * scaleBottom + shearPerZ * zBottom, pts[j].Y * scaleBottom, zBottom));
+                mesh.Vertices.Add(new GearPoint3D(pts[j].X * scaleTop + shearPerZ * zTop, pts[j].Y * scaleTop, zTop));
                 mesh.TriangleIndices.AddRange(new[] { baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3 });
             }
 
-            AddCap(mesh, pts, zTop, scaleTop, true, starShaped);
-            AddCap(mesh, pts, zBottom, scaleBottom, false, starShaped);
+            AddCap(mesh, pts, zTop, scaleTop, true, starShaped, shearPerZ * zTop);
+            AddCap(mesh, pts, zBottom, scaleBottom, false, starShaped, shearPerZ * zBottom);
             mesh.CalculateNormals();
             return mesh;
         }
 
-        private static void AddCap(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> pts, double z, double scale, bool facesUp, bool starShaped)
+        private static void AddCap(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> pts, double z, double scale, bool facesUp, bool starShaped,
+            double shearX = 0.0)
         {
             var n = pts.Count;
             var ring = mesh.Vertices.Count;
             foreach (var p in pts)
             {
-                mesh.Vertices.Add(new GearPoint3D(p.X * scale, p.Y * scale, z));
+                mesh.Vertices.Add(new GearPoint3D(p.X * scale + shearX, p.Y * scale, z));
             }
 
             var triangles = new List<int>();
             if (starShaped)
             {
                 var centre = mesh.Vertices.Count;
-                mesh.Vertices.Add(new GearPoint3D(0, 0, z));
+                mesh.Vertices.Add(new GearPoint3D(shearX, 0, z));
                 for (var i = 0; i < n; i++)
                 {
                     triangles.Add(centre);

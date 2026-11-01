@@ -59,7 +59,7 @@ namespace Bolsover.Gears.Gui.Views
         private readonly ToolStripMenuItem _btnExportAlibre = new ToolStripMenuItem("Export gear to &Alibre…")
         {
             Enabled = false,
-            ToolTipText = "Create the selected involute gear (external or internal, spur or helical) as a new Alibre part: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Available when the editor runs inside Alibre Design."
+            ToolTipText = "Create the selected gear as a new Alibre part. Involute gears (external or internal, spur or helical) and worm wheels: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Racks (straight or helical): one tooth cell, extruded (swept along a slanted path for a helical rack) and linear-patterned. Worms: a core cylinder with a helical thread. Available when the editor runs inside Alibre Design."
         };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
@@ -444,16 +444,42 @@ namespace Bolsover.Gears.Gui.Views
                 return;
             }
 
-            if (!(_selected is InvoluteGearComponent gear))
+            switch (_selected)
             {
-                ShowMessage("Select the gear to export to Alibre.", true);
-                return;
+                case InvoluteGearComponent gear:
+                {
+                    ShowMessage($"Exporting {gear.Id} to Alibre…", false);
+                    _alibreExporter.Export(gear);
+                    var kind = (gear.IsInternal ? "internal " : "external ") + (gear.IsHelical ? "helical" : "spur");
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1} gear, {2} teeth, module {3:0.###}) to a new Alibre part.", gear.Id, kind, gear.Teeth, gear.Module), false);
+                    break;
+                }
+                case RackComponent rack:
+                {
+                    ShowMessage($"Exporting {rack.Id} to Alibre…", false);
+                    _alibreExporter.Export(rack);
+                    var kind = rack.IsHelical ? string.Format(CultureInfo.InvariantCulture, "helical, {0:0.###} degrees {1}", rack.HelixAngleDeg, rack.HelicalDirection) : "straight";
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (rack, {1}, {2} teeth, module {3:0.###}) to a new Alibre part.", rack.Id, kind, rack.Teeth, rack.Module), false);
+                    break;
+                }
+                case WormComponent worm:
+                {
+                    ShowMessage($"Exporting {worm.Id} to Alibre…", false);
+                    _alibreExporter.Export(worm);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (worm, {1} start(s), axial module {2:0.###}, {3} hand) to a new Alibre part.", worm.Id, worm.Starts, worm.Module, worm.HelicalDirection == "R" ? "right" : "left"), false);
+                    break;
+                }
+                case WormWheelComponent wheel:
+                {
+                    ShowMessage($"Exporting {wheel.Id} to Alibre…", false);
+                    _alibreExporter.Export(wheel);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (worm wheel, {1} teeth, axial module {2:0.###}, helix angle {3:0.###} degrees) to a new Alibre part.", wheel.Id, wheel.Teeth, wheel.Module, wheel.LeadAngleDeg), false);
+                    break;
+                }
+                default:
+                    ShowMessage("Select a gear, rack, worm or worm wheel to export to Alibre.", true);
+                    break;
             }
-
-            ShowMessage($"Exporting {gear.Id} to Alibre…", false);
-            _alibreExporter.Export(gear);
-            var kind = (gear.IsInternal ? "internal " : "external ") + (gear.IsHelical ? "helical" : "spur");
-            ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1} gear, {2} teeth, module {3:0.###}) to a new Alibre part.", gear.Id, kind, gear.Teeth, gear.Module), false);
         }
 
         private void RunCommand(Action command)

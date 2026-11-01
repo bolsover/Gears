@@ -57,12 +57,16 @@ namespace Bolsover.Gears.Model.Assemblies
             }
         }
 
-        public override GearGeometry BuildGeometry()
+        /// <summary>
+        /// The helical involute gear that this wheel is made of: normal module <c>m cos(gamma)</c>, helix angle equal to the lead angle
+        /// and the hand of the worm. Used for the 3D geometry and for the export to Alibre.
+        /// </summary>
+        public InvoluteGearComponent ToInvoluteGear()
         {
             Validate();
 
             var normalModule = Module * Math.Cos(LeadAngleDeg * Math.PI / 180.0);
-            var gear = new InvoluteGearComponent(Id)
+            return new InvoluteGearComponent(Id)
             {
                 Teeth = Teeth,
                 Module = normalModule,
@@ -73,8 +77,11 @@ namespace Bolsover.Gears.Model.Assemblies
                 Backlash = Backlash,
                 Clearance = 0.25 * normalModule
             };
+        }
 
-            return gear.BuildGeometry();
+        public override GearGeometry BuildGeometry()
+        {
+            return ToInvoluteGear().BuildGeometry();
         }
     }
 }

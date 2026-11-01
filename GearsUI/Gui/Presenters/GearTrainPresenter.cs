@@ -321,7 +321,9 @@ namespace Bolsover.Gears.Gui.Presenters
                         Teeth = teeth > 0 ? teeth : 12,
                         Module = pinion.Module,
                         PressureAngleDeg = pinion.PressureAngleDeg,
-                        FaceWidth = pinion.FaceWidth
+                        FaceWidth = pinion.FaceWidth,
+                        HelixAngleDeg = pinion.IsHelical ? pinion.HelixAngleDeg : 0.0,
+                        HelicalDirection = pinion.HelicalDirection == "R" ? "L" : "R"
                     };
                     break;
                 }

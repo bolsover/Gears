@@ -4,7 +4,8 @@ using Bolsover.Gears.Model.Assemblies;
 namespace Bolsover.Gears.Calculator.Assemblies
 {
     /// <summary>
-    /// Mesh solver for an external spur pinion (driver) and a straight rack (driven).
+    /// Mesh solver for an external spur or helical pinion (driver) and a straight or helical rack (driven). A helical pair needs the
+    /// same helix angle and opposite hands, as for external helical gears; the module and pressure angle are the normal values.
     /// <para>
     /// The rack datum line is placed at the distance <c>m * z / 2 + x * m</c> from the pinion axis (x is the pinion's
     /// profile shift), parallel to the pinion axis, perpendicular to the line of centres and with the tooth tips pointing
@@ -38,6 +39,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
             }
 
             var pitchRadius = PitchRadius(pinion);
+            CheckHelix(pinion, rack);
+
             var distance = GearPrecision.Round(pitchRadius + pinion.ProfileShift * pinion.Module);
             var displacement = GearPrecision.Round(pitchRadius * driverPhaseRad);
 
@@ -59,7 +62,31 @@ namespace Bolsover.Gears.Calculator.Assemblies
             return 2.0 * Math.PI * PitchRadius(pinion);
         }
 
-        private static double PitchRadius(InvoluteGearComponent pinion) => pinion.Module * pinion.Teeth / 2.0;
+        /// <summary>Pitch radius in the end-face section: m z / (2 cos(beta)); for a spur pinion m z / 2.</summary>
+        private static double PitchRadius(InvoluteGearComponent pinion) => pinion.PitchDiameter / 2.0;
+
+        private static void CheckHelix(InvoluteGearComponent pinion, RackComponent rack)
+        {
+            if (pinion.IsHelical != rack.IsHelical)
+            {
+                throw new InvalidOperationException(
+                    $"'{pinion.Id}' and rack '{rack.Id}' cannot mesh: one is helical and the other has straight teeth.");
+            }
+
+            if (!pinion.IsHelical) return;
+
+            if (!GearPrecision.AreEqual(pinion.HelixAngleDeg, rack.HelixAngleDeg))
+            {
+                throw new InvalidOperationException(
+                    $"'{pinion.Id}' and rack '{rack.Id}' cannot mesh: helix angles differ ({pinion.HelixAngleDeg} and {rack.HelixAngleDeg}).");
+            }
+
+            if (pinion.HelicalDirection == rack.HelicalDirection)
+            {
+                throw new InvalidOperationException(
+                    $"'{pinion.Id}' and rack '{rack.Id}' cannot mesh: a helical pinion needs a rack of the opposite hand.");
+            }
+        }
 
         private static InvoluteGearComponent Pinion(GearComponent driver)
         {
@@ -68,11 +95,6 @@ namespace Bolsover.Gears.Calculator.Assemblies
             if (pinion.IsInternal)
             {
                 throw new InvalidOperationException($"Gear '{pinion.Id}' is an internal gear and cannot mesh with a rack.");
-            }
-
-            if (pinion.IsHelical)
-            {
-                throw new InvalidOperationException($"Gear '{pinion.Id}' is helical: helical racks are not supported, use a spur pinion.");
             }
 
             return pinion;

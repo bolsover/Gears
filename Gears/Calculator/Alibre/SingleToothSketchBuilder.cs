@@ -73,6 +73,12 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         public static SingleToothSketch Build(InvoluteGearComponent gear)
         {
+            return Build(gear, null);
+        }
+
+        /// <summary>Builds the sketch plan and names the Alibre part <paramref name="partName"/> (null for the default gear name).</summary>
+        public static SingleToothSketch Build(InvoluteGearComponent gear, string partName)
+        {
             EnsureSupported(gear);
 
             var isInternal = gear.IsInternal;
@@ -167,7 +173,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             var depth = Q(gear.FaceWidth);
             var helix = gear.IsHelical ? BuildHelix(gear, parameters["pitchRadius"], depth) : null;
 
-            return new SingleToothSketch(gear.Teeth, depth, PartName(gear), figures, circles, isInternal, helix);
+            return new SingleToothSketch(gear.Teeth, depth, string.IsNullOrWhiteSpace(partName) ? PartName(gear) : partName, figures, circles, isInternal, helix);
         }
 
         /// <summary>

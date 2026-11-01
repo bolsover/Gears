@@ -15,12 +15,47 @@ namespace Bolsover.Gears.Model.Assemblies
     /// </para>
     /// A rack is mounted on a "carrier" shaft whose placement is solved from the pinion, so the carrier axis is
     /// parallel to the pinion axis and is not drawn.
+    /// <para>
+    /// A helical rack has a <see cref="HelixAngleDeg"/> and a <see cref="HelicalDirection"/>. As for helical gears, the module and
+    /// the pressure angle are the normal values; the end-face (transverse) section of the rack has the pitch pi m / cos(beta) and the
+    /// pressure angle atan(tan(alpha) / cos(beta)), and each tooth is sheared along X by tan(beta) per unit of Z. A rack meshes with a
+    /// pinion of the same helix angle and the opposite hand, as external helical gears do.
+    /// </para>
     /// </summary>
     public class RackComponent : GearComponent
     {
+        private string _helicalDirection = "R";
+
+        /// <summary>Largest helix angle accepted, in degrees.</summary>
+        public const double MaximumHelixAngleDeg = 60.0;
+
         public RackComponent(string id) : base(id)
         {
         }
+
+        /// <summary>Helix angle in degrees; zero for a straight-toothed rack.</summary>
+        public double HelixAngleDeg { get; set; }
+
+        /// <summary>"R" (right) or "L" (left). Any value starting with L/l is treated as left.</summary>
+        public string HelicalDirection
+        {
+            get => _helicalDirection;
+            set => _helicalDirection = value?.StartsWith("L", StringComparison.OrdinalIgnoreCase) == true ? "L" : "R";
+        }
+
+        public bool IsHelical => HelixAngleDeg > 1e-6;
+
+        /// <summary>Cosine of the helix angle (1 for a straight rack).</summary>
+        private double CosHelix => IsHelical ? Math.Cos(HelixAngleDeg * Math.PI / 180.0) : 1.0;
+
+        /// <summary>Pressure angle in the end-face section (radians): tan(alpha_t) = tan(alpha_n) / cos(beta).</summary>
+        public double TransversePressureAngleRad => Math.Atan(Math.Tan(PressureAngleDeg * Math.PI / 180.0) / CosHelix);
+
+        /// <summary>
+        /// Sideways shift (X) of a tooth section per unit of Z. A right-hand rack meshes with a left-hand pinion, whose teeth move
+        /// towards +X with +Z at the contact point, so a right-hand rack moves towards -X.
+        /// </summary>
+        public double ShearPerZ => !IsHelical ? 0.0 : (HelicalDirection == "R" ? -1.0 : 1.0) * Math.Tan(HelixAngleDeg * Math.PI / 180.0);
 
         /// <summary>Number of teeth along the rack.</summary>
         public int Teeth { get; set; } = 12;
@@ -34,8 +69,8 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Height of the rack body below the tooth roots (mm).</summary>
         public double BodyHeight { get; set; } = 10.0;
 
-        /// <summary>Distance between two teeth along the rack (mm).</summary>
-        public double Pitch => Math.PI * Module;
+        /// <summary>Distance between two teeth along the rack in the end-face section (mm): pi m / cos(beta).</summary>
+        public double Pitch => Math.PI * Module / CosHelix;
 
         /// <summary>Length of the toothed part of the rack (mm).</summary>
         public double Length => Teeth * Pitch;
@@ -45,7 +80,7 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>A rack has no pitch circle; zero is returned and the pitch line velocity is its linear speed.</summary>
         public override double PitchDiameter => 0.0;
 
-        public override string TypeName => "Rack";
+        public override string TypeName => IsHelical ? "Helical rack" : "Rack";
 
         public override bool IsLinear => true;
 
@@ -68,6 +103,12 @@ namespace Bolsover.Gears.Model.Assemblies
             {
                 throw new InvalidOperationException($"Rack '{Id}': the backlash must be between 0 and half the pitch.");
             }
+
+            if (HelixAngleDeg < 0 || HelixAngleDeg > MaximumHelixAngleDeg)
+            {
+                throw new InvalidOperationException(
+                    $"Rack '{Id}': the helix angle must be between 0 (straight teeth) and {MaximumHelixAngleDeg:0} degrees.");
+            }
         }
 
         /// <summary>The closed, anticlockwise outline of the rack in its local XY plane (first point not repeated).</summary>
@@ -76,7 +117,7 @@ namespace Bolsover.Gears.Model.Assemblies
             Validate();
 
             var p = Pitch;
-            var tanAlpha = Math.Tan(PressureAngleDeg * Math.PI / 180.0);
+            var tanAlpha = Math.Tan(TransversePressureAngleRad);
             var addendum = Module;
             var dedendum = Module + Clearance;
             var thickness = p / 2.0 - Backlash / 2.0;
@@ -118,7 +159,7 @@ namespace Bolsover.Gears.Model.Assemblies
         {
             var outline = BuildOutline();
             var closed = new List<GearPoint>(outline) { outline[0] };
-            var mesh = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, -FaceWidth / 2.0, 1.0, false);
+            var mesh = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, -FaceWidth / 2.0, 1.0, false, ShearPerZ);
             return new GearGeometry(null, new List<List<GearPoint>> { closed }, mesh);
         }
 

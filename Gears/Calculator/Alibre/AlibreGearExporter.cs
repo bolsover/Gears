@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AlibreX;
 using Bolsover.Gears.Model.Assemblies;
 
@@ -29,7 +30,25 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// </summary>
         public const bool HelicalBossParallelOriented = true;
 
+        /// <summary>Name of the default axis of a new Alibre part along which the rack tooth is linear-patterned.</summary>
+        public const string RackPatternAxisName = "X-Axis";
+
+        /// <summary>
+        /// Name of the default plane that holds the sweep path of a helical rack tooth: it lies in a plane that contains the part
+        /// axis. Sketch x is the global X; sketch y is the global Z when <see cref="AxialPlaneSketchYIsNegativeZ"/> is false.
+        /// </summary>
+        public const string AxialSketchPlaneName = "XZ-Plane";
+
+        /// <summary>
+        /// Set to true when Alibre's sketch y axis on the XZ plane points along -Z, so that the helical rack sweep path is drawn
+        /// mirrored in y and still runs along +Z. This has not been checked inside Alibre.
+        /// </summary>
+        public bool AxialPlaneSketchYIsNegativeZ { get; set; }
+
         public const string SketchName = "ToothProfile";
+        public const string PathSketchName = "ToothPath";
+        public const string ThreadPatternFeatureName = "ThreadPattern";
+        public const string RackPatternFeatureName = "RackTeeth";
         public const string ToothFeatureName = "Tooth";
         public const string PatternFeatureName = "ToothPattern";
 
@@ -53,7 +72,216 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// </summary>
         public IADPartSession Export(InvoluteGearComponent gear)
         {
-            var plan = SingleToothSketchBuilder.Build(gear);
+            return Export(gear, null);
+        }
+
+        /// <summary>
+        /// Creates a worm wheel in a new Alibre part. A worm wheel is a helical involute gear (normal module m cos(gamma), helix angle
+        /// equal to the lead angle of the worm, same hand), so it is made like any helical gear: one tooth swept along a helix, then
+        /// patterned. The throat of an enveloping wheel is not modelled.
+        /// </summary>
+        public IADPartSession Export(WormWheelComponent wheel)
+        {
+            if (wheel == null) throw new ArgumentNullException(nameof(wheel));
+            if (wheel.LeadAngleDeg <= 0.0)
+            {
+                throw new InvalidOperationException(
+                    $"Worm wheel '{wheel.Id}' has no lead angle yet: mesh it with a worm first, so that its helix angle is known.");
+            }
+
+            return Export(wheel.ToInvoluteGear(), WormThreadSketchBuilder.PartName(wheel));
+        }
+
+        /// <summary>
+        /// Creates a straight or helical rack in a new Alibre part: a closed sketch of one tooth cell on the XY plane, a single tooth
+        /// formed by an extrusion to the face width (or, for a helical rack, a rigid sweep along a slanted path that shears the
+        /// section), and a linear pattern of that tooth along the X axis.
+        /// </summary>
+        public IADPartSession Export(RackComponent rack)
+        {
+            var plan = RackToothSketchBuilder.Build(rack);
+            if (!plan.IsClosed()) throw new InvalidOperationException($"The tooth sketch of rack '{rack.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = _root.CreateEmptyPartEx(plan.PartName, false, true);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, SketchName);
+
+                stage = "drawing the tooth profile";
+                var closed = DrawFigures(sketch, plan.Figures, null);
+
+                IADPartFeature tooth;
+                try
+                {
+                    if (plan.IsHelical)
+                    {
+                        stage = "drawing the sweep path of the helical tooth";
+                        var pathPlane = session.DesignPlanes.Item(AxialSketchPlaneName);
+                        var pathSketch = session.Sketches.AddSketch(null, pathPlane, PathSketchName);
+                        var ySign = AxialPlaneSketchYIsNegativeZ ? -1.0 : 1.0;
+                        pathSketch.BeginChange();
+                        try
+                        {
+                            pathSketch.Figures.AddLine(0.0, 0.0, plan.ShearTotal, ySign * plan.ExtrusionDepth);
+                        }
+                        finally
+                        {
+                            pathSketch.EndChange();
+                        }
+
+                        stage = "sweeping the tooth along its helical path";
+                        var path = _root.NewObjectCollector();
+                        path.Add(pathSketch);
+                        tooth = session.Features.AddSweptBoss(sketch, path, true, ADPartFeatureEndCondition.AD_ENTIRE_PATH, null, null, 0.0, 0.0, false,
+                            ToothFeatureName);
+                    }
+                    else
+                    {
+                        stage = "extruding the tooth";
+                        tooth = session.Features.AddExtrudedBoss(sketch, plan.ExtrusionDepth, ADPartFeatureEndCondition.AD_TO_DEPTH, null, null, 0.0,
+                            ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, ToothFeatureName, "", "");
+                    }
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the tooth sketch is not closed: " + ex.Message, ex);
+                }
+
+                if (plan.Teeth > 1)
+                {
+                    stage = "patterning the tooth along the rack";
+                    AddRackPattern(session, tooth, plan);
+                }
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of rack '{rack.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Creates a worm in a new Alibre part the way a helical gear is made: a closed sketch of the end-face section of one thread
+        /// start on the XY plane, a single thread formed by sweeping that section along a helix about the Z axis with a helical boss
+        /// (height = threaded length, pitch = lead), and, for several starts, a circular pattern of the thread about the Z axis.
+        /// </summary>
+        public IADPartSession Export(WormComponent worm)
+        {
+            var plan = WormThreadSketchBuilder.Build(worm);
+            if (!plan.IsClosed()) throw new InvalidOperationException($"The thread sketch of worm '{worm.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = _root.CreateEmptyPartEx(plan.PartName, false, true);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, SketchName);
+
+                stage = "drawing the thread section";
+                var closed = DrawFigures(sketch, plan.Figures, plan.ReferenceCircles);
+
+                var axis = session.DesignAxes.Item(PatternAxisName);
+                IADPartFeature thread;
+                try
+                {
+                    stage = "sweeping the thread along its helix";
+                    thread = AddHelicalTooth(session, sketch, axis, plan.Helix);
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the thread sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(thread, "The helical thread");
+
+                if (plan.Starts > 1)
+                {
+                    stage = "patterning the thread for each start";
+                    var targets = _root.NewObjectCollector();
+                    targets.Add(thread);
+                    var pattern = session.Features.AddCircularFeaturePattern(targets, plan.Starts, plan.PatternAngle, null, axis, false,
+                        PatternGeometry, ThreadPatternFeatureName);
+                    CheckFeature(pattern, "The circular pattern of the thread");
+                }
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of worm '{worm.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Patterns the single rack tooth along the rack. Alibre can accept the call and still report the pattern feature as failed, which
+        /// leaves a single tooth, so each attempt is checked and the next argument form is tried: the plain 1D pattern, the same with a
+        /// real second-direction spacing and numeric counts passed as doubles, and the same patterning the geometry directly.
+        /// Throws <see cref="InvalidOperationException"/> when no attempt gives a valid pattern.
+        /// </summary>
+        private void AddRackPattern(IADPartSession session, IADPartFeature tooth, RackToothSketch plan)
+        {
+            var axis = session.DesignAxes.Item(RackPatternAxisName);
+            var failures = new List<string>();
+
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                IADLinearPatternFeature pattern = null;
+                try
+                {
+                    var targets = _root.NewObjectCollector();
+                    targets.Add(tooth);
+
+                    object count = attempt == 0 ? (object)plan.Teeth : (double)plan.Teeth;
+                    object secondCount = attempt == 0 ? (object)1 : 1.0;
+                    var secondDistance = attempt == 0 ? 0.0 : plan.Pitch;
+                    var patternGeometry = attempt == 2 ? !PatternGeometry : PatternGeometry;
+
+                    pattern = session.Features.AddLinearFeaturePattern(targets, count, plan.Pitch, null, axis, false, secondCount, secondDistance,
+                        null, null, false, patternGeometry, RackPatternFeatureName);
+
+                    if (pattern != null && !pattern.HasError) return;
+                    failures.Add($"attempt {attempt + 1}: Alibre reports an error in the pattern feature");
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"attempt {attempt + 1}: {ex.Message}");
+                }
+
+                try
+                {
+                    pattern?.Delete();
+                }
+                catch (Exception)
+                {
+                    // A pattern that cannot be removed is left for the user to see; the next attempt still runs.
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"the linear pattern of {plan.Teeth} teeth along {RackPatternAxisName} was not accepted ({string.Join("; ", failures)})");
+        }
+
+        /// <summary>Throws when Alibre reports an error in the feature that was just created.</summary>
+        private static void CheckFeature(IADPartFeature feature, string description)
+        {
+            if (feature == null) throw new InvalidOperationException(description + " was not created.");
+            if (feature.HasError) throw new InvalidOperationException(description + " has an error in Alibre, so it was not formed.");
+        }
+
+        private IADPartSession Export(InvoluteGearComponent gear, string partName)
+        {
+            var plan = SingleToothSketchBuilder.Build(gear, partName);
             if (!plan.IsClosed()) throw new InvalidOperationException($"The tooth sketch of gear '{gear.Id}' is not closed, so it cannot be exported.");
 
             var stage = "creating the part";
@@ -66,7 +294,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                 var sketch = session.Sketches.AddSketch(null, plane, SketchName);
 
                 stage = "drawing the tooth profile";
-                var closed = DrawProfile(sketch, plan);
+                var closed = DrawFigures(sketch, plan.Figures, plan.ReferenceCircles);
 
                 var axis = session.DesignAxes.Item(PatternAxisName);
 
@@ -119,19 +347,23 @@ namespace Bolsover.Gears.Calculator.Alibre
                 ToothFeatureName, "", "", "", "", "", "", "", "", "");
         }
 
-        /// <summary>Draws the closed profile and the reference circles; returns whether Alibre reports the sketch as closed.</summary>
-        private static bool DrawProfile(IADSketch sketch, SingleToothSketch plan)
+        /// <summary>
+        /// Draws the closed profile and the reference circles (when given); returns whether Alibre reports the sketch as closed.
+        /// <paramref name="ySign"/> mirrors the sketch y coordinates (-1) for a plane whose sketch y axis points the other way.
+        /// </summary>
+        private static bool DrawFigures(IADSketch sketch, IEnumerable<ToothSketchFigure> profile, IEnumerable<ToothSketchReferenceCircle> referenceCircles,
+            double ySign = 1.0)
         {
             sketch.BeginChange();
             try
             {
                 var figures = sketch.Figures;
-                foreach (var figure in plan.Figures)
+                foreach (var figure in profile)
                 {
                     switch (figure.Kind)
                     {
                         case ToothSketchFigureKind.Line:
-                            figures.AddLine(figure.StartX, figure.StartY, figure.EndX, figure.EndY);
+                            figures.AddLine(figure.StartX, ySign * figure.StartY, figure.EndX, ySign * figure.EndY);
                             break;
                         case ToothSketchFigureKind.Arc:
                             figures.AddCircularArcByCenterStartEnd(figure.CentreX, figure.CentreY, figure.StartX, figure.StartY, figure.EndX, figure.EndY);
@@ -150,9 +382,12 @@ namespace Bolsover.Gears.Calculator.Alibre
                     }
                 }
 
-                foreach (var circle in plan.ReferenceCircles)
+                if (referenceCircles != null)
                 {
-                    figures.AddCircle(0.0, 0.0, circle.Radius).IsReference = true;
+                    foreach (var circle in referenceCircles)
+                    {
+                        figures.AddCircle(0.0, 0.0, circle.Radius).IsReference = true;
+                    }
                 }
             }
             finally

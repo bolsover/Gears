@@ -359,6 +359,24 @@ namespace Bolsover.Gears.Gui.Presenters
             set => _rack.Backlash = value;
         }
 
+        [Category("Teeth")]
+        [DisplayName("Helix angle (deg)")]
+        [Description("0 for straight teeth. A helical rack meshes with a pinion of the same helix angle and the opposite hand.")]
+        public double HelixAngle
+        {
+            get => _rack.HelixAngleDeg;
+            set => _rack.HelixAngleDeg = Math.Max(0.0, value);
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Helix hand (R/L)")]
+        [Description("Hand of the rack teeth: R or L. The meshing pinion has the opposite hand.")]
+        public string HelixHand
+        {
+            get => _rack.HelicalDirection;
+            set => _rack.HelicalDirection = value;
+        }
+
         [Category("Dimensions")]
         [DisplayName("Body height (mm)")]
         public double BodyHeight

@@ -202,6 +202,11 @@ namespace Bolsover.Gears.Model.Assemblies
                     dto.Teeth = g.Teeth;
                     dto.Backlash = g.Backlash;
                     dto.BodyHeight = g.BodyHeight;
+                    if (g.IsHelical)
+                    {
+                        dto.HelixAngleDeg = g.HelixAngleDeg;
+                        dto.HelicalDirection = g.HelicalDirection;
+                    }
                     break;
                 case BevelGearComponent g:
                     dto.Type = "Bevel";
@@ -258,7 +263,9 @@ namespace Bolsover.Gears.Model.Assemblies
                     {
                         Teeth = dto.Teeth ?? 12,
                         Backlash = dto.Backlash ?? 0.0,
-                        BodyHeight = dto.BodyHeight ?? 10.0
+                        BodyHeight = dto.BodyHeight ?? 10.0,
+                        HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
+                        HelicalDirection = dto.HelicalDirection ?? "R"
                     };
                     break;
                 case "Bevel":

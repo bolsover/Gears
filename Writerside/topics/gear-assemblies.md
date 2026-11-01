@@ -9,7 +9,7 @@ All computed lengths and coordinates are given to **7 decimal places**; angles k
 | Family | Component | Mesh type | Notes |
 |---|---|---|---|
 | Spur, helical, internal | `InvoluteGearComponent` | `Parallel` | Parallel shafts. A pair uses `GearParameterCalculator.CalculatePair`. |
-| Rack and pinion | `RackComponent` | `Rack` | A spur pinion drives a straight rack mounted on a carrier shaft. |
+| Rack and pinion | `RackComponent` | `Rack` | A spur or helical pinion drives a straight or helical rack mounted on a carrier shaft. |
 | Bevel | `BevelGearComponent` | `Bevel` | Straight bevel gears, Tredgold approximation, any shaft angle. |
 | Worm and wheel | `WormComponent`, `WormWheelComponent` | `Worm` | Crossed shafts at 90 degrees. |
 | Planetary | `PlanetaryGearSet` | none | Sun, planets, ring and carrier plate; builds an ordinary assembly. |
@@ -20,8 +20,9 @@ A component's *phase* is its rotation about its axis in radians. For a rack the 
 
 * The rack datum line lies at `m z / 2 + x m` from the pinion axis (x is the profile shift), parallel to the pinion axis
   and perpendicular to the line of centres, with the tooth tips pointing at the pinion.
-* Turning the pinion by `phi` slides the rack by `m z / 2 * phi`. The linear speed is `2 pi m z / 2` mm per revolution.
-* The pinion must be an external spur gear; helical racks are not supported.
+* Turning the pinion by `phi` slides the rack by `r * phi`, where `r` is the transverse pitch radius (`m z / 2` for a spur pinion). The linear speed is `2 pi r` mm per revolution.
+* The pinion must be an external gear. A spur pinion needs a straight rack.
+* **Helical rack:** the rack has a *Helix angle* and a *Helix hand*. As for helical gears, the module and pressure angle are the normal values. In the end-face section the rack has the pitch `p_t = pi m_n / cos(beta)` and the pressure angle `tan(alpha_t) = tan(alpha_n) / cos(beta)`, and the pinion datum radius is `m_n z / (2 cos(beta))`. Each tooth section is sheared along the rack by `tan(beta)` per mm of face width. A helical pinion needs a rack of the **same helix angle and the opposite hand**, as external helical gears do; the solver reports an error otherwise. *Add mate* gives the new rack the pinion's helix angle and the opposite hand.
 
 ### Bevel gears (Tredgold)
 
@@ -97,7 +98,7 @@ Select an involute gear in the editor to change these in the property grid. Mesh
 ## Limits
 
 * Bevel and worm geometry is an approximation intended for visualisation, DXF and STL hand-off, not a stress calculation.
-* Helical racks, enveloping worm wheels and idler bevel gears are not supported.
+* Enveloping worm wheels and idler bevel gears are not supported.
 * A planetary stage is edited through its properties; other gears cannot be added to it.
 
 
@@ -147,7 +148,7 @@ For bevel and worm gears the 2D view is the projection of the outline onto the X
 
 ## Export a gear to Alibre
 
-When the editor is opened from the Alibre add-on, **File > Export gear to Alibre…** creates the selected gear as a new Alibre part. The item is disabled in the stand-alone program, which has no Alibre session. **Involute spur and helical gears, external and internal,** are exported; other gear families and whole gear trains are not (yet).
+When the editor is opened from the Alibre add-on, **File > Export gear to Alibre…** creates the selected gear as a new Alibre part. The item is disabled in the stand-alone program, which has no Alibre session. **Involute spur and helical gears (external and internal), racks (straight and helical), worms and worm wheels** are exported; bevel gears, planetary stages and whole gear trains are not (yet).
 
 The export follows the usual manual steps, using the Alibre automation API (`AlibreGearExporter`):
 
@@ -174,6 +175,44 @@ The circular pattern then copies the helical tooth. Helix angles from 0 to 60 de
 The sketch, helix lead, turn angle and hand are tested without Alibre. How Alibre orients the swept sketch (the direction of the sweep along the axis, and whether `bClockwise` matches the preview's hand) has not been checked inside Alibre.
 
 Alibre sketches and features are in **centimetres**, so each length is rounded to 7 decimal places in millimetres and then multiplied by 0.1. `SingleToothSketchBuilder` builds the sketch plan without calling Alibre, so the closure and pitch span can be tested without a running Alibre; it refuses an outline whose pieces do not join or do not span one pitch. If Alibre rejects a step, the error message names the step.
+
+### Racks
+
+The rack is built from **one tooth cell** and a **linear pattern**. `RackToothSketchBuilder` makes the plan:
+
+1. A sketch on the `XY-Plane` holds the closed cell: the rack length runs along X, the tooth tips point towards +Y, and the cell spans X = 0 to one pitch, with the tooth in the middle and the rack body below it. The cell starts and ends in the middle of a tooth space, like the rack in the 3D view, and the cells add up to exactly that rack. The cell is made of lines only.
+2. A straight rack's tooth is extruded to the face width (`AddExtrudedBoss`).
+3. The tooth is patterned along the `X-Axis` (`AddLinearFeaturePattern`) with *z* instances, one transverse pitch apart.
+
+The installed `AlibreX.dll` has a different `AddLinearFeaturePattern` signature from the documentation: the instance count and distance come first, then the optional occurrence and axis. The code uses the installed one.
+
+Alibre can accept the call and still mark the pattern feature as failed (`IADLinearPatternFeature.HasError`), which leaves a single tooth. The exporter therefore checks the pattern it gets back and, if it has an error, deletes it and tries the next argument form: (1) the plain one-direction pattern with integer counts; (2) the same with counts passed as real numbers and a real spacing for the unused second direction; (3) the same, patterning the geometry directly (the opposite of `PatternGeometry`). If no form is accepted, the export stops with a message that lists each failure instead of silently leaving one tooth.
+
+A **helical rack** uses the transverse section: pitch `pi m_n / cos(beta)` and pressure angle `atan(tan(alpha_n) / cos(beta))`. The tooth is formed with a **rigid sweep** (`AddSweptBoss`, `IsRigid = true`, so the sketch stays parallel to its plane) along a straight path sketched on the `XZ-Plane`. The path runs from the origin to `(tan(beta) * face width, face width)` with the sign of the hand, so each section of the tooth moves along X by `tan(beta)` per unit of depth. Parts are named `Rack_Z{z}_M{m}` and `HelicalRack_Z{z}_M{m}_B{beta}{R|L}`.
+
+### Worm wheels
+
+A worm wheel is exported as the helical involute gear it is made of (`WormWheelComponent.ToInvoluteGear()`): normal module `m cos(gamma)`, helix angle equal to the lead angle, and the hand of the worm. It follows exactly the helical gear steps above. The wheel needs its lead angle first, so mesh it with a worm before exporting; otherwise the export says so. The part is named `WormWheel_Z{z}_M{m}_L{gamma}{R|L}`. The throat of an enveloping wheel is not modelled.
+
+### Worms
+
+A worm is made exactly like a helical gear. `WormThreadSketchBuilder` makes the plan:
+
+1. A sketch on the `XY-Plane` holds the closed **end-face section of one thread start**. A worm's section repeats every `360 / starts` degrees, so the sketch is a wedge one start wide: the root arc, the spiral flank (a spline through points of `WormComponent.RadiusAt`), the tip arc, the other flank and the root arc again, closed by two radial lines to the axis. A single-start worm goes all the way round, so its section closes on itself without radial lines. The root, pitch and tip circles are added as reference circles.
+2. The single thread is formed with a **helical boss** (`AddHelicalBoss`, parallel oriented) about the `Z-Axis`, as for a helical gear: height = the threaded length, pitch = the lead `starts * pi * m`, a clockwise helix for a right-hand worm. The section turns through `2 pi` per lead.
+3. For several starts the thread is circular-patterned about the `Z-Axis` (`AddCircularFeaturePattern`), one instance per start, `2 pi / starts` apart.
+
+There is no separate core cylinder: the swept section includes the root cylinder. The section is taken at the end of the part, at the angle the 3D view has there (Z = -L/2), so the thread positions agree with the 3D view, and the tests check that every sketch point lies on the thread surface of the component. The exporter checks that the helical boss and the pattern are not in error in Alibre. The part is named `Worm_S{starts}_M{m}_Q{q}_{R|L}`.
+
+### Alibre values not checked inside Alibre
+
+* How the sketch y axis of the `XZ-Plane` is oriented. The sweep path of a helical rack assumes that sketch y is the global **+Z**. If Alibre's y points along -Z, set `AlibreGearExporter.AxialPlaneSketchYIsNegativeZ` to true (an instance property of the exporter, not yet on a menu); the path is then drawn mirrored in y.
+* Whether the sweep path of a helical rack starts on the profile plane as Alibre needs, and whether the swept tooth keeps its section parallel to the end face (the documented meaning of `IsRigid`).
+* Whether the linear pattern instance count includes the original tooth (the same assumption as for the circular pattern), and whether the default axis is named `X-Axis`.
+* Whether `bClockwise = true` gives a right-hand thread, as the documentation says (the worm uses the same helical boss settings as the helical gears).
+* Adjacent patterned rack teeth share a face; Alibre should merge them into one solid.
+
+Export one straight rack, one helical rack (for example 12 teeth, module 2, 15 degrees, left hand), one worm and one worm wheel first, and check the results before relying on them.
 
 ## Alibre add-on
 
