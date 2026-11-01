@@ -39,6 +39,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
             g1.MateTeeth = g2.Teeth;
             g2.MateTeeth = g1.Teeth;
             g2.ShaftAngleDeg = g1.ShaftAngleDeg;
+            // Standard and Gleason teeth have different proportions and do not mesh with each other.
+            g2.BevelType = g1.BevelType;
 
             g1.Validate();
             g2.Validate();

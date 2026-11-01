@@ -5,6 +5,19 @@ using Bolsover.Gears.Calculator.Assemblies;
 
 namespace Bolsover.Gears.Model.Assemblies
 {
+    /// <summary>Tooth proportion system of a straight bevel gear.</summary>
+    public enum BevelGearType
+    {
+        /// <summary>Equal addendum m on both gears and a bottom clearance of 0.25 m.</summary>
+        Standard = 0,
+
+        /// <summary>
+        /// Gleason straight bevel proportions: whole depth 2.188 m + 0.051 mm, clearance 0.188 m + 0.051 mm and unequal
+        /// addenda (long pinion addendum, short gear addendum) that depend on the gear ratio.
+        /// </summary>
+        Gleason = 1
+    }
+
     /// <summary>
     /// A straight bevel gear built with the Tredgold (back-cone) approximation.
     /// <para>
@@ -27,7 +40,13 @@ namespace Bolsover.Gears.Model.Assemblies
         {
         }
 
+        /// <summary>Gleason whole depth is 2.188 m + this constant (mm); the clearance is 0.188 m + the same constant.</summary>
+        public const double GleasonDepthConstant = 0.051;
+
         public int Teeth { get; set; } = 20;
+
+        /// <summary>Tooth proportion system; the mesh solver sets it on both gears of a pair, because the two gears must agree.</summary>
+        public BevelGearType BevelType { get; set; } = BevelGearType.Standard;
 
         /// <summary>Tooth count of the mating gear; zero means "same as this gear".</summary>
         public int MateTeeth { get; set; }
@@ -38,8 +57,49 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Circular backlash (mm).</summary>
         public double Backlash { get; set; }
 
-        /// <summary>Bottom clearance (mm).</summary>
-        public double Clearance => 0.25 * Module;
+        /// <summary>Bottom clearance (mm): 0.25 m (Standard) or 0.188 m + 0.051 mm (Gleason).</summary>
+        public double Clearance => BevelType == BevelGearType.Gleason ? 0.188 * Module + GleasonDepthConstant : 0.25 * Module;
+
+        /// <summary>Whole tooth depth at the large end (mm): 2 m + clearance.</summary>
+        public double WholeDepth => 2.0 * Module + Clearance;
+
+        /// <summary>
+        /// Ratio of the virtual tooth numbers of this gear and its mate, <c>(z / cos delta) / (zMate / cos deltaMate)</c>.
+        /// For a 90 degree pair this equals the square of the tooth ratio, (z / zMate)^2.
+        /// </summary>
+        public double VirtualToothRatio
+        {
+            get
+            {
+                var sigma = ShaftAngleDeg * Math.PI / 180.0;
+                var mateCone = sigma - PitchConeAngleRad;
+                var zv = Teeth / Math.Cos(PitchConeAngleRad);
+                var zvMate = EffectiveMateTeeth / Math.Cos(mateCone);
+                return zv / zvMate;
+            }
+        }
+
+        /// <summary>
+        /// Addendum at the large end (mm). Standard: m. Gleason: the gear (virtual ratio q &gt;= 1) has
+        /// <c>0.54 m + 0.46 m / u^2</c>, where u = sqrt(q) is the equivalent 90 degree gear ratio (the tooth ratio z / zMate for a
+        /// 90 degree pair), so <c>0.54 m + 0.46 m / q</c>. The pinion has the rest of the working depth, <c>2 m - a(gear)</c>.
+        /// </summary>
+        public double Addendum
+        {
+            get
+            {
+                if (BevelType != BevelGearType.Gleason) return Module;
+                var q = VirtualToothRatio;
+                if (q >= 1.0) return Module * (0.54 + 0.46 / q);
+                return Module * (2.0 - 0.54 - 0.46 * q);
+            }
+        }
+
+        /// <summary>Dedendum at the large end (mm): whole depth minus addendum.</summary>
+        public double Dedendum => WholeDepth - Addendum;
+
+        /// <summary>Profile shift of the virtual spur gear in mm: the addendum less the module (zero for Standard).</summary>
+        public double ProfileShiftMm => Addendum - Module;
 
         public override int ToothCount => Teeth;
 
@@ -100,7 +160,7 @@ namespace Bolsover.Gears.Model.Assemblies
 
             var virtualTeeth = VirtualTeeth;
             var profile = AlibreGearGenerator.GenerateExternalToothProfile(
-                virtualTeeth, Module, PressureAngleDeg, 0.0, false, null, Clearance, Backlash, 0.0);
+                virtualTeeth, Module, PressureAngleDeg, ProfileShiftMm, false, null, Clearance, Backlash, 0.0);
 
             var radiusScale = Teeth / (double)virtualTeeth;
             var angleScale = virtualTeeth / (double)Teeth;

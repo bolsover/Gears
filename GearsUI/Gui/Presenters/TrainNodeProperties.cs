@@ -399,6 +399,31 @@ namespace Bolsover.Gears.Gui.Presenters
             set => _gear.Backlash = value;
         }
 
+        [Category("Teeth")]
+        [DisplayName("Bevel type")]
+        [Description("Standard: equal addendum m and clearance 0.25 m. Gleason: whole depth 2.188 m + 0.051 mm, with a long pinion addendum and a short gear addendum. Set it on the driving gear; the meshed gear follows.")]
+        public BevelGearType BevelType
+        {
+            get => _gear.BevelType;
+            set => _gear.BevelType = value;
+        }
+
+        [Category("Tooth depth")]
+        [DisplayName("Addendum (mm)")]
+        public double Addendum => _gear.Addendum;
+
+        [Category("Tooth depth")]
+        [DisplayName("Dedendum (mm)")]
+        public double Dedendum => _gear.Dedendum;
+
+        [Category("Tooth depth")]
+        [DisplayName("Whole depth (mm)")]
+        public double WholeDepth => _gear.WholeDepth;
+
+        [Category("Tooth depth")]
+        [DisplayName("Clearance (mm)")]
+        public double Clearance => _gear.Clearance;
+
         [Category("Cone")]
         [DisplayName("Shaft angle (deg)")]
         [Description("Angle between the two shafts of the pair; set it on the driving gear.")]

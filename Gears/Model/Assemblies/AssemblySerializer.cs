@@ -209,6 +209,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     dto.MateTeeth = g.MateTeeth;
                     dto.ShaftAngleDeg = g.ShaftAngleDeg;
                     dto.Backlash = g.Backlash;
+                    dto.BevelType = g.BevelType.ToString();
                     break;
                 case WormComponent g:
                     dto.Type = "Worm";
@@ -266,7 +267,8 @@ namespace Bolsover.Gears.Model.Assemblies
                         Teeth = dto.Teeth ?? 20,
                         MateTeeth = dto.MateTeeth ?? 0,
                         ShaftAngleDeg = dto.ShaftAngleDeg ?? 90.0,
-                        Backlash = dto.Backlash ?? 0.0
+                        Backlash = dto.Backlash ?? 0.0,
+                        BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard
                     };
                     break;
                 case "Worm":
@@ -341,6 +343,9 @@ namespace Bolsover.Gears.Model.Assemblies
             public double? BodyHeight { get; set; }
             public int? MateTeeth { get; set; }
             public double? ShaftAngleDeg { get; set; }
+
+            /// <summary>Bevel tooth system (Standard or Gleason); absent in older files, which are Standard.</summary>
+            public string BevelType { get; set; }
             public int? Starts { get; set; }
             public double? DiameterQuotient { get; set; }
             public double? LeadAngleDeg { get; set; }

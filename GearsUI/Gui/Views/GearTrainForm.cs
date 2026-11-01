@@ -151,7 +151,8 @@ namespace Bolsover.Gears.Gui.Views
 
             var ddStart = new ToolStripDropDownButton("Start with");
             ddStart.DropDownItems.Add("Spur gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Spur)));
-            ddStart.DropDownItems.Add("Bevel gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel)));
+            ddStart.DropDownItems.Add("Bevel gear (standard)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Standard)));
+            ddStart.DropDownItems.Add("Bevel gear (Gleason)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Gleason)));
             ddStart.DropDownItems.Add("Worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm)));
             ddStart.DropDownItems.Add("Planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()));
 

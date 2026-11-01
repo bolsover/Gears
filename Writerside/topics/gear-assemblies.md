@@ -30,7 +30,20 @@ A component's *phase* is its rotation about its axis in radians. For a rack the 
   perpendicular to the axis (radius times `z / Zv`, angle times `Zv / z`), then scaled towards the cone apex by
   `(Re - b) / Re` at the small end. `Re` is the cone distance and `b` the face width along the cone.
 * Both cone apexes coincide. The tooth phase is the same as for an external spur pair, and the speed ratio is `-z1 / z2`.
-* A bevel gear can mesh with one mate only: the solver sets the mate's tooth count and shaft angle on both gears.
+* A bevel gear can mesh with one mate only: the solver sets the mate's tooth count, shaft angle and bevel type on both gears.
+
+#### Standard and Gleason tooth proportions
+
+The *Bevel type* property (and the *Start with* menu entries *Bevel gear (standard)* and *Bevel gear (Gleason)*) selects the tooth depth system. Set it on the driving gear; the meshed gear follows.
+
+| | Standard | Gleason |
+|---|---|---|
+| Addendum `a` | `m` on both gears | gear `0.54 m + 0.46 m / q`, pinion `2 m - a(gear)` |
+| Clearance `c` | `0.25 m` | `0.188 m + 0.051 mm` |
+| Whole depth `h` | `2.25 m` | `2.188 m + 0.051 mm` |
+
+`q` is the ratio of the virtual (Tredgold) tooth numbers, `(z1 / cos(delta1)) / (z2 / cos(delta2))`, taken as at least 1 for the gear. For a 90 degree pair it is the square of the tooth ratio, so the formula equals the usual `0.54 m + 0.46 m / u^2` with `u = z2 / z1`.
+A 2:1 pair therefore has a gear addendum of `0.655 m` and a pinion addendum of `1.345 m`. The long and short addenda are applied as equal and opposite profile shifts of the virtual spur gears, so the working depth stays `2 m` and the teeth are thicker on the pinion. The property grid shows the addendum, dedendum, whole depth and clearance. Files saved before this option load as Standard.
 
 ### Worm gear sets
 

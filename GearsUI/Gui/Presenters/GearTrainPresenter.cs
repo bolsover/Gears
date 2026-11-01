@@ -96,8 +96,11 @@ namespace Bolsover.Gears.Gui.Presenters
         /// <summary>Starts a new train with one shaft carrying one 20 tooth gear (module 2 mm, 20 degree pressure angle).</summary>
         public void NewTrain() => NewTrain(GearFamily.Spur);
 
-        /// <summary>Starts a new train with one shaft carrying one gear of the given family (a 20 tooth spur or bevel gear, or a worm).</summary>
-        public void NewTrain(GearFamily family)
+        /// <summary>
+        /// Starts a new train with one shaft carrying one gear of the given family (a 20 tooth spur or bevel gear, or a worm).
+        /// <paramref name="bevelType"/> only applies to a bevel gear.
+        /// </summary>
+        public void NewTrain(GearFamily family, BevelGearType bevelType = BevelGearType.Standard)
         {
             ResetState();
 
@@ -105,7 +108,7 @@ namespace Bolsover.Gears.Gui.Presenters
             switch (family)
             {
                 case GearFamily.Bevel:
-                    first = new BevelGearComponent("Bevel " + (++_gearCounter)) { Teeth = 20, FaceWidth = 10.0 };
+                    first = new BevelGearComponent("Bevel " + (++_gearCounter)) { Teeth = 20, FaceWidth = 10.0, BevelType = bevelType };
                     break;
                 case GearFamily.Worm:
                     first = new WormComponent("Worm " + (++_gearCounter));
@@ -332,7 +335,8 @@ namespace Bolsover.Gears.Gui.Presenters
                         Module = bevel.Module,
                         PressureAngleDeg = bevel.PressureAngleDeg,
                         FaceWidth = bevel.FaceWidth,
-                        ShaftAngleDeg = bevel.ShaftAngleDeg
+                        ShaftAngleDeg = bevel.ShaftAngleDeg,
+                        BevelType = bevel.BevelType
                     };
                     break;
                 }
