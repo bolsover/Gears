@@ -144,16 +144,12 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Calculator\AlibreGearGenerator.cs" />
-        <Compile Include="Builder\GearVariableBuilder.cs" />
         <Compile Include="Calculator\ConversionUtils.cs" />
         <Compile Include="Calculator\CustomCalculations.cs" />
-        <Compile Include="Calculator\GearCalculator.cs" />
         <Compile Include="Calculator\GearMesh3DBuilder.cs" />
         <Compile Include="Calculator\GearParameterCalculator.cs" />
-        <Compile Include="Calculator\IGearCalculator.cs" />
         <Compile Include="Calculator\LaTeXUtils.cs" />
         <Compile Include="Calculator\NCalcLatexRenderer.cs" />
-        <Compile Include="Data\GearVariableLoader.cs" />
         <Compile Include="Calculator\Assemblies\GearAssemblySceneBuilder.cs" />
         <Compile Include="Calculator\Assemblies\GearTrainAnalyzer.cs" />
         <Compile Include="Calculator\Assemblies\ShaftMeshBuilder.cs" />
@@ -184,29 +180,19 @@
         <Compile Include="Model\Assemblies\AssemblySerializer.cs" />
         <Compile Include="Calculator\Assemblies\MeshExporter.cs" />
         <Compile Include="Calculator\Assemblies\GearTrainAnimator.cs" />
-        <Compile Include="Model\CalculationMode.cs" />
-        <Compile Include="Model\ConvertImperial.cs" />
         <Compile Include="Model\ConvertMetric.cs" />
         <Compile Include="Model\Feature.cs" />
         <Compile Include="Model\FeatureType.cs" />
-        <Compile Include="Model\Gear.cs" />
         <Compile Include="Model\GearContext.cs" />
         <Compile Include="Model\GearParameterRow.cs" />
         <Compile Include="Model\GearPoint.cs" />
         <Compile Include="Model\GearPoint3D.cs" />
-        <Compile Include="Model\GearVariable.cs" />
-        <Compile Include="Model\IVariableResolver.cs" />
         <Compile Include="Model\VariableIds.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="App.config" />
       <None Include="packages.config" />
-    </ItemGroup>
-    <ItemGroup>
-      <Content Include="Data\Nexus.db">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

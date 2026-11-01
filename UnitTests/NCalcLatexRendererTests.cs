@@ -1,10 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
+
 using Bolsover.Gears.Calculator;
-using Bolsover.Gears.Data;
-using Bolsover.Gears.Model;
+
 using NUnit.Framework;
 
 namespace UnitTests
@@ -57,75 +54,6 @@ namespace UnitTests
                 Assert.That(LaTeXUtils.TryParse(latex, out var error), Is.True, $"{latex}: {error}");
             }
         }
-
-        private static IEnumerable<List<GearVariable>> AllGearTypes() =>
-            GearVariableLoader.GetGearContexts()
-                .Select(c => GearVariableLoader.LoadGearVariables((GearTypes)Enum.Parse(typeof(GearTypes), c)));
-
-        private static IEnumerable<GearVariable> NCalcExpressions(IEnumerable<GearVariable> variables) =>
-            variables.Where(v => v.CalcMethod == "NCalc" && !string.IsNullOrWhiteSpace(v.NCalc) &&
-                                 !v.NCalc.TrimStart().StartsWith(@"\"));
-
-        [Test]
-        public void KeysAreUniquePerGearType()
-        {
-            var duplicates = AllGearTypes()
-                .SelectMany(vs => vs.GroupBy(v => v.Key).Where(g => g.Count() > 1)
-                    .Select(g => $"{g.First().GearType}: {g.Key} ({string.Join(", ", g.Select(v => v.Id))})"))
-                .ToList();
-            Assert.That(duplicates, Is.Empty, string.Join(Environment.NewLine, duplicates));
-        }
-
-        [Test]
-        public void EveryNCalcReferenceResolvesToAKey()
-        {
-            var failures = new List<string>();
-            foreach (var variables in AllGearTypes())
-            {
-                var keys = new HashSet<string>(variables.Select(v => v.Key)) { "pi" };
-                foreach (var v in NCalcExpressions(variables))
-                {
-                    failures.AddRange(Regex.Matches(v.NCalc, @"\[(.*?)\]").Cast<Match>()
-                        .Select(m => m.Groups[1].Value)
-                        .Where(k => !keys.Contains(k))
-                        .Select(k => $"{v.GearType}.{v.Id} ({v.GearPart}): [{k}]"));
-                }
-            }
-
-            Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
-        }
-
-        /// <summary>
-        /// Every NCalc expression in the database renders to LaTeX that WpfMath can parse.
-        /// The rendered output is written to the test log for review against the hand-written Formula.
-        /// </summary>
-        [Test]
-        public void EveryDatabaseFormulaRendersToValidLatex()
-        {
-            var failures = new List<string>();
-            foreach (var variables in AllGearTypes())
-            {
-                var symbols = variables.GroupBy(v => v.Key).ToDictionary(g => g.Key, g => g.First().Symbol);
-                foreach (var v in NCalcExpressions(variables))
-                {
-                    string latex;
-                    try
-                    {
-                        latex = NCalcLatexRenderer.Render(v.NCalc, k => symbols.TryGetValue(k, out var s) ? s : null);
-                    }
-                    catch (Exception ex)
-                    {
-                        failures.Add($"{v.GearType}.{v.Id}: {ex.Message}");
-                        continue;
-                    }
-
-                    if (!LaTeXUtils.TryParse(latex, out var error)) failures.Add($"{v.GearType}.{v.Id}: {latex}: {error}");
-                    ConsoleIO.WriteLine($"{v.GearType}.{v.Id} [{v.Key}]{Environment.NewLine}" +
-                                        $"  override : {v.FormulaOverride}{Environment.NewLine}  generated: {latex}");
-                }
-            }
-
-            Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
-        }
     }
+
 }
