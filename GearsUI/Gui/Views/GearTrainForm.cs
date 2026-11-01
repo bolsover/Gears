@@ -47,14 +47,14 @@ namespace Bolsover.Gears.Gui.Views
             Font = new Font("Consolas", 9f)
         };
 
-        private readonly ToolStripLabel _status = new ToolStripLabel("Ready");
+        private readonly ToolStripStatusLabel _status = new ToolStripStatusLabel("Ready");
         private readonly NumericUpDown _numSpeed = new NumericUpDown { Minimum = -100000, Maximum = 100000, DecimalPlaces = 1, Value = 1000, Width = 80 };
         private readonly NumericUpDown _numAngle = new NumericUpDown { Minimum = -360, Maximum = 360, DecimalPlaces = 1, Value = 0, Width = 70 };
-        private readonly ToolStripButton _btnWireframe = new ToolStripButton("Wireframe") { CheckOnClick = true };
-        private readonly ToolStripButton _btnShafts = new ToolStripButton("Shafts") { CheckOnClick = true, Checked = true };
-        private readonly ToolStripButton _btnPitchCircles = new ToolStripButton("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
-        private readonly ToolStripButton _btnLabels = new ToolStripButton("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
-        private readonly ToolStripButton _btnAnimate = new ToolStripButton("Animate") { CheckOnClick = true };
+        private readonly ToolStripMenuItem _btnWireframe = new ToolStripMenuItem("Wireframe") { CheckOnClick = true };
+        private readonly ToolStripMenuItem _btnShafts = new ToolStripMenuItem("Shafts") { CheckOnClick = true, Checked = true };
+        private readonly ToolStripMenuItem _btnPitchCircles = new ToolStripMenuItem("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
+        private readonly ToolStripMenuItem _btnLabels = new ToolStripMenuItem("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
+        private readonly ToolStripMenuItem _btnAnimate = new ToolStripMenuItem("Animate") { CheckOnClick = true };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
@@ -138,37 +138,61 @@ namespace Bolsover.Gears.Gui.Views
 
         private void BuildLayout()
         {
-            var toolbar = new ToolStrip { GripStyle = ToolStripGripStyle.Hidden };
-            var btnNew = new ToolStripButton("New train");
-            var btnAddGear = new ToolStripButton("Add gear to shaft");
-            var btnAddMeshed = new ToolStripButton("Add meshed gear");
-            var btnRemove = new ToolStripButton("Remove");
-            var btnFitShift = new ToolStripButton("Fit profile shift")
+            var menu = new MenuStrip();
+            var btnNew = new ToolStripMenuItem("&New train");
+            var btnAddGear = new ToolStripMenuItem("Add &gear to shaft");
+            var btnAddMeshed = new ToolStripMenuItem("Add &meshed gear");
+            var btnRemove = new ToolStripMenuItem("&Remove selected");
+            var btnFitShift = new ToolStripMenuItem("Fit &profile shift")
             {
                 ToolTipText = "Give the selected driven gear the profile shift that makes its mesh run at the current centre distance."
             };
-            var btnFit = new ToolStripButton("Fit view");
+            var btnFit = new ToolStripMenuItem("&Fit view");
 
-            var ddStart = new ToolStripDropDownButton("Start with");
+            var ddStart = new ToolStripMenuItem("&Start with");
             ddStart.DropDownItems.Add("Spur gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Spur)));
             ddStart.DropDownItems.Add("Bevel gear (standard)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Standard)));
             ddStart.DropDownItems.Add("Bevel gear (Gleason)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Gleason)));
             ddStart.DropDownItems.Add("Worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm)));
             ddStart.DropDownItems.Add("Planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()));
 
-            var ddMate = new ToolStripDropDownButton("Add mate");
+            var ddMate = new ToolStripMenuItem("Add m&ate");
             ddMate.DropDownItems.Add("Rack for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack)));
             ddMate.DropDownItems.Add("Bevel gear for the selected bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)));
             ddMate.DropDownItems.Add("Worm wheel for the selected worm", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Worm)));
 
-            var ddFile = new ToolStripDropDownButton("File");
+            var ddFile = new ToolStripMenuItem("&File");
+            ddFile.DropDownItems.Add(btnNew);
+            ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("Save gear train…", null, (s, e) => SaveTrain());
             ddFile.DropDownItems.Add("Load gear train…", null, (s, e) => LoadTrain());
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("Export STL…", null, (s, e) => ExportScene(false));
             ddFile.DropDownItems.Add("Export OBJ…", null, (s, e) => ExportScene(true));
+            ddFile.DropDownItems.Add(new ToolStripSeparator());
+            ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
-            btnNew.Click += (s, e) => _presenter.NewTrain();
+            var menuBuild = new ToolStripMenuItem("&Build");
+            menuBuild.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                ddStart, new ToolStripSeparator(), btnAddGear, btnAddMeshed, ddMate, new ToolStripSeparator(), btnFitShift, btnRemove
+            });
+
+            var menuView = new ToolStripMenuItem("&View");
+            menuView.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                _btnWireframe, _btnShafts, _btnPitchCircles, _btnLabels, new ToolStripSeparator(), btnFit
+            });
+
+            var menuSimulation = new ToolStripMenuItem("&Simulation");
+            menuSimulation.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                new ToolStripLabel("Input speed (rpm)"), new ToolStripControlHost(_numSpeed),
+                new ToolStripLabel("Input angle (deg)"), new ToolStripControlHost(_numAngle), new ToolStripSeparator(),
+                _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed)
+            });
+
+            btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
             btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
             btnRemove.Click += (s, e) => _presenter.RemoveSelected();
@@ -183,15 +207,11 @@ namespace Bolsover.Gears.Gui.Views
             _btnWireframe.Click += (s, e) => RenderScene();
             _btnShafts.Click += (s, e) => RenderScene();
 
-            toolbar.LayoutStyle = ToolStripLayoutStyle.Flow;
-            toolbar.Items.AddRange(new ToolStripItem[]
-            {
-                btnNew, ddStart, btnAddGear, btnAddMeshed, ddMate, btnFitShift, btnRemove, ddFile, new ToolStripSeparator(),
-                new ToolStripLabel("Input speed (rpm)"), new ToolStripControlHost(_numSpeed),
-                new ToolStripLabel("Input angle (deg)"), new ToolStripControlHost(_numAngle), new ToolStripSeparator(),
-                _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed), new ToolStripSeparator(),
-                _btnWireframe, _btnShafts, _btnPitchCircles, _btnLabels, btnFit, new ToolStripSeparator(), _status
-            });
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation });
+            MainMenuStrip = menu;
+
+            var statusBar = new StatusStrip();
+            statusBar.Items.Add(_status);
 
             var leftSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
             leftSplit.Panel1.Controls.Add(_tree);
@@ -218,7 +238,8 @@ namespace Bolsover.Gears.Gui.Views
             mainSplit.Panel2.Controls.Add(rightSplit);
 
             Controls.Add(mainSplit);
-            Controls.Add(toolbar);
+            Controls.Add(statusBar);
+            Controls.Add(menu);
 
             Load += (s, e) =>
             {

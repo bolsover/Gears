@@ -81,7 +81,7 @@ Select an involute gear in the editor to change these in the property grid. Mesh
   contact ratio and backlash are recalculated. For an unshifted pair without backlash the working backlash is `2 a_w (inv alpha_w - inv alpha)`:
   a larger distance adds backlash to an external pair and takes it away from an internal pair.
   A distance below `a cos(alpha_t)` is rejected because the base circles would overlap.
-* **Fit profile shift** (toolbar) gives the selected driven gear the profile shift that makes the mesh run at the current centre distance with no
+* **Fit profile shift** (*Build* menu) gives the selected driven gear the profile shift that makes the mesh run at the current centre distance with no
   fixed distance, so the distance follows from the profile shifts. The driver is not changed.
 * The *Mesh* group of the property grid and the *Stages* tab show the standard and working centre distance, the working pressure angle, the working
   backlash and the contact ratio. The report warns when the working backlash is negative (the teeth jam) or the contact ratio is below 1.
@@ -135,9 +135,9 @@ All design parameters and calculations are metric. The **Imperial reference** ta
 The area above the report tabs of the Gear Train form has two tabs: **3D view** (unchanged) and **2D view**. The 2D view draws the outline of every visible gear in the world X/Y plane, using the same solved scene as the 3D view.
 
 * Each gear is coloured by its shaft. The selected gear or shaft is drawn in orange. Gears hidden in the tree are not drawn.
-* Shafts are drawn as their projected outline (a circle when the shaft axis is perpendicular to the view, a bar when it is angled), controlled by the **Shafts** toolbar button.
-* **Pitch circles** shows the dashed pitch circle of each spur and helical gear, and **Labels** shows the gear names. Both toolbar buttons apply to the 2D view only.
-* The mouse wheel zooms about the cursor, dragging pans, and **Fit view** fits both views. The status line at the bottom shows the cursor position in millimetres and the scale.
+* Shafts are drawn as their projected outline (a circle when the shaft axis is perpendicular to the view, a bar when it is angled), controlled by **View > Shafts**.
+* **Pitch circles** shows the dashed pitch circle of each spur and helical gear, and **Labels** shows the gear names. Both *View* menu items apply to the 2D view only.
+* The mouse wheel zooms about the cursor, dragging pans, and **View > Fit view** fits both views. The status line at the bottom shows the cursor position in millimetres and the scale.
 * Clicking a gear or shaft selects it in the tree, the property grid and the parameter tabs, as in the 3D view. A click near an outline also selects that gear.
 * The view follows the animation and every edit, so meshing gears can be checked as they turn.
 
