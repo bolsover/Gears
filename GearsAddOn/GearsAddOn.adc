@@ -1,10 +1,11 @@
 <AlibreDesignAddOn specificationVersion="2" friendlyName="Gears">
-   <Author name="DavidBolsover" link="https://bolsover.com"/>
-   <Copyright>Copyright (c) 2026. DavidBolsover</Copyright>
+   <Author name="DavidBolsover" link="https://github.com/bolsover/Gears"/>
+   <Copyright>Copyright (c) 2026. David Bolsover</Copyright>
    <DLL type="Managed" loadedWhen="Startup" location="GearsAddOn.dll"/>
    <Icon location="GearsAddOn.ico"/>
    <Menu text="Gears"/>
    <Description>Gear train editor: shafts, spur, helical, bevel, worm, rack and planetary gears with 2D and 3D views</Description>
-   <Workspace type="Always"/>
+   <Workspace type="Part"/>
+   <Workspace type="Assembly"/>
    <Property name="Identifier" value="{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}"/>
 </AlibreDesignAddOn>

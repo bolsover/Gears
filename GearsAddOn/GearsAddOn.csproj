@@ -37,9 +37,11 @@
   <ItemGroup>
     <Reference Include="AlibreAddOn">
       <HintPath>..\..\..\..\AlibreLib\AlibreAddOn.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="AlibreX">
       <HintPath>..\..\..\..\AlibreLib\AlibreX.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

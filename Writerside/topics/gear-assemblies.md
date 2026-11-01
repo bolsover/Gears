@@ -145,6 +145,19 @@ For bevel and worm gears the 2D view is the projection of the outline onto the X
 
 
 
+## Export a spur gear to Alibre
+
+When the editor is opened from the Alibre add-on, **File > Export spur gear to Alibre…** creates the selected gear as a new Alibre part. The item is disabled in the stand-alone program, which has no Alibre session. Only simple **external involute spur gears** are exported; internal and helical gears, other gear families and whole gear trains are not (yet).
+
+The export follows the usual manual steps, using the Alibre automation API (`AlibreSpurGearExporter`):
+
+1. A new part is created (`CreateEmptyPartEx`) and a 2D sketch is added on the `XY-Plane`.
+2. The sketch gets **one closed tooth**: spline curves for the two trochoids and two involutes, arcs for the addendum and root, and two radial lines to the axis. The outline from `AlibreGearGenerator` is exactly one pitch wide, so the two radial lines close it into a wedge, and the patterned wedges tile into a solid disc. The pitch, base, root and outside circles are added as reference circles.
+3. The sketch is extruded to the face width (`AddExtrudedBoss`) to form a single tooth.
+4. The tooth feature is patterned about the `Z-Axis` (`AddCircularFeaturePattern`) with *z* instances, at `2 pi / z` radians apart.
+
+Alibre sketches and features are in **centimetres**, so each length is rounded to 7 decimal places in millimetres and then multiplied by 0.1. `SingleToothSketchBuilder` builds the sketch plan without calling Alibre, so the closure and pitch span can be tested without a running Alibre; it refuses an outline whose pieces do not join or do not span one pitch. If Alibre rejects a step, the error message names the step.
+
 ## Alibre add-on
 
 The Gear Train editor can be loaded inside Alibre Design as a managed add-on. The `GearsAddOn` project (a class library, .NET Framework 4.8.1, x64) references `GearsUI` and `Gears`, so the add-on opens the same `GearTrainForm` as the stand-alone program. The stand-alone program is unchanged.

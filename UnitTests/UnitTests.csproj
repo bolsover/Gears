@@ -166,6 +166,7 @@
     <Compile Include="TestGearTrainPhases3To7.cs" />
     <Compile Include="TestGearTrainEditorPhases3To7.cs" />
     <Compile Include="TestGearAddOn.cs" />
+    <Compile Include="TestAlibreSpurGearExport.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />
     <Compile Include="TestHelixMeshAdapter.cs" />

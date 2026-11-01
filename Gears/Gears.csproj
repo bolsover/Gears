@@ -162,6 +162,9 @@
         <Compile Include="Model\Assemblies\GearTrainReport.cs" />
         <Compile Include="Calculator\Assemblies\IMeshSolver.cs" />
         <Compile Include="Calculator\Assemblies\IAdjustableCentreSolver.cs" />
+        <Compile Include="Calculator\Alibre\AlibreSpurGearExporter.cs" />
+        <Compile Include="Calculator\Alibre\SingleToothSketch.cs" />
+        <Compile Include="Calculator\Alibre\SingleToothSketchBuilder.cs" />
         <Compile Include="Calculator\Assemblies\GearParameterTables.cs" />
         <Compile Include="Calculator\Assemblies\ImperialUnits.cs" />
         <Compile Include="Calculator\Assemblies\ProfileShiftFitter.cs" />

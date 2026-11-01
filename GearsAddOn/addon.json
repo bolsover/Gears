@@ -7,6 +7,6 @@
   "dllType": "managed",
   "arch": "x64",
   "minAlibreBuild": 29000,
-  "publisher": "DavidBolsover",
+  "publisher": "David Bolsover",
   "description": "Gear train editor: shafts, spur, helical, bevel, worm, rack and planetary gears with 2D and 3D views."
 }

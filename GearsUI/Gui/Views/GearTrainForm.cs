@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Calculator.Alibre;
 using Bolsover.Gears.Calculator.Assemblies;
 using Bolsover.Gears.Gui.Presenters;
 using Bolsover.Gears.Model;
@@ -55,6 +56,11 @@ namespace Bolsover.Gears.Gui.Views
         private readonly ToolStripMenuItem _btnPitchCircles = new ToolStripMenuItem("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
         private readonly ToolStripMenuItem _btnLabels = new ToolStripMenuItem("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
         private readonly ToolStripMenuItem _btnAnimate = new ToolStripMenuItem("Animate") { CheckOnClick = true };
+        private readonly ToolStripMenuItem _btnExportAlibre = new ToolStripMenuItem("Export spur gear to &Alibre…")
+        {
+            Enabled = false,
+            ToolTipText = "Create the selected external involute spur gear as a new Alibre part: one closed tooth sketch, extruded and circular-patterned. Available when the editor runs inside Alibre Design."
+        };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
@@ -63,6 +69,7 @@ namespace Bolsover.Gears.Gui.Views
         private AssemblyScene _scene;
         private object _selected;
         private ISet<GearComponent> _hidden;
+        private AlibreSpurGearExporter _alibreExporter;
 
         public GearTrainForm()
         {
@@ -78,6 +85,20 @@ namespace Bolsover.Gears.Gui.Views
         }
 
         public GearTrainPresenter Presenter => _presenter;
+
+        /// <summary>
+        /// Creates gears as Alibre parts. Set by the Alibre add-on; null when the editor runs as a stand-alone program,
+        /// in which case the export menu item is disabled.
+        /// </summary>
+        public AlibreSpurGearExporter AlibreExporter
+        {
+            get => _alibreExporter;
+            set
+            {
+                _alibreExporter = value;
+                _btnExportAlibre.Enabled = value != null;
+            }
+        }
 
         public double InputSpeedRpm => (double)_numSpeed.Value;
 
@@ -170,6 +191,8 @@ namespace Bolsover.Gears.Gui.Views
             ddFile.DropDownItems.Add("Export STL…", null, (s, e) => ExportScene(false));
             ddFile.DropDownItems.Add("Export OBJ…", null, (s, e) => ExportScene(true));
             ddFile.DropDownItems.Add(new ToolStripSeparator());
+            ddFile.DropDownItems.Add(_btnExportAlibre);
+            ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
             var menuBuild = new ToolStripMenuItem("&Build");
@@ -192,6 +215,7 @@ namespace Bolsover.Gears.Gui.Views
                 _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed)
             });
 
+            _btnExportAlibre.Click += (s, e) => RunCommand(ExportSelectedGearToAlibre);
             btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
             btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
@@ -410,6 +434,25 @@ namespace Bolsover.Gears.Gui.Views
             {
                 if (dialog.ShowDialog(this) == DialogResult.OK) _presenter.Export(dialog.FileName, _btnShafts.Checked);
             }
+        }
+
+        private void ExportSelectedGearToAlibre()
+        {
+            if (_alibreExporter == null)
+            {
+                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
+                return;
+            }
+
+            if (!(_selected is InvoluteGearComponent gear))
+            {
+                ShowMessage("Select the spur gear to export to Alibre.", true);
+                return;
+            }
+
+            ShowMessage($"Exporting {gear.Id} to Alibre…", false);
+            _alibreExporter.Export(gear);
+            ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1} teeth, module {2:0.###}) to a new Alibre part.", gear.Id, gear.Teeth, gear.Module), false);
         }
 
         private void RunCommand(Action command)

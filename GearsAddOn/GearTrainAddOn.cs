@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using AlibreAddOn;
 using AlibreX;
+using Bolsover.Gears.Calculator.Alibre;
 using Bolsover.Gears.Gui.Views;
 
 namespace Bolsover.Gears.AddOn
@@ -30,7 +31,7 @@ namespace Bolsover.Gears.AddOn
         /// <param name="alibreRoot">The Alibre root object (kept for future use; the editor does not need it yet).</param>
         /// <param name="parentWindowHandle">Handle of the Alibre main window, used as the owner of the editor.</param>
         public GearTrainAddOn(IADRoot alibreRoot, IntPtr parentWindowHandle)
-            : this(alibreRoot, parentWindowHandle, () => new GearTrainForm())
+            : this(alibreRoot, parentWindowHandle, () => CreateForm(alibreRoot))
         {
         }
 
@@ -45,6 +46,14 @@ namespace Bolsover.Gears.AddOn
         }
 
         public IADRoot AlibreRoot { get; }
+
+        /// <summary>Creates the editor with its "Export to Alibre" command connected to the Alibre session.</summary>
+        private static Form CreateForm(IADRoot alibreRoot)
+        {
+            var form = new GearTrainForm();
+            if (alibreRoot != null) form.AlibreExporter = new AlibreSpurGearExporter(alibreRoot);
+            return form;
+        }
 
         /// <summary>True while the editor form exists and has not been closed.</summary>
         public bool IsFormOpen => _form != null && !_form.IsDisposed;
