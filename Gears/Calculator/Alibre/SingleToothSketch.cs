@@ -63,21 +63,71 @@ namespace Bolsover.Gears.Calculator.Alibre
     }
 
     /// <summary>
-    /// The plan for exporting one involute spur gear to Alibre: the closed sketch of a single tooth, the extrusion depth and the
-    /// circular pattern. The sketch is a wedge: the tooth profile (root to root, one pitch wide) closed by two radial lines to the
-    /// gear axis, so that the patterned copies tile into a solid gear. All lengths are in Alibre units (centimetres).
+    /// How the tooth of a helical gear is formed: the sketch is swept along a helix about the gear axis (an Alibre helical boss)
+    /// instead of being extruded straight. The sketch turns through <see cref="TurnAngle"/> over the face width. Lengths are in
+    /// Alibre units (centimetres).
+    /// </summary>
+    public sealed class SingleToothHelix
+    {
+        public SingleToothHelix(double angleDeg, bool rightHand, double height, double lead, double pitchRadius)
+        {
+            AngleDeg = angleDeg;
+            RightHand = rightHand;
+            Height = height;
+            Lead = lead;
+            PitchRadius = pitchRadius;
+        }
+
+        /// <summary>Helix angle at the pitch circle, in degrees.</summary>
+        public double AngleDeg { get; }
+
+        /// <summary>True for a right-hand helix, false for a left-hand helix.</summary>
+        public bool RightHand { get; }
+
+        /// <summary>Axial length of the helix: the face width.</summary>
+        public double Height { get; }
+
+        /// <summary>Axial advance for one full turn: 2 pi pitch radius / tan(helix angle).</summary>
+        public double Lead { get; }
+
+        /// <summary>Pitch radius of the gear (including profile shift).</summary>
+        public double PitchRadius { get; }
+
+        /// <summary>Number of turns of the helix over <see cref="Height"/>.</summary>
+        public double Revolutions => Height / Lead;
+
+        /// <summary>Angle the tooth section turns through over the face width, in radians.</summary>
+        public double TurnAngle => 2.0 * Math.PI * Revolutions;
+    }
+
+    /// <summary>
+    /// The plan for exporting one involute gear to Alibre: the closed sketch of a single tooth, how the tooth is formed (extrusion,
+    /// or a helical boss for a helical gear) and the circular pattern. The sketch is a wedge one pitch wide. For an external gear it
+    /// is the tooth profile closed by two radial lines to the gear axis. For an internal gear it is the inner tooth profile closed by
+    /// two radial lines out to the rim and a rim arc. Either way the patterned copies tile into a solid gear. All lengths are in
+    /// Alibre units (centimetres).
     /// </summary>
     public sealed class SingleToothSketch
     {
         public SingleToothSketch(int teeth, double extrusionDepth, string partName, IReadOnlyList<ToothSketchFigure> figures,
-            IReadOnlyList<ToothSketchReferenceCircle> referenceCircles)
+            IReadOnlyList<ToothSketchReferenceCircle> referenceCircles, bool isInternal = false, SingleToothHelix helix = null)
         {
             Teeth = teeth;
             ExtrusionDepth = extrusionDepth;
             PartName = partName;
             Figures = figures;
             ReferenceCircles = referenceCircles;
+            IsInternal = isInternal;
+            Helix = helix;
         }
+
+        /// <summary>True for an internal (ring) gear.</summary>
+        public bool IsInternal { get; }
+
+        /// <summary>The helix the tooth is swept along; null for a spur gear, which is extruded straight.</summary>
+        public SingleToothHelix Helix { get; }
+
+        public bool IsHelical => Helix != null;
 
         public int Teeth { get; }
 

@@ -7,9 +7,11 @@ using Bolsover.Gears.Model.Assemblies;
 namespace Bolsover.Gears.Calculator.Alibre
 {
     /// <summary>
-    /// Builds the <see cref="SingleToothSketch"/> of an external involute spur gear from the tooth profile made by
-    /// <see cref="AlibreGearGenerator"/>. Gears are calculated in millimetres to 7 decimal places; Alibre sketches are in
+    /// Builds the <see cref="SingleToothSketch"/> of an involute gear (external or internal, spur or helical) from the tooth profile
+    /// made by <see cref="AlibreGearGenerator"/>. Gears are calculated in millimetres to 7 decimal places; Alibre sketches are in
     /// centimetres, so every length is rounded to 7 decimal places in millimetres and then divided by 10.
+    /// The sketch is always the transverse (end-face) section of one tooth. A helical gear is made by sweeping that sketch along a
+    /// helix, described by <see cref="SingleToothSketch.Helix"/>.
     /// </summary>
     public static class SingleToothSketchBuilder
     {
@@ -19,10 +21,19 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>Smallest tooth count that gives a sensible circular pattern.</summary>
         public const int MinimumTeeth = 3;
 
+        /// <summary>Largest helix angle accepted, in degrees. Beyond this the lead of the helix becomes unreasonably long.</summary>
+        public const double MaximumHelixAngleDeg = 60.0;
+
+        /// <summary>The rim of an internal gear is never thinner than this (mm), as in the 3D preview.</summary>
+        public const double MinimumRimThickness = 1.0;
+
         private const int Decimals = 7;
 
-        /// <summary>Points per curve used for the sketch: involute, trochoid, addendum arc, dedendum arc.</summary>
-        private static readonly int[] PointsPerCurve = { 30, 15, 5, 5 };
+        /// <summary>Points per curve for an external gear: involute, trochoid, addendum arc, dedendum arc.</summary>
+        private static readonly int[] ExternalPointsPerCurve = { 30, 15, 5, 5 };
+
+        /// <summary>Points per curve for an internal gear: involute, upper arc, lower arcs (halved, so at least 4), rim arc.</summary>
+        private static readonly int[] InternalPointsPerCurve = { 30, 5, 6, 5 };
 
         /// <summary>Largest gap, in sketch units, tolerated between neighbouring curves before the profile is rejected.</summary>
         private const double JoinTolerance = 1e-4;
@@ -41,23 +52,20 @@ namespace Bolsover.Gears.Calculator.Alibre
             public List<GearPoint> Points { get; }
         }
 
-        /// <summary>Throws <see cref="InvalidOperationException"/> when the gear is not a simple external involute spur gear.</summary>
+        /// <summary>Throws <see cref="InvalidOperationException"/> when the gear is not a simple involute spur or helical gear.</summary>
         public static void EnsureSupported(InvoluteGearComponent gear)
         {
             if (gear == null) throw new ArgumentNullException(nameof(gear));
-            if (gear.IsInternal)
-            {
-                throw new InvalidOperationException($"Gear '{gear.Id}' is an internal gear. Only external involute spur gears can be exported to Alibre so far.");
-            }
-
-            if (gear.IsHelical)
-            {
-                throw new InvalidOperationException($"Gear '{gear.Id}' is helical. Only external involute spur gears can be exported to Alibre so far.");
-            }
 
             if (gear.Teeth < MinimumTeeth)
             {
                 throw new InvalidOperationException($"Gear '{gear.Id}' needs at least {MinimumTeeth} teeth to be exported to Alibre.");
+            }
+
+            if (gear.HelixAngleDeg < 0.0 || gear.HelixAngleDeg > MaximumHelixAngleDeg)
+            {
+                throw new InvalidOperationException(
+                    $"Gear '{gear.Id}' has a helix angle of {gear.HelixAngleDeg:G4} degrees. Use 0 for a spur gear, or an angle up to {MaximumHelixAngleDeg:0} degrees for a helical gear; set the hand with R or L.");
             }
 
             gear.Validate();
@@ -67,20 +75,18 @@ namespace Bolsover.Gears.Calculator.Alibre
         {
             EnsureSupported(gear);
 
-            var profile = AlibreGearGenerator.GenerateExternalToothProfile(
-                gear.Teeth, gear.Module, gear.PressureAngleDeg, gear.ProfileShift, gear.OptimalShift,
-                PointsPerCurve, gear.Clearance, gear.Backlash, 0.0);
+            var isInternal = gear.IsInternal;
+            var helixAngle = gear.IsHelical ? gear.HelixAngleDeg : 0.0;
 
-            // The outline runs: root, trochoid, involute, tip, involute, trochoid, root, and the root arc to the next tooth.
-            var segments = new List<Segment>
-            {
-                new Segment("Trochoid 1", ToothSketchFigureKind.Spline, Scale(profile.Trochoid1)),
-                new Segment("Involute 1", ToothSketchFigureKind.Spline, Scale(profile.Involute1)),
-                new Segment("Addendum arc", ToothSketchFigureKind.Arc, Scale(profile.UpperArc)),
-                new Segment("Involute 2", ToothSketchFigureKind.Spline, Scale(profile.Involute2)),
-                new Segment("Trochoid 2", ToothSketchFigureKind.Spline, Scale(profile.Trochoid2)),
-                new Segment("Root arc", ToothSketchFigureKind.Arc, Scale(profile.LowerArc))
-            };
+            var profile = isInternal
+                ? AlibreGearGenerator.GenerateInternalToothProfile(
+                    gear.Teeth, gear.Module, gear.PressureAngleDeg, gear.RimThickness, gear.ProfileShift, gear.OptimalShift,
+                    InternalPointsPerCurve, gear.Clearance, gear.Backlash, helixAngle)
+                : AlibreGearGenerator.GenerateExternalToothProfile(
+                    gear.Teeth, gear.Module, gear.PressureAngleDeg, gear.ProfileShift, gear.OptimalShift,
+                    ExternalPointsPerCurve, gear.Clearance, gear.Backlash, helixAngle);
+
+            var segments = isInternal ? InternalSegments(profile) : ExternalSegments(profile);
 
             var chain = new List<ToothSketchFigure>();
             GearPoint previousEnd = null;
@@ -114,7 +120,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                 throw new InvalidOperationException($"The tooth outline of gear '{gear.Id}' is empty.");
             }
 
-            // The outline spans exactly one pitch; two radial lines to the axis close it into a wedge.
+            // The outline spans exactly one pitch; radial lines close it into a wedge that tiles into a solid gear.
             var span = Math.Abs(NormaliseAngle(Math.Atan2(chainStart.Y, chainStart.X) - Math.Atan2(previousEnd.Y, previousEnd.X)));
             var pitch = 2.0 * Math.PI / gear.Teeth;
             if (Math.Abs(span - pitch) > 1e-5)
@@ -123,29 +129,111 @@ namespace Bolsover.Gears.Calculator.Alibre
                     $"The tooth outline of gear '{gear.Id}' spans {span * 180.0 / Math.PI:F4} degrees instead of one pitch ({pitch * 180.0 / Math.PI:F4} degrees).");
             }
 
-            var figures = new List<ToothSketchFigure>
-            {
-                new ToothSketchFigure(ToothSketchFigureKind.Line, "Radial line 1", 0.0, 0.0, chainStart.X, chainStart.Y)
-            };
-            figures.AddRange(chain);
-            figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Line, "Radial line 2", previousEnd.X, previousEnd.Y, 0.0, 0.0));
+            var figures = new List<ToothSketchFigure>();
+            var circles = new List<ToothSketchReferenceCircle>();
+            var parameters = profile.Parameters;
 
-            var circles = new List<ToothSketchReferenceCircle>
+            if (isInternal)
             {
-                new ToothSketchReferenceCircle("Root circle", Q(profile.Parameters["dedendumRadius"])),
-                new ToothSketchReferenceCircle("Base circle", Q(profile.Parameters["baseRadius"])),
-                new ToothSketchReferenceCircle("Pitch circle", Q(profile.Parameters["pitchRadius"])),
-                new ToothSketchReferenceCircle("Outside circle", Q(profile.Parameters["addendumRadius"]))
-            };
+                // Out to the rim along the radial lines from both ends of the tooth contour, then the rim arc between them.
+                var rimRadius = Math.Round(parameters["dedendumRadius"], Decimals) + Math.Max(gear.RimThickness, MinimumRimThickness);
+                var rimStart = RimPoint(chainStart, rimRadius);
+                var rimEnd = RimPoint(previousEnd, rimRadius);
 
-            return new SingleToothSketch(gear.Teeth, Q(gear.FaceWidth), PartName(gear), figures, circles);
+                figures.AddRange(chain);
+                figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Line, "Radial line 1", previousEnd.X, previousEnd.Y, rimEnd.X, rimEnd.Y));
+                figures.Add(CreateFigure(new Segment("Rim arc", ToothSketchFigureKind.Arc, new List<GearPoint> { rimEnd, rimStart }),
+                    new List<GearPoint> { rimEnd, rimStart }));
+                figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Line, "Radial line 2", rimStart.X, rimStart.Y, chainStart.X, chainStart.Y));
+
+                circles.Add(new ToothSketchReferenceCircle("Inside circle", Q(parameters["addendumRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Pitch circle", Q(parameters["pitchRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Base circle", Q(parameters["baseRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Root circle", Q(parameters["dedendumRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Rim circle", Q(rimRadius)));
+            }
+            else
+            {
+                figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Line, "Radial line 1", 0.0, 0.0, chainStart.X, chainStart.Y));
+                figures.AddRange(chain);
+                figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Line, "Radial line 2", previousEnd.X, previousEnd.Y, 0.0, 0.0));
+
+                circles.Add(new ToothSketchReferenceCircle("Root circle", Q(parameters["dedendumRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Base circle", Q(parameters["baseRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Pitch circle", Q(parameters["pitchRadius"])));
+                circles.Add(new ToothSketchReferenceCircle("Outside circle", Q(parameters["addendumRadius"])));
+            }
+
+            var depth = Q(gear.FaceWidth);
+            var helix = gear.IsHelical ? BuildHelix(gear, parameters["pitchRadius"], depth) : null;
+
+            return new SingleToothSketch(gear.Teeth, depth, PartName(gear), figures, circles, isInternal, helix);
         }
 
-        /// <summary>The name given to the Alibre part, for example <c>SpurGear_Z20_M2p5</c>.</summary>
+        /// <summary>
+        /// The name given to the Alibre part, for example <c>SpurGear_Z20_M2p5</c>, <c>HelicalGear_Z20_M2p5_B15R</c> or
+        /// <c>InternalGear_Z40_M2</c>.
+        /// </summary>
         public static string PartName(InvoluteGearComponent gear)
         {
-            var module = gear.Module.ToString("0.###", CultureInfo.InvariantCulture).Replace('.', 'p');
-            return $"SpurGear_Z{gear.Teeth}_M{module}";
+            var module = FormatNumber(gear.Module);
+            var kind = gear.IsInternal
+                ? (gear.IsHelical ? "InternalHelicalGear" : "InternalGear")
+                : (gear.IsHelical ? "HelicalGear" : "SpurGear");
+            var name = $"{kind}_Z{gear.Teeth}_M{module}";
+            if (gear.IsHelical) name += $"_B{FormatNumber(gear.HelixAngleDeg)}{gear.HelicalDirection}";
+            return name;
+        }
+
+        /// <summary>
+        /// The helix of a helical tooth. Over the face width H the transverse section of the tooth turns through
+        /// H tan(beta) / r (the same rule the 3D preview uses), so one full turn takes the lead 2 pi r / tan(beta), with r the pitch
+        /// radius. Right and left hand follow the gear's hand.
+        /// </summary>
+        private static SingleToothHelix BuildHelix(InvoluteGearComponent gear, double pitchRadiusMm, double heightAlibre)
+        {
+            var radius = Math.Round(pitchRadiusMm, Decimals);
+            var leadMm = 2.0 * Math.PI * radius / Math.Tan(gear.HelixAngleDeg * Math.PI / 180.0);
+            return new SingleToothHelix(gear.HelixAngleDeg, gear.HelicalDirection == "R", heightAlibre, Q(leadMm), Q(radius));
+        }
+
+        private static string FormatNumber(double value)
+        {
+            return value.ToString("0.###", CultureInfo.InvariantCulture).Replace('.', 'p');
+        }
+
+        /// <summary>Outline of an external tooth: root, trochoid, involute, tip, involute, trochoid, root, and the root arc to the next tooth.</summary>
+        private static List<Segment> ExternalSegments(AlibreGearGenerator.AlibreGearProfile profile)
+        {
+            return new List<Segment>
+            {
+                new Segment("Trochoid 1", ToothSketchFigureKind.Spline, Scale(profile.Trochoid1)),
+                new Segment("Involute 1", ToothSketchFigureKind.Spline, Scale(profile.Involute1)),
+                new Segment("Addendum arc", ToothSketchFigureKind.Arc, Scale(profile.UpperArc)),
+                new Segment("Involute 2", ToothSketchFigureKind.Spline, Scale(profile.Involute2)),
+                new Segment("Trochoid 2", ToothSketchFigureKind.Spline, Scale(profile.Trochoid2)),
+                new Segment("Root arc", ToothSketchFigureKind.Arc, Scale(profile.LowerArc))
+            };
+        }
+
+        /// <summary>Inner outline of an internal tooth, in the order the 3D preview joins it.</summary>
+        private static List<Segment> InternalSegments(AlibreGearGenerator.AlibreGearProfile profile)
+        {
+            return new List<Segment>
+            {
+                new Segment("Inside arc 1", ToothSketchFigureKind.Arc, Scale(profile.LowerArc2)),
+                new Segment("Involute 1", ToothSketchFigureKind.Spline, Scale(profile.Involute1)),
+                new Segment("Root arc", ToothSketchFigureKind.Arc, Scale(profile.UpperArc)),
+                new Segment("Involute 2", ToothSketchFigureKind.Spline, Scale(profile.Involute2)),
+                new Segment("Inside arc 2", ToothSketchFigureKind.Arc, Scale(profile.LowerArc1))
+            };
+        }
+
+        /// <summary>The point on the rim circle (radius in millimetres) at the same angle as <paramref name="point"/> (Alibre units).</summary>
+        private static GearPoint RimPoint(GearPoint point, double rimRadiusMm)
+        {
+            var angle = Math.Atan2(point.Y, point.X);
+            return new GearPoint(Q(rimRadiusMm * Math.Cos(angle)), Q(rimRadiusMm * Math.Sin(angle)));
         }
 
         private static ToothSketchFigure CreateFigure(Segment segment, List<GearPoint> points)

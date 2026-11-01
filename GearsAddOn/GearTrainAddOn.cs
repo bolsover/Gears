@@ -51,7 +51,7 @@ namespace Bolsover.Gears.AddOn
         private static Form CreateForm(IADRoot alibreRoot)
         {
             var form = new GearTrainForm();
-            if (alibreRoot != null) form.AlibreExporter = new AlibreSpurGearExporter(alibreRoot);
+            if (alibreRoot != null) form.AlibreExporter = new AlibreGearExporter(alibreRoot);
             return form;
         }
 

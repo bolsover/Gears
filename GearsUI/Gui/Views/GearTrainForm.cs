@@ -56,10 +56,10 @@ namespace Bolsover.Gears.Gui.Views
         private readonly ToolStripMenuItem _btnPitchCircles = new ToolStripMenuItem("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
         private readonly ToolStripMenuItem _btnLabels = new ToolStripMenuItem("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
         private readonly ToolStripMenuItem _btnAnimate = new ToolStripMenuItem("Animate") { CheckOnClick = true };
-        private readonly ToolStripMenuItem _btnExportAlibre = new ToolStripMenuItem("Export spur gear to &Alibre…")
+        private readonly ToolStripMenuItem _btnExportAlibre = new ToolStripMenuItem("Export gear to &Alibre…")
         {
             Enabled = false,
-            ToolTipText = "Create the selected external involute spur gear as a new Alibre part: one closed tooth sketch, extruded and circular-patterned. Available when the editor runs inside Alibre Design."
+            ToolTipText = "Create the selected involute gear (external or internal, spur or helical) as a new Alibre part: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Available when the editor runs inside Alibre Design."
         };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
@@ -69,7 +69,7 @@ namespace Bolsover.Gears.Gui.Views
         private AssemblyScene _scene;
         private object _selected;
         private ISet<GearComponent> _hidden;
-        private AlibreSpurGearExporter _alibreExporter;
+        private AlibreGearExporter _alibreExporter;
 
         public GearTrainForm()
         {
@@ -90,7 +90,7 @@ namespace Bolsover.Gears.Gui.Views
         /// Creates gears as Alibre parts. Set by the Alibre add-on; null when the editor runs as a stand-alone program,
         /// in which case the export menu item is disabled.
         /// </summary>
-        public AlibreSpurGearExporter AlibreExporter
+        public AlibreGearExporter AlibreExporter
         {
             get => _alibreExporter;
             set
@@ -446,13 +446,14 @@ namespace Bolsover.Gears.Gui.Views
 
             if (!(_selected is InvoluteGearComponent gear))
             {
-                ShowMessage("Select the spur gear to export to Alibre.", true);
+                ShowMessage("Select the gear to export to Alibre.", true);
                 return;
             }
 
             ShowMessage($"Exporting {gear.Id} to Alibre…", false);
             _alibreExporter.Export(gear);
-            ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1} teeth, module {2:0.###}) to a new Alibre part.", gear.Id, gear.Teeth, gear.Module), false);
+            var kind = (gear.IsInternal ? "internal " : "external ") + (gear.IsHelical ? "helical" : "spur");
+            ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1} gear, {2} teeth, module {3:0.###}) to a new Alibre part.", gear.Id, kind, gear.Teeth, gear.Module), false);
         }
 
         private void RunCommand(Action command)

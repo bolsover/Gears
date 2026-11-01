@@ -145,16 +145,33 @@ For bevel and worm gears the 2D view is the projection of the outline onto the X
 
 
 
-## Export a spur gear to Alibre
+## Export a gear to Alibre
 
-When the editor is opened from the Alibre add-on, **File > Export spur gear to Alibre…** creates the selected gear as a new Alibre part. The item is disabled in the stand-alone program, which has no Alibre session. Only simple **external involute spur gears** are exported; internal and helical gears, other gear families and whole gear trains are not (yet).
+When the editor is opened from the Alibre add-on, **File > Export gear to Alibre…** creates the selected gear as a new Alibre part. The item is disabled in the stand-alone program, which has no Alibre session. **Involute spur and helical gears, external and internal,** are exported; other gear families and whole gear trains are not (yet).
 
-The export follows the usual manual steps, using the Alibre automation API (`AlibreSpurGearExporter`):
+The export follows the usual manual steps, using the Alibre automation API (`AlibreGearExporter`):
 
 1. A new part is created (`CreateEmptyPartEx`) and a 2D sketch is added on the `XY-Plane`.
 2. The sketch gets **one closed tooth**: spline curves for the two trochoids and two involutes, arcs for the addendum and root, and two radial lines to the axis. The outline from `AlibreGearGenerator` is exactly one pitch wide, so the two radial lines close it into a wedge, and the patterned wedges tile into a solid disc. The pitch, base, root and outside circles are added as reference circles.
-3. The sketch is extruded to the face width (`AddExtrudedBoss`) to form a single tooth.
+3. A single tooth is formed: a spur gear's sketch is extruded to the face width (`AddExtrudedBoss`); a helical gear's sketch is swept along a helix (`AddHelicalBoss`, see below).
 4. The tooth feature is patterned about the `Z-Axis` (`AddCircularFeaturePattern`) with *z* instances, at `2 pi / z` radians apart.
+
+### Internal gears
+
+The single tooth of an internal gear is a wedge of the ring, one pitch wide. The sketch is the inner tooth contour (inside arcs, involute splines and the root arc), closed by two radial lines out to the rim circle and a rim arc between them. The rim circle is the root circle plus the rim thickness (never less than 1 mm). Nothing touches the axis, so the bore stays open. The tip arcs never go below the base circle, because an involute cannot start there. The part is named `InternalGear_Z{z}_M{m}`.
+
+### Helical gears
+
+A helical gear uses the same transverse (end-face) tooth sketch, made with the transverse module `m / cos(beta)`. The single tooth is formed with a **helical boss** (`AddHelicalBoss`) about the `Z-Axis` instead of a straight extrusion. The sketch is not parallel to the axis, and the helix is a constant-pitch helix given by height and pitch:
+
+* height *H* = the face width;
+* pitch (lead) *L* = `2 pi r / tan(beta)`, with *r* the transverse pitch radius including profile shift;
+* revolutions = *H* / *L*, so the tooth section turns through `H tan(beta) / r`, the same rule the 3D preview uses;
+* a right-hand gear gives a clockwise helix and a left-hand gear a counter-clockwise one.
+
+The circular pattern then copies the helical tooth. Helix angles from 0 to 60 degrees are accepted. The part is named `HelicalGear_Z{z}_M{m}_B{beta}{R|L}`, or `InternalHelicalGear_...` for an internal gear.
+
+The sketch, helix lead, turn angle and hand are tested without Alibre. How Alibre orients the swept sketch (the direction of the sweep along the axis, and whether `bClockwise` matches the preview's hand) has not been checked inside Alibre.
 
 Alibre sketches and features are in **centimetres**, so each length is rounded to 7 decimal places in millimetres and then multiplied by 0.1. `SingleToothSketchBuilder` builds the sketch plan without calling Alibre, so the closure and pitch span can be tested without a running Alibre; it refuses an outline whose pieces do not join or do not span one pitch. If Alibre rejects a step, the error message names the step.
 
