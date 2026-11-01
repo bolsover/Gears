@@ -142,3 +142,34 @@ The area above the report tabs of the Gear Train form has two tabs: **3D view** 
 * The view follows the animation and every edit, so meshing gears can be checked as they turn.
 
 For bevel and worm gears the 2D view is the projection of the outline onto the X/Y plane. Pitch circles are only drawn for gears whose axis is perpendicular to the view.
+
+
+
+## Alibre add-on
+
+The Gear Train editor can be loaded inside Alibre Design as a managed add-on. The `GearsAddOn` project (a class library, .NET Framework 4.8.1, x64) references `GearsUI` and `Gears`, so the add-on opens the same `GearTrainForm` as the stand-alone program. The stand-alone program is unchanged.
+
+In Alibre a **Gears** menu appears with one command, **Gear Train**. The command opens the editor as a modeless window owned by the Alibre main window, so Alibre stays usable. Choosing the command again brings the open window forward; closing the window and choosing the command again opens a new one. The command is enabled on the home window and in every part, assembly and drawing workspace. The editor does not read or change Alibre documents; gear trains are saved to their own JSON files.
+
+### Files
+
+| File | Purpose |
+| --- | --- |
+| `AlibreAddOn.cs` | The entry points that Alibre calls: `AddOnLoad`, `AddOnInvoke`, `AddOnUnload` and `GetAddOnInterface`. The namespace `AlibreAddOnAssembly` and the class name `AlibreAddOn` must stay as they are. It also loads the add-on's own libraries by name from the add-on folder, because Alibre does not apply the binding redirects of the add-on. |
+| `GearTrainAddOn.cs` | Implements `IAlibreAddOn`: the menu tree, tool tips and enabled state, and `InvokeCommand`, which opens the editor. |
+| `GearsAddOn.adc` | The add-on configuration that Alibre reads: managed DLL, loaded at startup, menu text, workspace and the identifier `{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}`. |
+| `addon.json`, `GearsAddOn.ico` | Add-on metadata and icon. |
+| `Install-GearsAddOn.ps1` | Copies the build output into the Alibre add-ons folder and registers it. |
+
+### Build and install
+
+1. Build the `GearsAddOn` project (it is part of `Gears.sln`). The output folder `GearsAddOn\bin\Debug` holds the add-on DLL, the `.adc` file, `GearsUI.exe`, `Gears.dll` and every library they need.
+2. Close Alibre Design. In an administrator PowerShell, run `Install-GearsAddOn.ps1` from the output folder. It copies the files to `C:\ProgramData\Alibre AddOns\GearsAddOn` and writes the value `{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}` = that folder under `HKEY_LOCAL_MACHINE\SOFTWARE\Alibre Design Add-Ons`. This is the registration that Alibre looks for.
+3. Start Alibre Design. The **Gears** menu appears.
+
+While developing, `Install-GearsAddOn.ps1 -InPlace` registers the build output folder itself, so a rebuild followed by an Alibre restart is enough. `Install-GearsAddOn.ps1 -Uninstall` removes the registration and the copied files.
+
+### Limits
+
+* The identifier in `GearsAddOn.adc`, `addon.json`, `GearTrainAddOn.AddOnId` and the install script must be the same; tests check this.
+* The add-on needs the Alibre assemblies `AlibreAddOn.dll` and `AlibreX.dll`; the project takes them from the `AlibreLib` folder, as the other Alibre projects in this solution do.

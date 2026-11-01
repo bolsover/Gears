@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}",
+  "name": "Gears",
+  "folderName": "GearsAddOn",
+  "version": "1.0.0",
+  "dllType": "managed",
+  "arch": "x64",
+  "minAlibreBuild": 29000,
+  "publisher": "DavidBolsover",
+  "description": "Gear train editor: shafts, spur, helical, bevel, worm, rack and planetary gears with 2D and 3D views."
+}

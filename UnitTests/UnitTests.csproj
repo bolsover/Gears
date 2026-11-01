@@ -165,6 +165,7 @@
     <Compile Include="TestBevelGearTypes.cs" />
     <Compile Include="TestGearTrainPhases3To7.cs" />
     <Compile Include="TestGearTrainEditorPhases3To7.cs" />
+    <Compile Include="TestGearAddOn.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />
     <Compile Include="TestHelixMeshAdapter.cs" />
@@ -180,6 +181,10 @@
     <ProjectReference Include="..\Gears\Gears.csproj">
       <Project>{d8109c2a-b970-468f-9c4f-68ae13e74abc}</Project>
       <Name>Gears</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GearsAddOn\GearsAddOn.csproj">
+      <Project>{97453981-64c7-48a4-8cc1-a38242dc8617}</Project>
+      <Name>GearsAddOn</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

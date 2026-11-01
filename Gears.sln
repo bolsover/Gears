@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\Unit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearsUI", "GearsUI\GearsUI.csproj", "{66E3EAFD-CDF3-459A-A934-6060EEFF519B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearsAddOn", "GearsAddOn\GearsAddOn.csproj", "{97453981-64C7-48A4-8CC1-A38242DC8617}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{66E3EAFD-CDF3-459A-A934-6060EEFF519B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97453981-64C7-48A4-8CC1-A38242DC8617}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97453981-64C7-48A4-8CC1-A38242DC8617}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97453981-64C7-48A4-8CC1-A38242DC8617}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97453981-64C7-48A4-8CC1-A38242DC8617}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
