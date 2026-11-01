@@ -24,6 +24,7 @@ namespace Bolsover.Gears.Gui.Views
         private readonly PropertyGrid _grid = new PropertyGrid { Dock = DockStyle.Fill, ToolbarVisible = false };
         private readonly HelixAssemblyViewport _viewport = new HelixAssemblyViewport();
         private readonly ElementHost _host = new ElementHost { Dock = DockStyle.Fill };
+        private readonly GearScene2DControl _view2D = new GearScene2DControl { Dock = DockStyle.Fill };
         private readonly DataGridView _gearsGrid = CreateGrid();
         private readonly DataGridView _shaftsGrid = CreateGrid();
         private readonly DataGridView _stagesGrid = CreateGrid();
@@ -51,6 +52,8 @@ namespace Bolsover.Gears.Gui.Views
         private readonly NumericUpDown _numAngle = new NumericUpDown { Minimum = -360, Maximum = 360, DecimalPlaces = 1, Value = 0, Width = 70 };
         private readonly ToolStripButton _btnWireframe = new ToolStripButton("Wireframe") { CheckOnClick = true };
         private readonly ToolStripButton _btnShafts = new ToolStripButton("Shafts") { CheckOnClick = true, Checked = true };
+        private readonly ToolStripButton _btnPitchCircles = new ToolStripButton("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
+        private readonly ToolStripButton _btnLabels = new ToolStripButton("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
         private readonly ToolStripButton _btnAnimate = new ToolStripButton("Animate") { CheckOnClick = true };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
@@ -169,7 +172,13 @@ namespace Bolsover.Gears.Gui.Views
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
             btnRemove.Click += (s, e) => _presenter.RemoveSelected();
             btnFitShift.Click += (s, e) => RunCommand(FitProfileShiftOfSelectedGear);
-            btnFit.Click += (s, e) => _viewport.FitView();
+            btnFit.Click += (s, e) =>
+            {
+                _viewport.FitView();
+                _view2D.FitView();
+            };
+            _btnPitchCircles.Click += (s, e) => _view2D.ShowPitchCircles = _btnPitchCircles.Checked;
+            _btnLabels.Click += (s, e) => _view2D.ShowLabels = _btnLabels.Checked;
             _btnWireframe.Click += (s, e) => RenderScene();
             _btnShafts.Click += (s, e) => RenderScene();
 
@@ -180,7 +189,7 @@ namespace Bolsover.Gears.Gui.Views
                 new ToolStripLabel("Input speed (rpm)"), new ToolStripControlHost(_numSpeed),
                 new ToolStripLabel("Input angle (deg)"), new ToolStripControlHost(_numAngle), new ToolStripSeparator(),
                 _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed), new ToolStripSeparator(),
-                _btnWireframe, _btnShafts, btnFit, new ToolStripSeparator(), _status
+                _btnWireframe, _btnShafts, _btnPitchCircles, _btnLabels, btnFit, new ToolStripSeparator(), _status
             });
 
             var leftSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
@@ -197,7 +206,10 @@ namespace Bolsover.Gears.Gui.Views
             AddTab(tabs, "Imperial reference", CreateImperialPanel());
 
             var rightSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
-            rightSplit.Panel1.Controls.Add(_host);
+            var viewTabs = new TabControl { Dock = DockStyle.Fill };
+            AddTab(viewTabs, "3D view", _host);
+            AddTab(viewTabs, "2D view", _view2D);
+            rightSplit.Panel1.Controls.Add(viewTabs);
             rightSplit.Panel2.Controls.Add(tabs);
 
             var mainSplit = new SplitContainer { Dock = DockStyle.Fill };
@@ -279,6 +291,7 @@ namespace Bolsover.Gears.Gui.Views
 
             _grid.PropertyValueChanged += (s, e) => BeginInvoke(new Action(_presenter.Refresh));
             _viewport.ItemPicked += tag => _presenter.Select(tag);
+            _view2D.ItemPicked += tag => _presenter.Select(tag);
 
             _numSpeed.ValueChanged += (s, e) => _presenter.Refresh();
             _numAngle.ValueChanged += (s, e) =>
@@ -664,6 +677,7 @@ namespace Bolsover.Gears.Gui.Views
         private void RenderScene()
         {
             _viewport.SetScene(_scene, _selected, _hidden, _btnWireframe.Checked, _btnShafts.Checked);
+            _view2D.SetScene(_scene, _selected, _hidden, _btnShafts.Checked);
         }
     }
 }

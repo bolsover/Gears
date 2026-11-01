@@ -114,3 +114,18 @@ All design parameters and calculations are metric. The **Imperial reference** ta
 * Every other length of the gear table (pitch, base, tip and root diameters, addendum, dedendum, face width, clearance, backlash and so on) follows, in millimetres and inches. The pitch diameter in inches equals `N / P`.
 * The lower table converts the lengths of the mesh (standard and working centre distance, working pitch diameters and so on).
 * The conversions are in `ImperialUnits` and `ImperialReference` (`Gears\Calculator\Assemblies\ImperialUnits.cs`). The values follow the relationships in *Elements of Metric Gear Technology*.
+
+
+
+## 2D view
+
+The area above the report tabs of the Gear Train form has two tabs: **3D view** (unchanged) and **2D view**. The 2D view draws the outline of every visible gear in the world X/Y plane, using the same solved scene as the 3D view.
+
+* Each gear is coloured by its shaft. The selected gear or shaft is drawn in orange. Gears hidden in the tree are not drawn.
+* Shafts are drawn as their projected outline (a circle when the shaft axis is perpendicular to the view, a bar when it is angled), controlled by the **Shafts** toolbar button.
+* **Pitch circles** shows the dashed pitch circle of each spur and helical gear, and **Labels** shows the gear names. Both toolbar buttons apply to the 2D view only.
+* The mouse wheel zooms about the cursor, dragging pans, and **Fit view** fits both views. The status line at the bottom shows the cursor position in millimetres and the scale.
+* Clicking a gear or shaft selects it in the tree, the property grid and the parameter tabs, as in the 3D view. A click near an outline also selects that gear.
+* The view follows the animation and every edit, so meshing gears can be checked as they turn.
+
+For bevel and worm gears the 2D view is the projection of the outline onto the X/Y plane. Pitch circles are only drawn for gears whose axis is perpendicular to the view.

@@ -176,6 +176,9 @@
     <Compile Include="Gui\HelixAssemblyViewport.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Gui\GearScene2DControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Gui\HelixMeshAdapter.cs" />
     <Compile Include="Gui\Presenters\AlibreGearPresenter.cs" />
     <Compile Include="Gui\Presenters\GearTrainPresenter.cs" />
