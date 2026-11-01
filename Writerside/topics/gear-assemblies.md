@@ -64,7 +64,7 @@ A 2:1 pair therefore has a gear addendum of `0.655 m` and a pinion addendum of `
 
 ## Gear train editor
 
-The editor (menu *Gear Train*) starts a train with a spur gear, a bevel gear, a worm or a planetary stage.
+The editor (`GearTrainForm`, the main window of the program) starts a train with a spur gear, a bevel gear, a worm or a planetary stage.
 *Add meshed gear* adds a parallel gear; *Add mate* adds a rack, bevel gear or worm wheel to the selected gear.
 The *File* menu saves and loads a train as JSON and exports the scene as STL or OBJ. *Animate* turns the input shaft
 at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
@@ -103,7 +103,7 @@ Select an involute gear in the editor to change these in the property grid. Mesh
 
 ## Gear and mesh parameter tables
 
-The Gear Train form has two tabs that list every calculated parameter, with its symbol, formula, value and unit. They use the same table as the single gear editor (`AlibreGearForm`), so the symbols and formulae are identical.
+The Gear Train form has two tabs that list every calculated parameter, with its symbol, formula, value and unit. They use the table calculated by `GearParameterCalculator`, with the symbols and formulae of *Elements of Metric Gear Technology*.
 
 - **Gear parameters** shows the table of the selected gear: module, pressure angle, tooth count, profile shift, pitch, base, tip and root diameters, addendum, dedendum, tooth thickness, and for helical gears the normal and transverse values. Select a gear in the tree or in the 3D view.
 - **Mesh parameters** shows the table of the mesh that drives the selected gear, or the first mesh it drives: standard and working centre distance, working pressure angle, centre distance increment factor, working involute function, contact ratios, gear ratio and, for a fixed centre distance, the working circular backlash.

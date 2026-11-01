@@ -1,9 +1,6 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
-using Bolsover.Gears.Calculator;
-using Bolsover.Gears.Gui;
 using Bolsover.Gears.Gui.Views;
-using Bolsover.Gears.Model;
 
 
 namespace Bolsover.Gears;
@@ -19,9 +16,6 @@ public class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
-
-        var form = new AlibreGearForm();
-       // var form = new GearForm();
-        Application.Run(form);
+        Application.Run(new GearTrainForm());
     }
 }

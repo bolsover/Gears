@@ -62,38 +62,14 @@
   &lt;Solution /&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=aabb4658_002De5a5_002D4032_002D9fed_002D5864cc6788a5/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Agent Session" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
-  &lt;Or&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestBevelGearTypes&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearTrainPhases3To7&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearTrainEditorPhases3To7&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearTrain&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearAssembly&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearAdjustments&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearScene2D&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestImperialUnits&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-  &lt;/Or&gt;&#xD;
+  &lt;Project Location="D:\02_Repository\02_Bolsover\28_Gears\UnitTests" Presentation="&amp;lt;UnitTests&amp;gt;" /&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FGearControlForm/@EntryIndexedValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FGearControlForm/@EntryIndexRemoved">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FGearControlView/@EntryIndexedValue">False</s:Boolean>
-	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FViews_002FAlibreGearForm/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FViews_002FAlibreGearForm/@EntryIndexedValue">False</s:Boolean>
+	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=GearsUI_002FGui_002FViews_002FAlibreGearForm/@EntryIndexRemoved">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/Initialized/@EntryValue">True</s:Boolean>
 	
 	

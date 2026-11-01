@@ -68,7 +68,7 @@ namespace Bolsover.Gears.Gui.Views
         {
             Text = "Gear Train";
             Size = new Size(1400, 860);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9f);
 
             _host.Child = _viewport;

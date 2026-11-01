@@ -167,12 +167,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Globals.cs" />
-    <Compile Include="Gui\AlibreGearPreviewControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Gui\HelixGearViewport.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Include="Gui\HelixAssemblyViewport.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -180,31 +174,14 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Gui\HelixMeshAdapter.cs" />
-    <Compile Include="Gui\Presenters\AlibreGearPresenter.cs" />
     <Compile Include="Gui\Presenters\GearTrainPresenter.cs" />
     <Compile Include="Gui\Presenters\TrainNodeProperties.cs" />
-    <Compile Include="Gui\Views\IAlibreGearView.cs" />
     <Compile Include="Gui\Views\IGearTrainView.cs" />
     <Compile Include="Gui\Views\GearTrainForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Gui\Views\AlibreGearForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Gui\Views\AlibreGearForm.Designer.cs">
-      <DependentUpon>AlibreGearForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Gui\Views\AddMeshedGearDialog.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Gui\Views\AddMeshedGearDialog.Designer.cs">
-      <DependentUpon>AddMeshedGearDialog.cs</DependentUpon>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-        <EmbeddedResource Include="Gui\Views\AlibreGearForm.resx">
-          <DependentUpon>AlibreGearForm.cs</DependentUpon>
-        </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

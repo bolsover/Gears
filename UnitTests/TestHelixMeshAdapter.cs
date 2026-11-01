@@ -104,41 +104,14 @@ namespace UnitTests
 
         [Test]
         [Apartment(System.Threading.ApartmentState.STA)]
-        public void HelixGearViewport_CanBeConstructed()
+        public void HelixAssemblyViewport_CanBeConstructed()
         {
-            var viewport = new HelixGearViewport();
+            var viewport = new HelixAssemblyViewport();
             Assert.IsNotNull(viewport);
             viewport.Measure(new System.Windows.Size(800, 600));
             viewport.Arrange(new System.Windows.Rect(0, 0, 800, 600));
             viewport.UpdateLayout();
             System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
-        }
-
-        [Test]
-        [Apartment(System.Threading.ApartmentState.STA)]
-        public void AlibreGearPreviewControl_SwitchTo3DView_DoesNotThrow()
-        {
-            using var preview = new AlibreGearPreviewControl();
-            var mesh = new GearMesh3DBuilder.Mesh3D();
-            mesh.Vertices.Add(new GearPoint3D(0, 0, 0));
-            mesh.Vertices.Add(new GearPoint3D(10, 0, 0));
-            mesh.Vertices.Add(new GearPoint3D(0, 10, 0));
-            mesh.TriangleIndices.Add(0);
-            mesh.TriangleIndices.Add(1);
-            mesh.TriangleIndices.Add(2);
-            mesh.CalculateNormals();
-
-            preview.Mesh = mesh;
-            preview.ViewMode = PreviewViewMode.Mode3D;
-            preview.Mode3D = Render3DMode.Solid;
-            preview.ResetView();
-
-            preview.Mode3D = Render3DMode.Wireframe;
-            preview.ResetView();
-
-            preview.ViewMode = PreviewViewMode.Mode2D;
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
-            Assert.Pass();
         }
     }
 }
