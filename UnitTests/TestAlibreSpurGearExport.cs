@@ -362,6 +362,14 @@ namespace UnitTests
         }
 
         [Test]
+        public void Exporter_PatternsTheRackAlongXWithASecondDirectionAlongY()
+        {
+            Assert.AreEqual("X-Axis", AlibreGearExporter.RackPatternAxisName);
+            Assert.AreEqual("Y-Axis", AlibreGearExporter.RackPatternSecondAxisName,
+                "Alibre rejects a linear pattern without a valid second axis ('The given second axis object is not valid').");
+        }
+
+        [Test]
         public void Exporter_OrientsTheHelicalBossParallelToTheAxis()
         {
             Assert.IsTrue(AlibreGearExporter.HelicalBossParallelOriented,

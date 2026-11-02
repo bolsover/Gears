@@ -34,10 +34,18 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string RackPatternAxisName = "X-Axis";
 
         /// <summary>
+        /// Name of the default axis of a new Alibre part used as the second pattern direction of the rack pattern. Alibre rejects a linear
+        /// pattern without a valid second axis ("The given second axis object is not valid") even when the second direction has a single
+        /// instance, so the rack pattern is made two-directional with one instance in this direction.
+        /// </summary>
+        public const string RackPatternSecondAxisName = "Y-Axis";
+        
+       
+        /// <summary>
         /// Name of the default plane that holds the sweep path of a helical rack tooth: it lies in a plane that contains the part
         /// axis. Sketch x is the global X; sketch y is the global Z when <see cref="AxialPlaneSketchYIsNegativeZ"/> is false.
         /// </summary>
-        public const string AxialSketchPlaneName = "XZ-Plane";
+        public const string AxialSketchPlaneName = "ZX-Plane";
 
         /// <summary>
         /// Set to true when Alibre's sketch y axis on the XZ plane points along -Z, so that the helical rack sweep path is drawn
@@ -224,17 +232,20 @@ namespace Bolsover.Gears.Calculator.Alibre
         }
 
         /// <summary>
-        /// Patterns the single rack tooth along the rack. Alibre can accept the call and still report the pattern feature as failed, which
-        /// leaves a single tooth, so each attempt is checked and the next argument form is tried: the plain 1D pattern, the same with a
-        /// real second-direction spacing and numeric counts passed as doubles, and the same patterning the geometry directly.
+        /// Patterns the single rack tooth along the rack. Alibre needs a valid second axis and a non-zero second spacing even for a pattern
+        /// in one direction (it rejects a null second axis, a zero second spacing and counts passed as doubles), so the second direction is the
+        /// <see cref="RackPatternSecondAxisName"/> with a single instance. Alibre can accept the call and still report the pattern feature as
+        /// failed, which leaves a single tooth, so each attempt is checked and the next form is tried: first as configured, then patterning
+        /// the geometry directly (or the feature, if the geometry was tried first).
         /// Throws <see cref="InvalidOperationException"/> when no attempt gives a valid pattern.
         /// </summary>
         private void AddRackPattern(IADPartSession session, IADPartFeature tooth, RackToothSketch plan)
         {
             var axis = session.DesignAxes.Item(RackPatternAxisName);
+            var secondAxis = session.DesignAxes.Item(RackPatternSecondAxisName);
             var failures = new List<string>();
 
-            for (var attempt = 0; attempt < 3; attempt++)
+            for (var attempt = 0; attempt < 2; attempt++)
             {
                 IADLinearPatternFeature pattern = null;
                 try
@@ -242,13 +253,10 @@ namespace Bolsover.Gears.Calculator.Alibre
                     var targets = _root.NewObjectCollector();
                     targets.Add(tooth);
 
-                    object count = attempt == 0 ? (object)plan.Teeth : (double)plan.Teeth;
-                    object secondCount = attempt == 0 ? (object)1 : 1.0;
-                    var secondDistance = attempt == 0 ? 0.0 : plan.Pitch;
-                    var patternGeometry = attempt == 2 ? !PatternGeometry : PatternGeometry;
+                    var patternGeometry = attempt == 1 ? !PatternGeometry : PatternGeometry;
 
-                    pattern = session.Features.AddLinearFeaturePattern(targets, count, plan.Pitch, null, axis, false, secondCount, secondDistance,
-                        null, null, false, patternGeometry, RackPatternFeatureName);
+                    pattern = session.Features.AddLinearFeaturePattern(targets, plan.Teeth, plan.Pitch, null, axis, false, 1, plan.Pitch,
+                        null, secondAxis, false, patternGeometry, RackPatternFeatureName);
 
                     if (pattern != null && !pattern.HasError) return;
                     failures.Add($"attempt {attempt + 1}: Alibre reports an error in the pattern feature");
