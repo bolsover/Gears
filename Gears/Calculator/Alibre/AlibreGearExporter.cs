@@ -45,11 +45,11 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// Name of the default plane that holds the sweep path of a helical rack tooth: it lies in a plane that contains the part
         /// axis. Sketch x is the global X; sketch y is the global Z when <see cref="AxialPlaneSketchYIsNegativeZ"/> is false.
         /// </summary>
-        public const string AxialSketchPlaneName = "ZX-Plane";
+        private const string AxialSketchPlaneName = "ZX-Plane";
 
         /// <summary>
-        /// Set to true when Alibre's sketch y axis on the XZ plane points along -Z, so that the helical rack sweep path is drawn
-        /// mirrored in y and still runs along +Z. This has not been checked inside Alibre.
+        /// Set to true when Alibre's sketch y axis on the ZX plane points along -Z, so that the helical rack sweep path is drawn
+        /// mirrored in y and still runs along +Z. This has been checked inside Alibre.
         /// </summary>
         public bool AxialPlaneSketchYIsNegativeZ { get; set; }
 
