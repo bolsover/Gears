@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Bolsover.Gears.Calculator;
@@ -239,7 +243,12 @@ namespace Bolsover.Gears.Gui.Views
             _btnWireframe.Click += (s, e) => RenderScene();
             _btnShafts.Click += (s, e) => RenderScene();
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation });
+            var menuHelp = new ToolStripMenuItem("&Help");
+            menuHelp.DropDownItems.Add("&About", null, (s, e) => ShowAbout());
+            menuHelp.DropDownItems.Add("&Help", null, (s, e) => OpenDocument("README.md", false));
+            menuHelp.DropDownItems.Add("&License", null, (s, e) => OpenDocument("LICENSE", true));
+
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation, menuHelp });
             MainMenuStrip = menu;
 
             var statusBar = new StatusStrip();
@@ -802,6 +811,61 @@ namespace Bolsover.Gears.Gui.Views
                 yield return node;
                 foreach (var child in Flatten(node.Nodes)) yield return child;
             }
+        }
+
+        /// <summary>
+        /// Shows a modal message with the copyright statement and version number from the assembly information.
+        /// </summary>
+        private void ShowAbout()
+        {
+            var assembly = typeof(GearTrainForm).Assembly;
+            var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "Gear Train";
+            var copyright = assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright ?? string.Empty;
+            var version = assembly.GetName().Version;
+            MessageBox.Show(this, $"{title}\nVersion {version}\n\n{copyright}", "About Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Opens a document that ships with the program (looked up next to the assembly, then in the parent folders).
+        /// </summary>
+        private void OpenDocument(string fileName, bool useNotepad)
+        {
+            var path = FindDocument(fileName);
+            if (path == null)
+            {
+                MessageBox.Show(this, $"The file {fileName} was not found.", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                if (useNotepad) Process.Start("notepad.exe", "\"" + path + "\"");
+                else Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            }
+            catch (Win32Exception)
+            {
+                try
+                {
+                    Process.Start("notepad.exe", "\"" + path + "\"");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, $"Could not open {path}.\n{ex.Message}", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+        private static string FindDocument(string fileName)
+        {
+            var folder = Path.GetDirectoryName(typeof(GearTrainForm).Assembly.Location);
+            while (!string.IsNullOrEmpty(folder))
+            {
+                var candidate = Path.Combine(folder, fileName);
+                if (File.Exists(candidate)) return candidate;
+                folder = Path.GetDirectoryName(folder);
+            }
+
+            return null;
         }
 
         private void RenderScene()
