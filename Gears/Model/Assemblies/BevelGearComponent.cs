@@ -131,6 +131,42 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Number of teeth of the virtual spur gear used for the tooth profile.</summary>
         public int VirtualTeeth => Math.Max(Teeth, (int)Math.Round(Teeth / Math.Cos(PitchConeAngleRad)));
 
+        /// <summary>
+        /// Dedendum angle (rad) at the cone distance: <c>atan(hf / Re)</c>. The root cone angle is the pitch cone angle less this
+        /// angle.
+        /// </summary>
+        public double DedendumAngleRad => Math.Atan(Dedendum / ConeDistance);
+
+        /// <summary>
+        /// Addendum angle (rad). Standard: <c>atan(ha / Re)</c>. Gleason: the dedendum angle of the mating gear, whose dedendum
+        /// is the clearance plus this gear's addendum, so the tip cone runs parallel to the root cone of the mate and the
+        /// clearance stays constant along the face (as in the HZPT/KHK tables).
+        /// </summary>
+        public double AddendumAngleRad =>
+            BevelType == BevelGearType.Gleason
+                ? Math.Atan((Clearance + Addendum) / ConeDistance)
+                : Math.Atan(Addendum / ConeDistance);
+
+        public double DedendumAngleDeg => DedendumAngleRad * 180.0 / Math.PI;
+
+        public double AddendumAngleDeg => AddendumAngleRad * 180.0 / Math.PI;
+
+        /// <summary>Tip (face) cone angle in degrees: pitch cone angle plus addendum angle.</summary>
+        public double TipConeAngleDeg => PitchConeAngleDeg + AddendumAngleDeg;
+
+        /// <summary>Root cone angle in degrees: pitch cone angle minus dedendum angle.</summary>
+        public double RootConeAngleDeg => PitchConeAngleDeg - DedendumAngleDeg;
+
+        /// <summary>Outside (tip) diameter at the large end (mm): <c>d + 2 ha cos(delta)</c>.</summary>
+        public double TipDiameter => PitchDiameter + 2.0 * Addendum * Math.Cos(PitchConeAngleRad);
+
+        /// <summary>Distance along the axis from the pitch cone apex to the crown (the tip at the large end) (mm): <c>Re cos(delta) - ha sin(delta)</c>.</summary>
+        public double PitchApexToCrown =>
+            ConeDistance * Math.Cos(PitchConeAngleRad) - Addendum * Math.Sin(PitchConeAngleRad);
+
+        /// <summary>Usual upper limit of the face width (mm): one third of the cone distance, but not more than ten modules.</summary>
+        public double RecommendedMaxFaceWidth => Math.Min(ConeDistance / 3.0, 10.0 * Module);
+
         public void Validate()
         {
             if (Teeth < 5) throw new InvalidOperationException($"Bevel gear '{Id}': the number of teeth must be at least 5.");
@@ -162,7 +198,12 @@ namespace Bolsover.Gears.Model.Assemblies
             var profile = AlibreGearGenerator.GenerateExternalToothProfile(
                 virtualTeeth, Module, PressureAngleDeg, ProfileShiftMm, false, null, Clearance, Backlash, 0.0);
 
-            var radiusScale = Teeth / (double)virtualTeeth;
+            // Radial distances from the pitch circle shrink by cos(delta) when the back cone profile is projected onto the large-end
+            // plane, so the tip and root radii are exactly d/2 + ha cos(delta) and d/2 - hf cos(delta). The angle is stretched so
+            // that the tooth pitch on the pitch circle is that of the real gear.
+            var pitchRadius = PitchDiameter / 2.0;
+            var virtualPitchRadius = Module * virtualTeeth / 2.0;
+            var radialScale = Math.Cos(PitchConeAngleRad);
             var angleScale = virtualTeeth / (double)Teeth;
             var tooth = new List<List<GearPoint>>();
             foreach (var segment in AlibreGearGenerator.BuildToothOutline(profile, false))
@@ -170,7 +211,7 @@ namespace Bolsover.Gears.Model.Assemblies
                 var mapped = new List<GearPoint>(segment.Count);
                 foreach (var point in segment)
                 {
-                    var radius = Math.Sqrt(point.X * point.X + point.Y * point.Y) * radiusScale;
+                    var radius = pitchRadius + (Math.Sqrt(point.X * point.X + point.Y * point.Y) - virtualPitchRadius) * radialScale;
                     var angle = Math.Atan2(point.Y, point.X) * angleScale;
                     mapped.Add(new GearPoint(radius * Math.Cos(angle), radius * Math.Sin(angle)));
                 }
@@ -181,10 +222,13 @@ namespace Bolsover.Gears.Model.Assemblies
             var polylines = AlibreGearGenerator.BuildFullGear(Teeth, tooth);
             var outline = SolidMeshBuilder.Flatten(polylines);
 
+            // The tooth ends are square to the pitch cone (back cone at the large end) and every tooth edge runs to the apex,
+            // so the tip, pitch and root cones meet at one point as in the usual drawings.
             var cone = PitchConeAngleRad;
             var halfAxial = FaceWidth * Math.Cos(cone) / 2.0;
             var smallEndScale = (ConeDistance - FaceWidth) / ConeDistance;
-            var mesh = SolidMeshBuilder.Loft(outline, halfAxial, smallEndScale, -halfAxial, 1.0, true);
+            var tanCone = Math.Cos(cone) > 0.05 ? Math.Tan(cone) : 0.0;
+            var mesh = SolidMeshBuilder.LoftToApex(outline, -halfAxial, PitchDiameter / 2.0, tanCone, ApexAxialPosition, smallEndScale);
 
             return new GearGeometry(profile, polylines, mesh);
         }

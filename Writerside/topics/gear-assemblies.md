@@ -27,11 +27,13 @@ A component's *phase* is its rotation about its axis in radians. For a rack the 
 ### Bevel gears (Tredgold)
 
 * Pitch cone angle: `tan(delta1) = sin(sigma) / (z2 / z1 + cos(sigma))`, and `delta1 + delta2 = sigma` (the shaft angle).
-* The tooth profile is the involute profile of a virtual spur gear with `Zv = z / cos(delta)` teeth, mapped onto the plane
-  perpendicular to the axis (radius times `z / Zv`, angle times `Zv / z`), then scaled towards the cone apex by
+* The tooth profile is the involute profile of a virtual spur gear with `Zv = z / cos(delta)` teeth, mapped onto the large-end
+  plane (radial distances from the pitch circle times `cos(delta)`, angle times `Zv / z`), then scaled towards the cone apex by
   `(Re - b) / Re` at the small end. `Re` is the cone distance and `b` the face width along the cone.
 * Both cone apexes coincide. The tooth phase is the same as for an external spur pair, and the speed ratio is `-z1 / z2`.
 * A bevel gear can mesh with one mate only: the solver sets the mate's tooth count, shaft angle and bevel type on both gears.
+* The property grid also reports the quantities of the usual bevel gear tables (for example KHK / HZPT): dedendum angle `atan(hf / Re)`, addendum angle (Standard `atan(ha / Re)`; Gleason: the dedendum angle of the mate), tip cone angle `delta + theta_a`, root cone angle `delta - theta_f`, tip diameter `d + 2 ha cos(delta)`, pitch apex to crown `Re cos(delta) - ha sin(delta)` and the recommended face width limit (the smaller of `Re / 3` and `10 m`).
+* The 3D solid and the 2D outline are built from the same large-end profile, so the tip and root radii are exactly `d/2 + ha cos(delta)` and `d/2 - hf cos(delta)`. At the large end every profile point lies on the back cone (the surface perpendicular to the pitch cone), so the tooth tips sit nearer the apex than the pitch circle, by `ha sin(delta)`, as in the usual section drawings. The small end is the large end scaled about the pitch apex, so the tooth edges, tip lines and root lines all run to the apex. For Standard teeth this gives exactly the tip and root cones of the tables. For Gleason teeth the tables use a constant-clearance taper; the solid keeps the proportional taper, so the tooth depth at the small end differs slightly (a few hundredths of a millimetre for a face width of one third of the cone distance).
 
 #### Standard and Gleason tooth proportions
 

@@ -94,6 +94,84 @@ namespace Bolsover.Gears.Calculator.Assemblies
             return mesh;
         }
 
+        /// <summary>
+        /// Lofts the outline of a straight bevel gear towards the cone apex on the +Z axis. At the large end every outline point
+        /// lies on the surface perpendicular to the pitch cone (the back cone): a point at radius <c>r</c> sits at
+        /// <c>zLarge + (r - pitchRadius) tan(delta)</c>, so tooth tips are set back towards the apex relative to the pitch circle,
+        /// as in the usual bevel gear drawings. The small end is the large end scaled about the apex by
+        /// <paramref name="smallEndScale"/>, so all tooth edges, tip lines and root lines run through the apex.
+        /// </summary>
+        /// <param name="zLarge">Z of the pitch circle at the large end.</param>
+        /// <param name="pitchRadius">Pitch radius at the large end.</param>
+        /// <param name="tanCone">Tangent of the pitch cone half angle; zero gives flat ends perpendicular to the axis.</param>
+        /// <param name="apexZ">Z of the cone apex.</param>
+        /// <param name="smallEndScale">Scale about the apex of the small end relative to the large end.</param>
+        public static GearMesh3DBuilder.Mesh3D LoftToApex(
+            IReadOnlyList<GearPoint> outline,
+            double zLarge,
+            double pitchRadius,
+            double tanCone,
+            double apexZ,
+            double smallEndScale)
+        {
+            var mesh = new GearMesh3DBuilder.Mesh3D();
+            if (outline == null || outline.Count < 3) return mesh;
+
+            var pts = new List<GearPoint>(outline);
+            if (SignedArea(pts) < 0) pts.Reverse();
+            var n = pts.Count;
+
+            double LargeZ(double radius) => zLarge + (radius - pitchRadius) * tanCone;
+            GearPoint3D Large(GearPoint p) => new GearPoint3D(p.X, p.Y, LargeZ(Math.Sqrt(p.X * p.X + p.Y * p.Y)));
+            GearPoint3D Small(GearPoint3D p) =>
+                new GearPoint3D(p.X * smallEndScale, p.Y * smallEndScale, apexZ + (p.Z - apexZ) * smallEndScale);
+
+            var large = new GearPoint3D[n];
+            var small = new GearPoint3D[n];
+            var minRadius = double.MaxValue;
+            for (var i = 0; i < n; i++)
+            {
+                large[i] = Large(pts[i]);
+                small[i] = Small(large[i]);
+                minRadius = Math.Min(minRadius, Math.Sqrt(pts[i].X * pts[i].X + pts[i].Y * pts[i].Y));
+            }
+
+            // Side faces: one quad per outline segment with its own four vertices (small end first, as in Loft).
+            for (var i = 0; i < n; i++)
+            {
+                var j = (i + 1) % n;
+                var baseIndex = mesh.Vertices.Count;
+                mesh.Vertices.Add(small[i]);
+                mesh.Vertices.Add(large[i]);
+                mesh.Vertices.Add(large[j]);
+                mesh.Vertices.Add(small[j]);
+                mesh.TriangleIndices.AddRange(new[] { baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3 });
+            }
+
+            // Caps: a fan from the axis at the level of the root circle (the flat inside of the blank).
+            var centreLarge = new GearPoint3D(0.0, 0.0, LargeZ(minRadius));
+            AddConeCap(mesh, small, Small(centreLarge), true);
+            AddConeCap(mesh, large, centreLarge, false);
+            mesh.CalculateNormals();
+            return mesh;
+        }
+
+        private static void AddConeCap(GearMesh3DBuilder.Mesh3D mesh, GearPoint3D[] ring, GearPoint3D centre, bool facesUp)
+        {
+            var n = ring.Length;
+            var ringStart = mesh.Vertices.Count;
+            mesh.Vertices.AddRange(ring);
+            var centreIndex = mesh.Vertices.Count;
+            mesh.Vertices.Add(centre);
+            for (var i = 0; i < n; i++)
+            {
+                var a = ringStart + i;
+                var b = ringStart + (i + 1) % n;
+                if (facesUp) mesh.TriangleIndices.AddRange(new[] { centreIndex, a, b });
+                else mesh.TriangleIndices.AddRange(new[] { centreIndex, b, a });
+            }
+        }
+
         private static void AddCap(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> pts, double z, double scale, bool facesUp, bool starShaped,
             double shearX = 0.0)
         {

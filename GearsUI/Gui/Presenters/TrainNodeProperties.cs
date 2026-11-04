@@ -462,6 +462,35 @@ namespace Bolsover.Gears.Gui.Presenters
         [Category("Cone")]
         [DisplayName("Virtual teeth (Tredgold)")]
         public int VirtualTeeth => _gear.VirtualTeeth;
+
+        [Category("Cone")]
+        [DisplayName("Dedendum angle (deg)")]
+        public double DedendumAngle => _gear.DedendumAngleDeg;
+
+        [Category("Cone")]
+        [DisplayName("Addendum angle (deg)")]
+        public double AddendumAngle => _gear.AddendumAngleDeg;
+
+        [Category("Cone")]
+        [DisplayName("Tip cone angle (deg)")]
+        public double TipConeAngle => _gear.TipConeAngleDeg;
+
+        [Category("Cone")]
+        [DisplayName("Root cone angle (deg)")]
+        public double RootConeAngle => _gear.RootConeAngleDeg;
+
+        [Category("Cone")]
+        [DisplayName("Tip diameter (mm)")]
+        public double TipDiameter => _gear.TipDiameter;
+
+        [Category("Cone")]
+        [DisplayName("Pitch apex to crown (mm)")]
+        public double PitchApexToCrown => _gear.PitchApexToCrown;
+
+        [Category("Cone")]
+        [DisplayName("Recommended max face width (mm)")]
+        [Description("One third of the cone distance, but not more than ten modules.")]
+        public double RecommendedMaxFaceWidth => _gear.RecommendedMaxFaceWidth;
     }
 
     /// <summary>Editable view of a worm in the property grid.</summary>

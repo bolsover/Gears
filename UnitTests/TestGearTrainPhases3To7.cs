@@ -525,14 +525,15 @@ namespace UnitTests
             var geometry = g1.BuildGeometry();
 
             AssertValidMesh(geometry.Mesh, "bevel");
-            var cone = g1.PitchConeAngleRad;
-            var halfAxial = g1.FaceWidth * Math.Cos(cone) / 2.0;
-            var bigEnd = geometry.Mesh.Vertices.Where(v => Math.Abs(v.Z + halfAxial) < 1e-9).Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)).Max();
-            var smallEnd = geometry.Mesh.Vertices.Where(v => Math.Abs(v.Z - halfAxial) < 1e-9).Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)).Max();
+            // The tooth ends are square to the pitch cone, so the ends are told apart by their distance from the apex.
+            var apexZ = g1.ApexAxialPosition;
+            double FromApex(Bolsover.Gears.Model.GearPoint3D v) => Math.Sqrt(v.X * v.X + v.Y * v.Y + (v.Z - apexZ) * (v.Z - apexZ));
+            var bigEnd = geometry.Mesh.Vertices.Where(v => FromApex(v) >= g1.ConeDistance - 1e-9).Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)).Max();
+            var smallEnd = geometry.Mesh.Vertices.Where(v => FromApex(v) < g1.ConeDistance - 1e-9).Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)).Max();
             Assert.AreEqual((g1.ConeDistance - g1.FaceWidth) / g1.ConeDistance, smallEnd / bigEnd, 1e-6);
 
-            var expectedTip = g1.Module * (g1.Teeth / 2.0 + g1.Teeth / (double)g1.VirtualTeeth);
-            Assert.AreEqual(expectedTip, bigEnd, 1e-3, "Tip radius = pitch radius + addendum * z / Zv.");
+            var expectedTip = g1.PitchDiameter / 2.0 + g1.Addendum * Math.Cos(g1.PitchConeAngleRad);
+            Assert.AreEqual(expectedTip, bigEnd, 1e-6, "Tip radius = pitch radius + addendum * cos(delta).");
             Assert.Greater(g1.VirtualTeeth, g1.Teeth);
         }
 
