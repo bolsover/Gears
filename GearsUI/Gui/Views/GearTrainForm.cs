@@ -61,6 +61,11 @@ namespace Bolsover.Gears.Gui.Views
             Enabled = false,
             ToolTipText = "Create the selected gear as a new Alibre part. Involute gears (external or internal, spur or helical) and worm wheels: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Racks (straight or helical): one tooth cell, extruded (swept along a slanted path for a helical rack) and linear-patterned. Worms: a core cylinder with a helical thread. Available when the editor runs inside Alibre Design."
         };
+        private readonly ToolStripMenuItem _btnExportAlibreAssembly = new ToolStripMenuItem("Export Assembly to Alibre")
+        {
+            Enabled = false,
+            ToolTipText = "Create a new Alibre assembly from the gear train (two or more gears). Each gear is added as a new part, built like the single gear export and placed at its shaft position. Available when the editor runs inside Alibre Design."
+        };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
@@ -97,6 +102,7 @@ namespace Bolsover.Gears.Gui.Views
             {
                 _alibreExporter = value;
                 _btnExportAlibre.Enabled = value != null;
+                _btnExportAlibreAssembly.Enabled = value != null;
             }
         }
 
@@ -192,6 +198,7 @@ namespace Bolsover.Gears.Gui.Views
             ddFile.DropDownItems.Add("Export OBJ…", null, (s, e) => ExportScene(true));
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add(_btnExportAlibre);
+            ddFile.DropDownItems.Add(_btnExportAlibreAssembly);
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
@@ -216,6 +223,7 @@ namespace Bolsover.Gears.Gui.Views
             });
 
             _btnExportAlibre.Click += (s, e) => RunCommand(ExportSelectedGearToAlibre);
+            _btnExportAlibreAssembly.Click += (s, e) => RunCommand(ExportAssemblyToAlibre);
             btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
             btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
@@ -434,6 +442,36 @@ namespace Bolsover.Gears.Gui.Views
             {
                 if (dialog.ShowDialog(this) == DialogResult.OK) _presenter.Export(dialog.FileName, _btnShafts.Checked);
             }
+        }
+
+        private void ExportAssemblyToAlibre()
+        {
+            if (_alibreExporter == null)
+            {
+                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
+                return;
+            }
+
+            var count = _presenter.Assembly.Components.Count();
+            if (count < AlibreGearExporter.MinimumAssemblyParts)
+            {
+                ShowMessage($"Add at least {AlibreGearExporter.MinimumAssemblyParts} gears to the train to export an assembly to Alibre.", true);
+                return;
+            }
+
+            ShowMessage($"Exporting {count} gears to a new Alibre assembly…", false);
+            try
+            {
+                _alibreExporter.ExportAssembly(_presenter.Assembly);
+            }
+            catch (Exception ex)
+            {
+                ShowMessage(ex.Message, true);
+                MessageBox.Show(this, ex.Message, "Export Assembly to Alibre", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            ShowMessage($"Exported {count} gears to a new Alibre assembly, each as a new part. Log: {_alibreExporter.LastExportLog}", false);
         }
 
         private void ExportSelectedGearToAlibre()
