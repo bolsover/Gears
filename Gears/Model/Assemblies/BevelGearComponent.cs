@@ -293,7 +293,7 @@ namespace Bolsover.Gears.Model.Assemblies
         }
 
         /// <summary>Shift along the axis from the blank frame (X along the axis, apex towards negative X) to the local frame (Z axis, apex on +Z): z = offset - x.</summary>
-        private double BlankAxialOffset => -FaceWidth * Math.Cos(PitchConeAngleRad) / 2.0;
+        public double BlankAxialOffset => -FaceWidth * Math.Cos(PitchConeAngleRad) / 2.0;
 
         /// <summary>The closed profile sketch of the gear blank, with the proportions of this gear and its mate.</summary>
         public BevelBlankProfile CreateBlankProfile()

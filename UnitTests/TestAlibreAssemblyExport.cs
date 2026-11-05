@@ -58,15 +58,16 @@ namespace UnitTests
         }
 
         [Test]
-        public void GetAssemblyParts_RejectsBevelGears()
+        public void GetAssemblyParts_IncludesBevelGears()
         {
             var assembly = new GearAssembly();
             var s1 = assembly.AddShaft(new Shaft("s1"));
             s1.Mount(Gear("g1"));
             s1.Mount(new BevelGearComponent("b1"), 20.0);
 
-            var ex = Assert.Throws<InvalidOperationException>(() => AlibreGearExporter.GetAssemblyParts(assembly));
-            StringAssert.Contains("b1", ex.Message);
+            var parts = AlibreGearExporter.GetAssemblyParts(assembly);
+
+            CollectionAssert.AreEqual(new[] { "g1", "b1" }, parts.Select(p => p.Key.Id).ToArray());
         }
 
         [Test]
@@ -142,7 +143,7 @@ namespace UnitTests
             Assert.IsTrue(AlibreGearExporter.IsExportable(new RackComponent("r")));
             Assert.IsTrue(AlibreGearExporter.IsExportable(new WormComponent("w")));
             Assert.IsTrue(AlibreGearExporter.IsExportable(new WormWheelComponent("ww")));
-            Assert.IsFalse(AlibreGearExporter.IsExportable(new BevelGearComponent("b")));
+            Assert.IsTrue(AlibreGearExporter.IsExportable(new BevelGearComponent("b")));
         }
     }
 }

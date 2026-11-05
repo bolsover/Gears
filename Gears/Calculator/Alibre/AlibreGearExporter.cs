@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using AlibreX;
 using Bolsover.Gears.Model.Assemblies;
@@ -60,6 +61,25 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string RackPatternFeatureName = "RackTeeth";
         public const string ToothFeatureName = "Tooth";
         public const string PatternFeatureName = "ToothPattern";
+
+        /// <summary>Name of the default plane of a new Alibre part that the back cone plane of a bevel gear is first offset from.</summary>
+        public const string BevelOffsetFromPlaneName = "YZ-Plane";
+
+        /// <summary>Name of the default axis of a new Alibre part that the bevel gear blank is revolved and the valleys are patterned about.</summary>
+        public const string BevelGearAxisName = "X-Axis";
+
+        public const string BevelBlankSketchName = "GearBlankProfile";
+        public const string BevelBlankFeatureName = "GearBlank";
+        public const string BevelOffsetPlaneName = "BackConeOffsetPlane";
+        public const string BevelConeAxisName = "BackConeAxis";
+        public const string BevelConePlaneName = "BackConePlane";
+        public const string BevelToothSketchName = "ToothValleyProfile";
+        public const string BevelNodeSketchName = "ApexNode";
+        public const string BevelValleyFeatureName = "ToothValley";
+        public const string BevelPatternFeatureName = "ToothValleyPattern";
+
+        /// <summary>Largest distance, in Alibre units (centimetres), between where a new plane should be and where Alibre put it.</summary>
+        private const double PlaneTolerance = 1e-4;
 
         private readonly IADRoot _root;
 
@@ -281,6 +301,360 @@ namespace Bolsover.Gears.Calculator.Alibre
                 $"the linear pattern of {plan.Teeth} teeth along {RackPatternAxisName} was not accepted ({string.Join("; ", failures)})");
         }
 
+        /// <summary>
+        /// Creates a straight bevel gear in a new Alibre part, following the construction of the 3D view in the editor:
+        /// 1. a sketch of the closed gear blank profile on the XY plane (gear axis along X), with a sketch node at the apex of the front cone,
+        /// 2. a revolve of the blank about the X axis,
+        /// 3. a plane offset from the YZ plane to the point where the back cone meets the X axis, an axis where that plane meets the XY
+        ///    plane, and a plane turned about that axis to lie on the back cone,
+        /// 4. a sketch of one tooth valley (Tredgold, with trochoidal root fillets) on the back cone plane,
+        /// 5. a loft cut from the valley sketch to the apex node,
+        /// 6. a circular pattern of the cut about the X axis, which forms all the teeth.
+        /// The bore and hub of the editor model are not part of the export.
+        /// </summary>
+        public IADPartSession Export(BevelGearComponent gear)
+        {
+            var plan = BevelGearSketch.Build(gear);
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(plan.PartName);
+                var xyPlane = session.DesignPlanes.Item(SketchPlaneName);
+                var gearAxis = session.DesignAxes.Item(BevelGearAxisName);
+
+                stage = "adding the gear blank sketch on the " + SketchPlaneName;
+                var blankSketch = session.Sketches.AddSketch(null, xyPlane, BevelBlankSketchName);
+
+                stage = "drawing the gear blank profile";
+                var closed = DrawFigures(blankSketch, plan.BlankFigures, null);
+
+                stage = "adding the sketch node at the apex of the front cone";
+                var apexNode = AddSketchNode(blankSketch, plan.ApexNodeX);
+
+                stage = "revolving the gear blank about the " + BevelGearAxisName;
+                IADPartFeature blank;
+                try
+                {
+                    blank = session.Features.AddRevolvedBoss(blankSketch, null, gearAxis, 2.0 * Math.PI, BevelBlankFeatureName);
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the gear blank sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(blank, "The revolved gear blank");
+
+                stage = "adding a plane offset from the " + BevelOffsetFromPlaneName + " to the back cone apex";
+                var offsetPlane = AddBackConeOffsetPlane(session, plan);
+
+                stage = "adding an axis where the offset plane meets the " + SketchPlaneName;
+                var coneAxis = session.DesignAxes.CreateBy2Planes(null, offsetPlane, null, xyPlane, BevelConeAxisName);
+
+                stage = "adding a plane on the back cone";
+                var conePlane = AddBackConePlane(session, offsetPlane, coneAxis, plan);
+
+                stage = "adding the tooth valley sketch on the back cone plane";
+                var toothSketch = session.Sketches.AddSketch(null, conePlane, BevelToothSketchName);
+
+                stage = "locating the axes of the back cone plane sketch";
+                var map = SketchMap.Create(session, toothSketch, plan);
+
+                stage = "drawing the tooth valley profile";
+                var toothClosed = DrawMappedFigures(toothSketch, plan.ToothFigures, map);
+
+                stage = "cutting a tooth valley with a loft to the apex node";
+                IADPartFeature valley;
+                try
+                {
+                    valley = AddValleyLoftCut(session, toothSketch, apexNode, plan, xyPlane);
+                }
+                catch (InvalidOperationException) when (!toothClosed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the tooth valley sketch is not closed.");
+                }
+
+                stage = "patterning the tooth valley about the " + BevelGearAxisName;
+                var targets = _root.NewObjectCollector();
+                targets.Add(valley);
+                var pattern = session.Features.AddCircularFeaturePattern(targets, plan.Teeth, plan.PatternAngle, null, gearAxis, false,
+                    PatternGeometry, BevelPatternFeatureName);
+                CheckFeature(pattern, "The circular pattern of the tooth valley");
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of bevel gear '{gear.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>Adds a sketch node on the X axis (the apex of the front cone) to an open or closed sketch; returns the sketch point.</summary>
+        private static object AddSketchNode(IADSketch sketch, double x)
+        {
+            sketch.BeginChange();
+            try
+            {
+                return sketch.Figures.AddSketchPoint(x, 0.0);
+            }
+            finally
+            {
+                sketch.EndChange();
+            }
+        }
+
+        /// <summary>
+        /// Adds the plane offset from the YZ plane to the point where the back cone meets the X axis. Alibre's offset direction is not
+        /// known in advance, so the plane is read back and, when it is on the wrong side, replaced by the plane offset the other way.
+        /// </summary>
+        private static IADDesignPlane AddBackConeOffsetPlane(IADPartSession session, BevelGearSketch plan)
+        {
+            var yzPlane = session.DesignPlanes.Item(BevelOffsetFromPlaneName);
+            string found = null;
+            foreach (var sign in new[] { 1.0, -1.0 })
+            {
+                var plane = session.DesignPlanes.CreateAtOffsetToPlane(null, yzPlane, sign * plan.BackConeApexX, BevelOffsetPlaneName);
+                if (!TryReadPlane(plane, out _, out var point) || Math.Abs(point[0] - plan.BackConeApexX) <= PlaneTolerance) return plane;
+
+                found = string.Format(CultureInfo.InvariantCulture, "{0:0.######}", point[0]);
+                DeleteQuietly(plane);
+            }
+
+            throw new InvalidOperationException(
+                $"the plane offset from the {BevelOffsetFromPlaneName} is at X = {found} instead of {plan.BackConeApexX.ToString("0.######", CultureInfo.InvariantCulture)}");
+        }
+
+        /// <summary>
+        /// Adds the plane that lies on the back cone: the offset plane turned about the axis by the pitch cone angle so that it holds the
+        /// back cone line from pointC to pointA. The direction of the new axis is not known in advance, so the plane is read back and,
+        /// when it does not hold the back cone line, replaced by the plane turned the other way.
+        /// </summary>
+        private static IADDesignPlane AddBackConePlane(IADPartSession session, IADDesignPlane offsetPlane, IADDesignAxis axis, BevelGearSketch plan)
+        {
+            plan.GetBackConeDirection(out var dx, out var dy);
+            foreach (var sign in new[] { 1.0, -1.0 })
+            {
+                var plane = session.DesignPlanes.CreateAtAngleToPlane(null, offsetPlane, null, axis, sign * plan.BackConePlaneAngleRad, BevelConePlaneName);
+                if (!TryReadPlane(plane, out var normal, out var point)) return plane;
+
+                var length = Math.Sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+                if (length > 0.0)
+                {
+                    var nx = normal[0] / length;
+                    var ny = normal[1] / length;
+                    var nz = normal[2] / length;
+                    var alongCone = nx * dx + ny * dy;
+                    var offPlane = (point[0] - plan.BackConeApexX) * nx + point[1] * ny + point[2] * nz;
+                    if (Math.Abs(alongCone) < 1e-6 && Math.Abs(nz) < 1e-6 && Math.Abs(offPlane) <= PlaneTolerance) return plane;
+                }
+
+                DeleteQuietly(plane);
+            }
+
+            throw new InvalidOperationException("the plane turned about the new axis does not lie on the back cone");
+        }
+
+        /// <summary>Reads the normal and a point of a plane; false when Alibre does not give them.</summary>
+        private static bool TryReadPlane(IADDesignPlane plane, out double[] normal, out double[] point)
+        {
+            normal = null;
+            point = null;
+            try
+            {
+                plane.GetGeometry(out var p1, out _, out _);
+                var n = plane.Normal;
+                if (p1 == null || n == null) return false;
+
+                point = new[] { p1.X, p1.Y, p1.Z };
+                normal = new[] { n.X, n.Y, n.Z };
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private static void DeleteQuietly(IADDesignPlane plane)
+        {
+            try
+            {
+                plane.Delete();
+            }
+            catch (Exception)
+            {
+                // A plane that cannot be removed is left for the user to see; the next attempt uses another name.
+            }
+        }
+
+        /// <summary>
+        /// Where the developed back cone (pointC as origin, x along the back cone line towards pointA, y across the tooth) lies in the
+        /// sketch on the back cone plane. Alibre decides the origin and axes of a new plane's sketch, so they are found by mapping three
+        /// world points that lie on the plane into the sketch.
+        /// </summary>
+        private sealed class SketchMap
+        {
+            private double _originX;
+            private double _originY;
+            private double _ux;
+            private double _uy;
+            private double _vx;
+            private double _vy;
+
+            public bool Mirrored => _ux * _vy - _uy * _vx < 0.0;
+
+            public double X(double u, double v) => _originX + u * _ux + v * _vx;
+
+            public double Y(double u, double v) => _originY + u * _uy + v * _vy;
+
+            public static SketchMap Create(IADPartSession session, IADSketch sketch, BevelGearSketch plan)
+            {
+                var factory = session.GeometryFactory;
+                MapPoint(sketch, factory, plan.BackConeApexX, 0.0, 0.0, out var cx, out var cy);
+                MapPoint(sketch, factory, 0.0, plan.PointAY, 0.0, out var ax, out var ay);
+                MapPoint(sketch, factory, plan.BackConeApexX, 0.0, 1.0, out var zx, out var zy);
+
+                var uLength = Math.Sqrt((ax - cx) * (ax - cx) + (ay - cy) * (ay - cy));
+                var vLength = Math.Sqrt((zx - cx) * (zx - cx) + (zy - cy) * (zy - cy));
+                if (!(uLength > 1e-9) || !(vLength > 1e-9)) throw new InvalidOperationException("the back cone line has no length in the sketch");
+
+                // The sketch is in the same units as the world, so the scale is 1; it is measured anyway.
+                var scale = uLength / plan.BackConeDistance;
+                var u = new[] { (ax - cx) / uLength, (ay - cy) / uLength };
+                var v = new[] { (zx - cx) / vLength, (zy - cy) / vLength };
+                if (Math.Abs(u[0] * v[0] + u[1] * v[1]) > 1e-6) throw new InvalidOperationException("the sketch axes of the back cone plane are not perpendicular");
+
+                return new SketchMap { _originX = cx, _originY = cy, _ux = u[0] * scale, _uy = u[1] * scale, _vx = v[0] * scale, _vy = v[1] * scale };
+            }
+
+            private static void MapPoint(IADSketch sketch, IADGeometryFactory factory, double x, double y, double z, out double sx, out double sy)
+            {
+                sketch.MapFromWorldToSketch(factory.CreatePoint(x, y, z), out var a, out var b);
+                sx = a;
+                sy = b;
+            }
+        }
+
+        /// <summary>Draws figures given in the developed back cone into a sketch through <paramref name="map"/>; returns whether the sketch is closed.</summary>
+        private static bool DrawMappedFigures(IADSketch sketch, IEnumerable<ToothSketchFigure> profile, SketchMap map)
+        {
+            sketch.BeginChange();
+            try
+            {
+                var figures = sketch.Figures;
+                foreach (var figure in profile)
+                {
+                    switch (figure.Kind)
+                    {
+                        case ToothSketchFigureKind.Line:
+                            figures.AddLine(map.X(figure.StartX, figure.StartY), map.Y(figure.StartX, figure.StartY),
+                                map.X(figure.EndX, figure.EndY), map.Y(figure.EndX, figure.EndY));
+                            break;
+                        case ToothSketchFigureKind.Arc:
+                        {
+                            // A mirrored sketch turns an anticlockwise arc into a clockwise one, so start and end change places.
+                            var startX = map.Mirrored ? figure.EndX : figure.StartX;
+                            var startY = map.Mirrored ? figure.EndY : figure.StartY;
+                            var endX = map.Mirrored ? figure.StartX : figure.EndX;
+                            var endY = map.Mirrored ? figure.StartY : figure.EndY;
+                            figures.AddCircularArcByCenterStartEnd(map.X(figure.CentreX, figure.CentreY), map.Y(figure.CentreX, figure.CentreY),
+                                map.X(startX, startY), map.Y(startX, startY), map.X(endX, endY), map.Y(endX, endY));
+                            break;
+                        }
+                        default:
+                            Array interpolation = new double[figure.Points.Count * 2];
+                            var index = 0;
+                            foreach (var point in figure.Points)
+                            {
+                                interpolation.SetValue(map.X(point.X, point.Y), index++);
+                                interpolation.SetValue(map.Y(point.X, point.Y), index++);
+                            }
+
+                            figures.AddBsplineByInterpolation(ref interpolation);
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                sketch.EndChange();
+            }
+
+            return sketch.IsClosed;
+        }
+
+        /// <summary>
+        /// Cuts one tooth valley with a loft from the valley sketch to the sketch node at the apex of the front cone. Alibre can accept the
+        /// call and still report the feature as failed, so each attempt is checked and the next form is tried: the node as drawn in the
+        /// blank sketch, the same with empty tangent and guide collectors, and finally a separate sketch that holds only the node.
+        /// Throws <see cref="InvalidOperationException"/> when no attempt gives a valid loft cut.
+        /// </summary>
+        private IADPartFeature AddValleyLoftCut(IADPartSession session, IADSketch toothSketch, object apexNode, BevelGearSketch plan, IADDesignPlane xyPlane)
+        {
+            var failures = new List<string>();
+
+            IADPartFeature Attempt(string label, object node, bool emptyCollectors)
+            {
+                IADLoftFeature loft = null;
+                try
+                {
+                    var sections = _root.NewObjectCollector();
+                    sections.Add(toothSketch);
+                    sections.Add(node);
+                    IObjectCollector tangents = null;
+                    IObjectCollector magnitudes = null;
+                    IObjectCollector angles = null;
+                    IObjectCollector guides = null;
+                    if (emptyCollectors)
+                    {
+                        tangents = _root.NewObjectCollector();
+                        magnitudes = _root.NewObjectCollector();
+                        angles = _root.NewObjectCollector();
+                        guides = _root.NewObjectCollector();
+                    }
+
+                    loft = session.Features.AddLoftCut(sections, tangents, magnitudes, angles, guides, ADLoftGuideType.AD_NONE, false, false, false, false,
+                        BevelValleyFeatureName);
+                    if (loft != null && !loft.HasError) return loft;
+                    failures.Add(label + ": Alibre reports an error in the loft cut");
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(label + ": " + ex.Message);
+                }
+
+                try
+                {
+                    loft?.Delete();
+                }
+                catch (Exception)
+                {
+                    // A loft that cannot be removed is left for the user to see; the next attempt still runs.
+                }
+
+                return null;
+            }
+
+            var result = Attempt("node in the blank sketch", apexNode, false) ?? Attempt("node in the blank sketch, empty collectors", apexNode, true);
+            if (result != null) return result;
+
+            try
+            {
+                var nodeSketch = session.Sketches.AddSketch(null, xyPlane, BevelNodeSketchName);
+                var node = AddSketchNode(nodeSketch, plan.ApexNodeX);
+                result = Attempt("node in its own sketch", node, false) ?? Attempt("node in its own sketch, empty collectors", node, true);
+                if (result != null) return result;
+            }
+            catch (Exception ex)
+            {
+                failures.Add("node in its own sketch: " + ex.Message);
+            }
+
+            throw new InvalidOperationException($"the loft cut of the tooth valley to the apex node was not accepted ({string.Join("; ", failures)})");
+        }
+
         /// <summary>Creates the new Alibre part that a component is built in.</summary>
         private IADPartSession CreatePart(string name)
         {
@@ -304,7 +678,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// (so it gets its full set of teeth), saved to <see cref="AssemblyFolder"/> and added to the assembly with
         /// <c>IADOccurrences.Add</c> (the Alibre API has no <c>AddPart</c>) at its shaft placement and axial offset in the train.
         /// Throws <see cref="InvalidOperationException"/> when the train has fewer than <see cref="MinimumAssemblyParts"/> gears,
-        /// holds a gear family that cannot be exported yet (bevel gears), or Alibre rejects a step.
+        /// holds a gear family that cannot be exported yet, or Alibre rejects a step.
         /// </summary>
         public IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName)
         {
@@ -486,7 +860,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                     if (!IsExportable(mount.Component))
                     {
                         throw new InvalidOperationException(
-                            $"Gear '{mount.Component.Id}' cannot be exported to Alibre yet; only involute gears, racks, worms and worm wheels can.");
+                            $"Gear '{mount.Component.Id}' cannot be exported to Alibre yet; only involute gears, racks, worms, worm wheels and bevel gears can.");
                     }
 
                     parts.Add(new KeyValuePair<GearComponent, Transform3D>(mount.Component, GetPartPlacement(shaft, mount)));
@@ -505,7 +879,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>True for the gear families that <see cref="ExportAssembly"/> and the single-part export can build.</summary>
         public static bool IsExportable(GearComponent component)
         {
-            return component is InvoluteGearComponent || component is RackComponent || component is WormComponent || component is WormWheelComponent;
+            return component is InvoluteGearComponent || component is RackComponent || component is WormComponent || component is WormWheelComponent
+                || component is BevelGearComponent;
         }
 
         /// <summary>
@@ -517,8 +892,30 @@ namespace Bolsover.Gears.Calculator.Alibre
             if (shaft == null) throw new ArgumentNullException(nameof(shaft));
             if (mount == null) throw new ArgumentNullException(nameof(mount));
 
+            if (mount.Component is BevelGearComponent bevel)
+            {
+                return shaft.Placement.ToTransform().Compose(GetBevelPartFrame(bevel, mount.AxialOffset));
+            }
+
             return shaft.Placement.ToTransform()
                 .Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, mount.AxialOffset - mount.Component.FaceWidth / 2.0)));
+        }
+
+        /// <summary>
+        /// Location of an exported bevel gear part in the local frame of its shaft mount (axis Z, apex on +Z, the face on the mid-plane at the
+        /// axial offset). The part has its axis along X with the apex towards -X, and a valley, not a tooth, on +Y. This is the rotation
+        /// (x, y, z) to (y, -z, -x) that the editor model uses, with the same axial shift and the same half pitch turn, so a tooth is on the
+        /// local +X axis and the bevel gear meshes as in the editor.
+        /// </summary>
+        public static Transform3D GetBevelPartFrame(BevelGearComponent gear, double axialOffset)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+
+            var phase = Math.PI / gear.Teeth;
+            var c = Math.Cos(phase);
+            var s = Math.Sin(phase);
+            return Transform3D.FromFrame(new Vector3D(0.0, 0.0, axialOffset + gear.BlankAxialOffset), new Vector3D(0.0, 0.0, -1.0),
+                new Vector3D(c, s, 0.0), new Vector3D(s, -c, 0.0));
         }
 
         /// <summary>
@@ -564,6 +961,8 @@ namespace Bolsover.Gears.Calculator.Alibre
                     return Export(worm);
                 case WormWheelComponent wheel:
                     return Export(wheel);
+                case BevelGearComponent bevel:
+                    return Export(bevel);
                 default:
                     throw new InvalidOperationException($"Gear '{component.Id}' cannot be exported to Alibre yet.");
             }

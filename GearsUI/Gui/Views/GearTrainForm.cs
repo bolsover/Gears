@@ -63,7 +63,7 @@ namespace Bolsover.Gears.Gui.Views
         private readonly ToolStripMenuItem _btnExportAlibre = new ToolStripMenuItem("Export gear to &Alibre…")
         {
             Enabled = false,
-            ToolTipText = "Create the selected gear as a new Alibre part. Involute gears (external or internal, spur or helical) and worm wheels: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Racks (straight or helical): one tooth cell, extruded (swept along a slanted path for a helical rack) and linear-patterned. Worms: a core cylinder with a helical thread. Available when the editor runs inside Alibre Design."
+            ToolTipText = "Create the selected gear as a new Alibre part. Involute gears (external or internal, spur or helical) and worm wheels: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Racks (straight or helical): one tooth cell, extruded (swept along a slanted path for a helical rack) and linear-patterned. Worms: a core cylinder with a helical thread. Bevel gears: the revolved gear blank, then one tooth valley sketched on a plane on the back cone, loft cut to the cone apex and circular-patterned. Available when the editor runs inside Alibre Design."
         };
         private readonly ToolStripMenuItem _btnExportAlibreAssembly = new ToolStripMenuItem("Export Assembly to Alibre")
         {
@@ -523,8 +523,15 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (worm wheel, {1} teeth, axial module {2:0.###}, helix angle {3:0.###} degrees) to a new Alibre part.", wheel.Id, wheel.Teeth, wheel.Module, wheel.LeadAngleDeg), false);
                     break;
                 }
+                case BevelGearComponent bevel:
+                {
+                    ShowMessage($"Exporting {bevel.Id} to Alibre…", false);
+                    _alibreExporter.Export(bevel);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (bevel gear, {1} teeth, module {2:0.###}, {3} system) to a new Alibre part.", bevel.Id, bevel.Teeth, bevel.Module, bevel.BevelType), false);
+                    break;
+                }
                 default:
-                    ShowMessage("Select a gear, rack, worm or worm wheel to export to Alibre.", true);
+                    ShowMessage("Select a gear, rack, worm, worm wheel or bevel gear to export to Alibre.", true);
                     break;
             }
         }
