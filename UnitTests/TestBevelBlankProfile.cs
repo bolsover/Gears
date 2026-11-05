@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Model.Assemblies;
 using NUnit.Framework;
 
 namespace UnitTests
@@ -14,6 +15,80 @@ namespace UnitTests
         private const double FaceWidth = 63.5;
 
         private static BevelBlankProfile Sample() => new BevelBlankProfile(18, 45, Module, FaceWidth);
+
+        [Test]
+        public void TestStandard_HasNoProfileShift()
+        {
+            var profile = Sample();
+
+            Assert.AreEqual(BevelGearType.Standard, profile.BevelType);
+            Assert.AreEqual(0.0, profile.ProfileShift, 1e-12);
+            Assert.AreEqual(0.25 * Module, profile.Clearance, 1e-9);
+        }
+
+        [TestCase(18, 45, 90.0)]
+        [TestCase(45, 18, 90.0)]
+        [TestCase(20, 36, 75.0)]
+        public void TestGleason_AddendumAndDedendumFollowTheGleasonFormulas(int teeth, int mateTeeth, double shaftAngleDeg)
+        {
+            var profile = new BevelBlankProfile(teeth, mateTeeth, Module, 30.0, shaftAngleDeg, bevelType: BevelGearType.Gleason);
+
+            var sigma = shaftAngleDeg * Math.PI / 180.0;
+            var delta = profile.PitchConeAngleRad;
+            var q = (teeth / Math.Cos(delta)) / (mateTeeth / Math.Cos(sigma - delta));
+            Assert.AreEqual(q, profile.VirtualToothRatio, 1e-9);
+
+            var expectedAddendum = q >= 1.0 ? Module * (0.54 + 0.46 / q) : Module * (2.0 - 0.54 - 0.46 * q);
+            Assert.AreEqual(expectedAddendum, profile.Addendum, 1e-9);
+            Assert.AreEqual(2.188 * Module + 0.051, profile.WholeDepth, 1e-9);
+            Assert.AreEqual(0.188 * Module + 0.051, profile.Clearance, 1e-9);
+            Assert.AreEqual(profile.WholeDepth - profile.Addendum, profile.Dedendum, 1e-9);
+            Assert.AreEqual(profile.Addendum - Module, profile.ProfileShift, 1e-9);
+            Assert.AreEqual(teeth < mateTeeth, profile.ProfileShift > 0.0, "The pinion has the long addendum.");
+        }
+
+        [Test]
+        public void TestGleason_PairAddendaAddUpToTheWorkingDepthAndPointsFollowThem()
+        {
+            var pinion = new BevelBlankProfile(18, 45, Module, FaceWidth, bevelType: BevelGearType.Gleason);
+            var gear = new BevelBlankProfile(45, 18, Module, FaceWidth, bevelType: BevelGearType.Gleason);
+
+            Assert.AreEqual(2.0 * Module, pinion.Addendum + gear.Addendum, 1e-9);
+            Assert.AreEqual(0.0, pinion.ProfileShift + gear.ProfileShift, 1e-9);
+            foreach (var p in new[] { pinion, gear })
+            {
+                Assert.AreEqual(p.Dedendum, (p.PointD - p.PointA).Length, 1e-9, "pointD is a dedendum from pointA.");
+                Assert.AreEqual(p.Addendum, (p.PointE - p.PointA).Length, 1e-9, "pointE is an addendum beyond pointA.");
+                Assert.AreEqual(p.WholeDepth, (p.PointE - p.PointD).Length, 1e-9);
+                Assert.Greater(p.PointH.Y, 0.0);
+            }
+        }
+
+        [Test]
+        public void TestGleason_EqualGearsHaveTheStandardAddendum()
+        {
+            var profile = new BevelBlankProfile(30, 30, Module, 20.0, bevelType: BevelGearType.Gleason);
+
+            Assert.AreEqual(Module, profile.Addendum, 1e-9);
+            Assert.AreEqual(0.0, profile.ProfileShift, 1e-9);
+        }
+
+        [Test]
+        public void TestGleason_MatchesTheComponentProportions()
+        {
+            var pinion = new BevelGearComponent("P") { Teeth = 18, MateTeeth = 45, Module = Module, FaceWidth = 20.0, BevelType = BevelGearType.Gleason };
+            var profile = new BevelBlankProfile(18, 45, Module, 20.0, bevelType: BevelGearType.Gleason);
+
+            Assert.AreEqual(pinion.Addendum, profile.Addendum, 1e-9);
+            Assert.AreEqual(pinion.Dedendum, profile.Dedendum, 1e-9);
+            Assert.AreEqual(pinion.ProfileShiftMm, profile.ProfileShift, 1e-9);
+        }
+
+        [Test]
+        public void TestGleasonWithNoMateCone_IsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => new BevelBlankProfile(20, 100, Module, 10.0, 150.0, bevelType: BevelGearType.Gleason));
+        }
 
         [Test]
         public void TestConeAngles()

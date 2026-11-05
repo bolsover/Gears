@@ -151,6 +151,7 @@
     <ItemGroup>
         <Compile Include="Calculator\AlibreGearGenerator.cs" />
         <Compile Include="Calculator\BevelBlankProfile.cs" />
+        <Compile Include="Calculator\BevelToothSketch.cs" />
         <Compile Include="Calculator\ConversionUtils.cs" />
         <Compile Include="Calculator\CustomCalculations.cs" />
         <Compile Include="Calculator\GearMesh3DBuilder.cs" />

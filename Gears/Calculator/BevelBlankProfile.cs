@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Bolsover.Gears.Model;
+using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Calculator
 {
@@ -49,8 +50,10 @@ namespace Bolsover.Gears.Calculator
         /// <param name="shaftAngleDeg">Angle between the two shafts, degrees.</param>
         /// <param name="addendumFactor">Addendum as a multiple of the module (standard 1).</param>
         /// <param name="dedendumFactor">Dedendum as a multiple of the module (standard 1.25).</param>
+        /// <param name="bevelType">Tooth system. For <see cref="BevelGearType.Gleason"/> the addendum and dedendum follow the Gleason
+        /// formulas (long pinion addendum, short gear addendum, whole depth 2.188 m + 0.051 mm) and the two factors are ignored.</param>
         public BevelBlankProfile(int teeth, int mateTeeth, double module, double faceWidth, double shaftAngleDeg = 90.0,
-            double addendumFactor = 1.0, double dedendumFactor = 1.25)
+            double addendumFactor = 1.0, double dedendumFactor = 1.25, BevelGearType bevelType = BevelGearType.Standard)
         {
             if (teeth < 1) throw new ArgumentException("The gear needs at least one tooth.", nameof(teeth));
             if (mateTeeth < 1) throw new ArgumentException("The mating gear needs at least one tooth.", nameof(mateTeeth));
@@ -64,14 +67,34 @@ namespace Bolsover.Gears.Calculator
             Module = module;
             FaceWidth = faceWidth;
             ShaftAngleDeg = shaftAngleDeg;
-            Addendum = addendumFactor * module;
-            Dedendum = dedendumFactor * module;
-            WholeDepth = Addendum + Dedendum;
+            BevelType = bevelType;
             PitchDiameter = module * teeth;
 
             var sigma = shaftAngleDeg * Math.PI / 180.0;
             PitchConeAngleRad = Math.Atan2(Math.Sin(sigma), (double)mateTeeth / teeth + Math.Cos(sigma));
             BackConeAngleRad = Math.PI / 2.0 - PitchConeAngleRad;
+
+            if (bevelType == BevelGearType.Gleason)
+            {
+                var mateCone = sigma - PitchConeAngleRad;
+                if (!(Math.Cos(mateCone) > 1e-9)) throw new ArgumentException("The Gleason proportions need a mating pitch cone angle below 90 degrees.", nameof(shaftAngleDeg));
+                VirtualToothRatio = (teeth / Math.Cos(PitchConeAngleRad)) / (mateTeeth / Math.Cos(mateCone));
+                Clearance = GleasonClearanceFactor * module + BevelGearComponent.GleasonDepthConstant;
+                WholeDepth = 2.0 * module + Clearance;
+                Addendum = GleasonAddendum(module, VirtualToothRatio);
+                Dedendum = WholeDepth - Addendum;
+                ProfileShift = Addendum - module;
+            }
+            else
+            {
+                VirtualToothRatio = 1.0;
+                Addendum = addendumFactor * module;
+                Dedendum = dedendumFactor * module;
+                WholeDepth = Addendum + Dedendum;
+                Clearance = WholeDepth - 2.0 * module;
+                ProfileShift = 0.0;
+            }
+
             ConeDistance = PitchDiameter / 2.0 / Math.Sin(PitchConeAngleRad);
 
             var radius = PitchDiameter / 2.0;
@@ -98,6 +121,34 @@ namespace Bolsover.Gears.Calculator
             if (!(PointH.Y > 0.0)) throw new InvalidOperationException("The face width is too large for this gear: the toe reaches the axis.");
             PointI = new BevelBlankPoint(PointH.X, 0.0);
         }
+
+        private const double GleasonClearanceFactor = 0.188;
+
+        /// <summary>
+        /// Gleason addendum at the large end for a gear whose virtual tooth ratio to its mate is <paramref name="virtualRatio"/>:
+        /// <c>0.54 m + 0.46 m / q</c> for the gear (q at least 1) and the rest of the working depth <c>2 m</c> for the pinion.
+        /// </summary>
+        public static double GleasonAddendum(double module, double virtualRatio)
+        {
+            return virtualRatio >= 1.0
+                ? module * (0.54 + 0.46 / virtualRatio)
+                : module * (2.0 - 0.54 - 0.46 * virtualRatio);
+        }
+
+        /// <summary>Tooth system of the gear.</summary>
+        public BevelGearType BevelType { get; }
+
+        /// <summary>Ratio of the virtual tooth counts of this gear and its mate (1 for the standard system, where it is not needed).</summary>
+        public double VirtualToothRatio { get; }
+
+        /// <summary>Bottom clearance at the large end, mm: whole depth less the working depth 2 m.</summary>
+        public double Clearance { get; }
+
+        /// <summary>
+        /// Profile shift of the virtual spur gear, mm: addendum less module for Gleason (long and short addendum, equal and opposite on
+        /// the two gears), zero otherwise. It makes the pinion tooth thicker and the gear tooth thinner at the pitch circle.
+        /// </summary>
+        public double ProfileShift { get; }
 
         public int Teeth { get; }
         public int MateTeeth { get; }
@@ -143,7 +194,97 @@ namespace Bolsover.Gears.Calculator
             }
         }
 
+        /// <summary>Length of the back cone line from pointC to pointA: the pitch radius of the developed back cone.</summary>
+        public double BackConeDistance => (PointA - PointC).Length;
+
+        /// <summary>Scale about the apex (pointB) that carries the heel (back cone) end of the teeth to the toe end.</summary>
+        public double ToeScale => (PointG - PointB).Length / (PointE - PointB).Length;
+
+        /// <summary>The point on the back cone line (pointC towards pointA and beyond) at the given distance from pointC.</summary>
+        public BevelBlankPoint BackConePoint(double distanceFromPointC) => PointC + (PointA - PointC) * (distanceFromPointC / BackConeDistance);
+
+        /// <summary>The point at the toe that corresponds to a point at the heel: a scaling about the apex (pointB).</summary>
+        public BevelBlankPoint ToToe(BevelBlankPoint heel) => PointB + (heel - PointB) * ToeScale;
+
+        /// <summary>Revolves a sketch point about the X axis into 3D (Y radial at angle 0, rotating towards Z).</summary>
+        public static GearPoint3D Revolve(BevelBlankPoint p, double angleRad) => new GearPoint3D(p.X, p.Y * Math.Cos(angleRad), p.Y * Math.Sin(angleRad));
+
         private static double Cross(BevelBlankPoint a, BevelBlankPoint b) => a.X * b.Y - a.Y * b.X;
+
+        /// <summary>
+        /// The blank with the teeth cut: a loft cut of the valley sketch from the back cone face to the toe, patterned about the axis.
+        /// Every tooth line runs to the cone apex, so the loft is the valley sketch on the back cone and the same sketch scaled
+        /// about pointB on the toe face. The cut valleys are removed from the revolved blank between the root cone (pointD to pointH)
+        /// and the tip cone (pointE to pointG); everything below the root cone and the back and toe faces are those of the blank.
+        /// </summary>
+        /// <param name="sketch">The valley sketch made for this blank.</param>
+        /// <param name="valleys">Number of valleys to cut (1 to the number of teeth); 0 or less cuts them all.</param>
+        public GearMesh3DBuilder.Mesh3D BuildToothedMesh(BevelToothSketch sketch, int valleys = 0)
+        {
+            if (sketch == null) throw new ArgumentNullException(nameof(sketch));
+            if (!ReferenceEquals(sketch.Profile, this)) throw new ArgumentException("The sketch belongs to a different blank.", nameof(sketch));
+
+            var outline = sketch.BuildOutline(valleys <= 0 ? Teeth : valleys);
+            var cosDelta = Math.Cos(PitchConeAngleRad);
+            var count = outline.Count;
+            var backFace = new GearPoint3D[count];
+            var heelRoot = new GearPoint3D[count];
+            var heel = new GearPoint3D[count];
+            var toe = new GearPoint3D[count];
+            var toeRoot = new GearPoint3D[count];
+            var toeFace = new GearPoint3D[count];
+            for (var i = 0; i < count; i++)
+            {
+                // The developed back cone is a full turn of 2 pi cos(delta); on the cone itself the turn is 2 pi.
+                var angle = outline[i].Angle / cosDelta;
+                var onBackCone = BackConePoint(outline[i].Radius);
+                backFace[i] = Revolve(PointF, angle);
+                heelRoot[i] = Revolve(PointD, angle);
+                heel[i] = Revolve(onBackCone, angle);
+                toe[i] = Revolve(ToToe(onBackCone), angle);
+                toeRoot[i] = Revolve(PointH, angle);
+                toeFace[i] = Revolve(PointI, angle);
+            }
+
+            // The same order as the sketch F, D, E, G, H, I: back face, heel (back cone), loft along the teeth, toe, toe face.
+            var mesh = new GearMesh3DBuilder.Mesh3D();
+            AddBand(mesh, backFace, heelRoot);
+            AddBand(mesh, heelRoot, heel);
+            AddBand(mesh, heel, toe);
+            AddBand(mesh, toe, toeRoot);
+            AddBand(mesh, toeRoot, toeFace);
+            mesh.CalculateNormals();
+            return mesh;
+        }
+
+        /// <summary>Joins two rings of equal length with triangles facing outwards, for a sketch that runs counter-clockwise.</summary>
+        private static void AddBand(GearMesh3DBuilder.Mesh3D mesh, GearPoint3D[] ring0, GearPoint3D[] ring1)
+        {
+            var count = ring0.Length;
+            var first0 = mesh.Vertices.Count;
+            mesh.Vertices.AddRange(ring0);
+            var first1 = mesh.Vertices.Count;
+            mesh.Vertices.AddRange(ring1);
+            for (var j = 0; j < count; j++)
+            {
+                var k = (j + 1) % count;
+                AddTriangleChecked(mesh, first0 + j, first1 + j, first0 + k);
+                AddTriangleChecked(mesh, first1 + j, first1 + k, first0 + k);
+            }
+        }
+
+        private static void AddTriangleChecked(GearMesh3DBuilder.Mesh3D mesh, int a, int b, int c)
+        {
+            if (SamePosition(mesh.Vertices[a], mesh.Vertices[b]) || SamePosition(mesh.Vertices[b], mesh.Vertices[c]) || SamePosition(mesh.Vertices[a], mesh.Vertices[c])) return;
+            mesh.TriangleIndices.Add(a);
+            mesh.TriangleIndices.Add(b);
+            mesh.TriangleIndices.Add(c);
+        }
+
+        private static bool SamePosition(GearPoint3D a, GearPoint3D b)
+        {
+            return Math.Abs(a.X - b.X) < 1e-9 && Math.Abs(a.Y - b.Y) < 1e-9 && Math.Abs(a.Z - b.Z) < 1e-9;
+        }
 
         /// <summary>Revolves the sketch 360 degrees about the X axis into a closed solid with outward facing triangles.</summary>
         /// <param name="segments">Number of steps around the axis.</param>
