@@ -103,6 +103,26 @@ namespace Bolsover.Gears.Gui
             }
         }
 
+        /// <summary>Replaces the displayed scene with a single mesh, for example a gear blank under test.</summary>
+        /// <param name="mesh">The mesh to show; null clears the viewport.</param>
+        /// <param name="color">The colour of the solid.</param>
+        /// <param name="wireframe">True to draw triangle edges instead of solid faces.</param>
+        /// <param name="fit">True to zoom the view to the mesh.</param>
+        public void ShowMesh(GearMesh3DBuilder.Mesh3D mesh, System.Windows.Media.Color color, bool wireframe, bool fit)
+        {
+            foreach (var visual in _sceneVisuals)
+            {
+                Viewport.Children.Remove(visual);
+            }
+
+            _sceneVisuals.Clear();
+            _modelTags.Clear();
+            if (mesh == null) return;
+
+            AddMesh(mesh, null, color, wireframe);
+            if (fit && _sceneVisuals.Count > 0) FitView();
+        }
+
         public void FitView()
         {
             try

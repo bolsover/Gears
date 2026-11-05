@@ -163,6 +163,7 @@
     <Compile Include="TestImperialUnits.cs" />
     <Compile Include="TestGearScene2D.cs" />
     <Compile Include="TestBevelGearTypes.cs" />
+    <Compile Include="TestBevelBlankProfile.cs" />
     <Compile Include="TestGearTrainPhases3To7.cs" />
     <Compile Include="TestGearTrainEditorPhases3To7.cs" />
     <Compile Include="TestGearAddOn.cs" />

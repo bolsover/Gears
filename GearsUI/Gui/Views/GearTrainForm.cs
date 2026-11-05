@@ -218,6 +218,9 @@ namespace Bolsover.Gears.Gui.Views
                 _btnWireframe, _btnShafts, _btnPitchCircles, _btnLabels, new ToolStripSeparator(), btnFit
             });
 
+            var menuBevelTests = new ToolStripMenuItem("Bevel &tests");
+            menuBevelTests.DropDownItems.Add("Bevel gear &blank (revolved profile)…", null, (s, e) => ShowBevelBlankTest());
+
             var menuSimulation = new ToolStripMenuItem("&Simulation");
             menuSimulation.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -248,7 +251,7 @@ namespace Bolsover.Gears.Gui.Views
             menuHelp.DropDownItems.Add("&Help", null, (s, e) => OpenDocument("README.md", false));
             menuHelp.DropDownItems.Add("&License", null, (s, e) => OpenDocument("LICENSE", true));
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation, menuHelp });
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation, menuBevelTests, menuHelp });
             MainMenuStrip = menu;
 
             var statusBar = new StatusStrip();
@@ -403,6 +406,13 @@ namespace Bolsover.Gears.Gui.Views
             {
                 if (_btnAnimate.Checked && !IsDisposed) _animationTimer.Start();
             }
+        }
+
+        private void ShowBevelBlankTest()
+        {
+            var form = new BevelTestForm();
+            form.FormClosed += (s, e) => form.Dispose();
+            form.Show(this);
         }
 
         private void AddMateToSelectedGear(MeshType meshType)
