@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Gears</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #222; margin: 16px 24px; }
+  h1 { font-size: 26px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h2 { font-size: 20px; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-top: 28px; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f1f1f1; padding: 1px 4px; }
+  pre { background: #f6f6f6; border: 1px solid #ddd; padding: 8px 10px; overflow: auto; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; margin: 8px 0; }
+  th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  a { color: #0b5cad; }
+</style>
+</head>
+<body>
+<h1>Gears</h1>
+<p>Gears is a .NET solution for calculating, visualising and exporting gear geometry. It contains a core calculation
+library, a stand-alone gear train editor, an add-on that opens the same editor inside <strong>Alibre Design</strong>, and a set of
+unit tests.</p>
+
+<h2>Features</h2>
+<ul>
+  <li><strong>Gear train editor</strong>: build a train from shafts, gears and meshing relations, with a 2D view, a 3D view (HelixToolkit)
+  and an animation of the input shaft.</li>
+  <li><strong>Gear families</strong>:
+    <ul>
+      <li>spur, helical and internal involute gears</li>
+      <li>rack and pinion (straight and helical racks)</li>
+      <li>straight bevel gears (Tredgold approximation, standard and Gleason tooth proportions)</li>
+      <li>worm and worm wheel</li>
+      <li>planetary sets (sun, planets, ring and carrier)</li>
+    </ul>
+  </li>
+  <li><strong>Design controls</strong>: profile shift, clearance, backlash, fixed centre distance and <em>Fit profile shift</em>, with working
+  pressure angle, working backlash and contact ratio reported for each mesh.</li>
+  <li><strong>Parameter tables</strong>: every calculated gear and mesh parameter is listed with its symbol, formula, value and unit
+  (symbols follow <em>Elements of Metric Gear Technology</em>). Formulae are evaluated with NCalc and can be rendered as LaTeX.</li>
+  <li><strong>Files and export</strong>: save and load a train as JSON, export the scene as STL or OBJ, and send gear and tooth
+  sketches to Alibre Design.</li>
+  <li><strong>Units</strong>: metric calculation, with imperial unit support.</li>
+</ul>
+<p>See <code>Writerside\topics\gear-assemblies.md</code> in the source tree for the equations, the
+behaviour of each gear family and the known limits. Bevel and worm geometry is an approximation meant for
+visualisation, DXF and STL hand-off, not for stress calculation.</p>
+
+<h2>Solution layout</h2>
+<table>
+  <tr><th>Path</th><th>Description</th></tr>
+  <tr><td><code>Gears\</code></td><td>Core class library (<code>Gears.dll</code>, namespace <code>Bolsover.Gears</code>). <code>Model\</code> holds the domain types (gears, shafts, assemblies, variables, points); <code>Calculator\</code> holds the geometry and parameter calculation, mesh solvers, mesh builders, exporters and the Alibre sketch generators.</td></tr>
+  <tr><td><code>GearsUI\</code></td><td>Windows Forms application (<code>GearsUI.exe</code>). <code>Program.cs</code> starts <code>GearTrainForm</code>. <code>Gui\</code> contains the 2D scene control, the 3D viewport, the mesh adapter and the presenter and view classes.</td></tr>
+  <tr><td><code>GearsAddOn\</code></td><td>Managed Alibre Design add-on (<code>GearsAddOn.dll</code>). It adds a <strong>Gears &gt; Gear Train</strong> menu that opens the editor, and includes <code>addon.json</code>, <code>GearsAddOn.adc</code> and <code>Install-GearsAddOn.ps1</code>.</td></tr>
+  <tr><td><code>UnitTests\</code></td><td>Automated tests for the calculators, assemblies, bevel, worm and rack export, Alibre export, unit conversion and the editor presenter.</td></tr>
+  <tr><td><code>Tools\VariableClassGenerator\</code></td><td>Small .NET 8 console tool that generates <code>IVariable</code> classes from a CSV file (columns <code>ClassName</code>, <code>Name</code>, <code>NCalc</code>, <code>Symbol</code>, <code>Formula</code>, <code>VariableRole</code>).</td></tr>
+  <tr><td><code>Writerside\</code></td><td>Documentation sources (JetBrains Writerside).</td></tr>
+  <tr><td><code>Reference\</code></td><td>Third-party Alibre add-on samples and reference material.</td></tr>
+</table>
+
+<h2>Requirements</h2>
+<ul>
+  <li>Windows (x64) with Visual Studio or JetBrains Rider.</li>
+  <li>.NET Framework 4.8.1 developer pack (<code>Gears</code>, <code>GearsUI</code>, <code>GearsAddOn</code> and <code>UnitTests</code>; C# language version 10).</li>
+  <li>.NET 8 SDK for <code>Tools\VariableClassGenerator</code>.</li>
+  <li><strong>Alibre Design</strong> (add-on build 29000 or later) and its API assemblies. The projects reference
+  <code>AlibreAddOn.dll</code> and <code>AlibreX.dll</code> through the relative path <code>..\..\..\..\AlibreLib\</code>, so copy those two files to a folder
+  called <code>AlibreLib</code> four levels above each project folder, or edit the <code>HintPath</code> entries in the <code>.csproj</code> files.</li>
+  <li>NuGet packages are restored from <code>packages.config</code> (NCalc, ExtendedNumerics.BigDecimal, HelixToolkit,
+  CommunityToolkit.Diagnostics, Microsoft.Extensions.*, System.Data.SQLite and others).</li>
+</ul>
+
+<h2>Build</h2>
+<p>Open <code>Gears.sln</code> in Visual Studio or Rider and build the solution, or from a developer prompt:</p>
+<pre><code>nuget restore Gears.sln
+msbuild Gears.sln /p:Configuration=Debug</code></pre>
+<p>Build outputs go to each project's <code>bin\</code> and <code>obj\</code> folders; do not commit them.</p>
+
+<h2>Run</h2>
+<ul>
+  <li><strong>Stand-alone editor</strong>: set <code>GearsUI</code> as the startup project and run it.</li>
+  <li><strong>Inside Alibre Design</strong>: see below.</li>
+</ul>
+
+<h2>Install the Alibre Design add-on</h2>
+<ol>
+  <li>Build <code>GearsAddOn</code> (x64).</li>
+  <li>Close Alibre Design.</li>
+  <li>Open an <strong>elevated</strong> PowerShell in <code>GearsAddOn\bin\Debug</code> (or <code>Release</code>) and run:
+<pre><code>.\Install-GearsAddOn.ps1             # copy to C:\ProgramData\Alibre AddOns\GearsAddOn and register
+.\Install-GearsAddOn.ps1 -InPlace    # register the build folder as it is (handy while developing)
+.\Install-GearsAddOn.ps1 -Uninstall  # remove the registration (and the copied files)</code></pre>
+  </li>
+  <li>Start Alibre Design and choose <strong>Gears &gt; Gear Train</strong>.</li>
+</ol>
+<p>The script registers the add-on identifier <code>{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}</code> under
+<code>HKLM\SOFTWARE\Alibre Design Add-Ons</code>.</p>
+
+<h2>Test</h2>
+<p>Run the <code>UnitTests</code> project from the IDE test runner, or from a developer prompt:</p>
+<pre><code>vstest.console.exe UnitTests\bin\Debug\UnitTests.dll</code></pre>
+<p>The tests that talk to Alibre Design need the Alibre API assemblies described above.</p>
+
+<h2>Documentation</h2>
+<p>The Writerside sources are in <code>Writerside\topics</code>. Update them when user-facing behaviour changes.</p>
+
+<h2>Contributing</h2>
+<ul>
+  <li>Follow the standard .NET naming rules: PascalCase for types, methods and properties; <code>_camelCase</code> for private fields.</li>
+  <li>Keep UI code separate from the geometry and model logic.</li>
+  <li>Add or update a unit test with each bug fix or behaviour change.</li>
+  <li>Keep changes minimal and leave <code>bin\</code> and <code>obj\</code> out of commits.</li>
+</ul>
+
+<h2>License</h2>
+<p>Gears is released under the <a href="LICENSE.html">MIT License</a>. The Alibre Design API assemblies (<code>AlibreAddOn.dll</code>,
+<code>AlibreX.dll</code>) and the NuGet packages are not covered by this license; each keeps its own terms.</p>
+</body>
+</html>

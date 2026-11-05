@@ -245,8 +245,8 @@ namespace Bolsover.Gears.Gui.Views
 
             var menuHelp = new ToolStripMenuItem("&Help");
             menuHelp.DropDownItems.Add("&About", null, (s, e) => ShowAbout());
-            menuHelp.DropDownItems.Add("&Help", null, (s, e) => OpenDocument("README.md", false));
-            menuHelp.DropDownItems.Add("&License", null, (s, e) => OpenDocument("LICENSE", true));
+            menuHelp.DropDownItems.Add("&Help", null, (s, e) => ShowDocument("Help", "README.html"));
+            menuHelp.DropDownItems.Add("&License", null, (s, e) => ShowDocument("License", "LICENSE.html"));
 
             menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation, menuHelp });
             MainMenuStrip = menu;
@@ -833,9 +833,10 @@ namespace Bolsover.Gears.Gui.Views
         }
 
         /// <summary>
-        /// Opens a document that ships with the program (looked up next to the assembly, then in the parent folders).
+        /// Shows an HTML document that ships with the program (looked up next to the assembly, then in the parent folders)
+        /// in a popup window.
         /// </summary>
-        private void OpenDocument(string fileName, bool useNotepad)
+        private void ShowDocument(string title, string fileName)
         {
             var path = FindDocument(fileName);
             if (path == null)
@@ -846,19 +847,14 @@ namespace Bolsover.Gears.Gui.Views
 
             try
             {
-                if (useNotepad) Process.Start("notepad.exe", "\"" + path + "\"");
-                else Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                using (var form = new HtmlDocumentForm(title, path))
+                {
+                    form.ShowDialog(this);
+                }
             }
-            catch (Win32Exception)
+            catch (Exception ex)
             {
-                try
-                {
-                    Process.Start("notepad.exe", "\"" + path + "\"");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(this, $"Could not open {path}.\n{ex.Message}", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+                MessageBox.Show(this, $"Could not open {path}.\n{ex.Message}", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

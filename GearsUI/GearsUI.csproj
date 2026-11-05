@@ -177,6 +177,9 @@
     <Compile Include="Gui\Presenters\GearTrainPresenter.cs" />
     <Compile Include="Gui\Presenters\TrainNodeProperties.cs" />
     <Compile Include="Gui\Views\IGearTrainView.cs" />
+    <Compile Include="Gui\Views\HtmlDocumentForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Gui\Views\GearTrainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -215,12 +218,12 @@
     <Content Include="nexus.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\README.md">
-      <Link>README.md</Link>
+    <Content Include="..\README.html">
+      <Link>README.html</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\LICENSE">
-      <Link>LICENSE</Link>
+    <Content Include="..\LICENSE.html">
+      <Link>LICENSE.html</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
