@@ -80,12 +80,30 @@ namespace Bolsover.Gears.Gui.Views
         private ISet<GearComponent> _hidden;
         private AlibreGearExporter _alibreExporter;
 
+        /// <summary>
+        /// Uses the gears icon that is built into GearsUI.exe as the window icon. This also works when the editor is hosted in Alibre Design,
+        /// where the process executable is not ours. A missing icon leaves the default one.
+        /// </summary>
+        private void LoadApplicationIcon()
+        {
+            try
+            {
+                var icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+                if (icon != null) Icon = icon;
+            }
+            catch (Exception)
+            {
+                // The default window icon is used.
+            }
+        }
+
         public GearTrainForm()
         {
-            Text = "Gear Train";
+            Text = "Gears";
             Size = new Size(1400, 860);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9f);
+            LoadApplicationIcon();
 
             _host.Child = _viewport;
             _presenter = new GearTrainPresenter(this);

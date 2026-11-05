@@ -117,7 +117,7 @@ namespace Bolsover.Gears.AddOn
             switch (menuId)
             {
                 case MenuIdRoot: return "Gears";
-                case MenuIdGearTrain: return "Gear Train";
+                case MenuIdGearTrain: return "Gears";
                 default: return string.Empty;
             }
         }

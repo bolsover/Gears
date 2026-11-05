@@ -23,6 +23,14 @@
 library, a stand-alone gear train editor, an add-on that opens the same editor inside <strong>Alibre Design</strong>, and a set of
 unit tests.</p>
 
+<h2>Known issues</h2>
+<ul>
+  <li>This Add-on does not work with Alibre versions earlier than 29.1</li>
+  <li>Export of gear assemblies is not supported when Alibre Design system options are set to save files to PDM. Vault is untested. Individual gears can be exported to Alibre Design when system options save to is set for either Windows or PDM. Vault is untested. </li>
+  <li>Export of worm gear with 2 starts fails in Alibre. 1, 3, 4, 5 starts all appear to work correctly. </li>
+  <li>Some bevel gear configurations may fail in Alibre. </li>
+</ul>
+
 <h2>Features</h2>
 <ul>
   <li><strong>Gear train editor</strong>: build a train from shafts, gears and meshing relations, with a 2D view, a 3D view (HelixToolkit)
