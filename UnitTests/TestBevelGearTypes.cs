@@ -138,14 +138,18 @@ namespace UnitTests
             Assert.Greater(radii.Max(), plainTip, "The long pinion addendum raises the tip above the standard tip.");
         }
 
-        /// <summary>Radii of the heel (large end) vertices: they are at least the cone distance away from the apex, the toe vertices are closer.</summary>
+        /// <summary>
+        /// Radii of the heel (large end) vertices of the toothed rim: they are at least the cone distance away from the apex, the toe
+        /// vertices are closer. The hub and the bore lie inside the root circle and are left out.
+        /// </summary>
         private static System.Collections.Generic.List<double> LargeEndRadii(BevelGearComponent gear, Bolsover.Gears.Calculator.GearMesh3DBuilder.Mesh3D mesh)
         {
             var apexZ = gear.ApexAxialPosition;
+            var rootRadius = gear.RootDiameter / 2.0;
             return mesh.Vertices
                 .Where(v => Math.Sqrt(v.X * v.X + v.Y * v.Y + (v.Z - apexZ) * (v.Z - apexZ)) >= gear.ConeDistance - 1e-9)
                 .Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y))
-                .Where(r => r > 1e-6)
+                .Where(r => r >= rootRadius - 1e-6)
                 .ToList();
         }
 
@@ -162,8 +166,9 @@ namespace UnitTests
             var re = gear.ConeDistance;
             var scale = (re - gear.FaceWidth) / re;
 
+            var rootRadius = gear.RootDiameter / 2.0;
             var heel = mesh.Vertices.Where(v => Math.Sqrt(v.X * v.X + v.Y * v.Y + (v.Z - apexZ) * (v.Z - apexZ)) >= re - 1e-9
-                                                 && Math.Sqrt(v.X * v.X + v.Y * v.Y) > 1e-6).ToList();
+                                                 && Math.Sqrt(v.X * v.X + v.Y * v.Y) >= rootRadius - 1e-6).ToList();
             Assert.IsNotEmpty(heel);
             foreach (var v in heel)
             {
@@ -182,12 +187,8 @@ namespace UnitTests
             Assert.AreEqual(scale * (apexZ - tip.Z), apexZ - toeTip.Z, 1e-6, "The tip line runs to the apex.");
         }
 
-        [Test]
-        public void TestSolid_FacesPointOutwards()
+        private static double SignedVolume(Bolsover.Gears.Calculator.GearMesh3DBuilder.Mesh3D mesh)
         {
-            Pair(out var gear, out _, BevelGearType.Standard).Solve();
-
-            var mesh = gear.BuildGeometry().Mesh;
             var volume = 0.0;
             for (var i = 0; i + 2 < mesh.TriangleIndices.Count; i += 3)
             {
@@ -197,7 +198,250 @@ namespace UnitTests
                 volume += (a.X * (b.Y * c.Z - b.Z * c.Y) - a.Y * (b.X * c.Z - b.Z * c.X) + a.Z * (b.X * c.Y - b.Y * c.X)) / 6.0;
             }
 
-            Assert.Greater(volume, 0.0, "Faces must point outwards.");
+            return volume;
+        }
+
+        [Test]
+        public void TestSolid_FacesPointOutwards()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard).Solve();
+
+            Assert.Greater(SignedVolume(gear.BuildGeometry().Mesh), 0.0, "Faces must point outwards.");
+        }
+
+        [TestCase(BevelGearType.Standard, 20, 40, 90.0)]
+        [TestCase(BevelGearType.Standard, 40, 20, 90.0)]
+        [TestCase(BevelGearType.Gleason, 20, 36, 75.0)]
+        public void TestHubAndBore_DefaultsFollowTheShaftAndFacesPointOutwards(BevelGearType type, int z1, int z2, double shaftAngleDeg)
+        {
+            Pair(out var gear, out _, type, z1, z2, shaftAngleDeg).Solve();
+
+            Assert.AreEqual(gear.CarrierShaft.Diameter, gear.EffectiveBoreDiameter, Tol, "The automatic bore is the shaft diameter.");
+            Assert.AreEqual(1.8 * gear.EffectiveBoreDiameter, gear.EffectiveHubDiameter, Tol, "The automatic hub is 1.8 times the bore.");
+            Assert.Greater(gear.EffectiveHubLength, 0.0);
+            Assert.Less(gear.EffectiveHubDiameter, gear.RootDiameter);
+
+            var mesh = gear.BuildGeometry().Mesh;
+            Assert.Greater(SignedVolume(mesh), 0.0, "Faces must point outwards.");
+            AssertMeshIsClosed(mesh);
+        }
+
+        /// <summary>Every triangle edge is shared by exactly two triangles (compared by position), so the solid has no holes.</summary>
+        private static void AssertMeshIsClosed(Bolsover.Gears.Calculator.GearMesh3DBuilder.Mesh3D mesh)
+        {
+            string Key(Bolsover.Gears.Model.GearPoint3D v) => Math.Round(v.X, 6) + "|" + Math.Round(v.Y, 6) + "|" + Math.Round(v.Z, 6);
+            var edges = new System.Collections.Generic.Dictionary<string, int>();
+            for (var i = 0; i + 2 < mesh.TriangleIndices.Count; i += 3)
+            {
+                var keys = new[]
+                {
+                    Key(mesh.Vertices[mesh.TriangleIndices[i]]),
+                    Key(mesh.Vertices[mesh.TriangleIndices[i + 1]]),
+                    Key(mesh.Vertices[mesh.TriangleIndices[i + 2]])
+                };
+                for (var e = 0; e < 3; e++)
+                {
+                    var a = keys[e];
+                    var b = keys[(e + 1) % 3];
+                    if (a == b) continue;
+                    var edge = string.CompareOrdinal(a, b) < 0 ? a + ">" + b : b + ">" + a;
+                    edges[edge] = edges.TryGetValue(edge, out var count) ? count + 1 : 1;
+                }
+            }
+
+            Assert.IsEmpty(edges.Where(kv => kv.Value != 2).Take(5).ToList(), "Every edge must be shared by two triangles.");
+        }
+
+        [Test]
+        public void TestHubAndBore_BoreIsACylinderThroughTheBlankAndTheBackConeCarriesTheHub()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard, 20, 40).Solve();
+            gear.BoreDiameter = 8.0;
+            gear.HubDiameter = 16.0;
+            gear.HubLength = 6.0;
+
+            var mesh = gear.BuildGeometry().Mesh;
+            var apexZ = gear.ApexAxialPosition;
+            var delta = gear.PitchConeAngleRad;
+            double Radial(Bolsover.Gears.Model.GearPoint3D v) => Math.Sqrt(v.X * v.X + v.Y * v.Y);
+            double Along(Bolsover.Gears.Model.GearPoint3D v) => Radial(v) * Math.Sin(delta) + (apexZ - v.Z) * Math.Cos(delta);
+
+            var bore = mesh.Vertices.Where(v => Math.Abs(Radial(v) - 4.0) < 1e-6).ToList();
+            Assert.IsNotEmpty(bore, "The bore has a wall of radius 4.");
+            Assert.IsEmpty(mesh.Vertices.Where(v => Radial(v) < 4.0 - 1e-6), "Nothing is inside the bore.");
+
+            var hubRing = mesh.Vertices.Where(v => Math.Abs(Radial(v) - 8.0) < 1e-6).ToList();
+            Assert.IsNotEmpty(hubRing);
+            var onBackCone = hubRing.Where(v => Math.Abs(Along(v) - gear.ConeDistance) < 1e-6).ToList();
+            Assert.IsNotEmpty(onBackCone, "The hub meets the back cone, which is perpendicular to the pitch cone at the cone distance.");
+            var hubEnd = hubRing.Where(v => Math.Abs(Along(v) - gear.ConeDistance) > 1e-6).ToList();
+            Assert.IsNotEmpty(hubEnd);
+            foreach (var v in hubEnd)
+            {
+                var onCone = onBackCone[0];
+                Assert.AreEqual(onCone.Z - 6.0, v.Z, 1e-6, "The hub projects 6 mm behind the back cone.");
+            }
+
+            gear.GetBodyAxialExtent(out var start, out var end);
+            Assert.AreEqual(mesh.Vertices.Min(v => v.Z), start, 1e-6, "The body extent starts at the back of the hub.");
+            Assert.AreEqual(mesh.Vertices.Max(v => v.Z), end, 1e-6, "The body extent ends at the front of the teeth.");
+            Assert.Greater(SignedVolume(mesh), 0.0);
+            AssertMeshIsClosed(mesh);
+        }
+
+        [Test]
+        public void TestHubAndBore_BackConeAndFrontConeAreParallelAtTheBore()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard, 40, 20).Solve();
+
+            var mesh = gear.BuildGeometry().Mesh;
+            var apexZ = gear.ApexAxialPosition;
+            var delta = gear.PitchConeAngleRad;
+            var boreRadius = gear.EffectiveBoreDiameter / 2.0;
+            var wall = mesh.Vertices.Where(v => Math.Abs(Math.Sqrt(v.X * v.X + v.Y * v.Y) - boreRadius) < 1e-6).ToList();
+
+            var along = wall.Select(v => boreRadius * Math.Sin(delta) + (apexZ - v.Z) * Math.Cos(delta)).ToList();
+            Assert.That(along.Min(), Is.EqualTo(gear.ConeDistance - gear.FaceWidth).Within(1e-6), "The front cone is a face width in from the back cone.");
+            var expectedBack = gear.ConeDistance + gear.EffectiveHubLength * Math.Cos(delta)
+                               - (gear.EffectiveHubDiameter - gear.EffectiveBoreDiameter) / 2.0 * Math.Sin(delta);
+            Assert.That(along.Max(), Is.EqualTo(expectedBack).Within(1e-6), "The bore reaches back to the end of the hub.");
+        }
+
+        [Test]
+        public void TestHubAndBore_NoHubKeepsTheBoreAndTheBackConeRunsStraightToIt()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard).Solve();
+            gear.HasHub = false;
+
+            Assert.AreEqual(0.0, gear.EffectiveHubDiameter, Tol);
+            Assert.AreEqual(0.0, gear.EffectiveHubLength, Tol);
+
+            var mesh = gear.BuildGeometry().Mesh;
+            var apexZ = gear.ApexAxialPosition;
+            var delta = gear.PitchConeAngleRad;
+            var boreRadius = gear.EffectiveBoreDiameter / 2.0;
+            Assert.IsNotEmpty(mesh.Vertices.Where(v => Math.Abs(Math.Sqrt(v.X * v.X + v.Y * v.Y) - boreRadius) < 1e-6));
+            Assert.IsEmpty(mesh.Vertices.Where(v => Math.Sqrt(v.X * v.X + v.Y * v.Y) < boreRadius - 1e-6));
+            Assert.IsEmpty(mesh.Vertices.Where(v => Math.Sqrt(v.X * v.X + v.Y * v.Y) * Math.Sin(delta) + (apexZ - v.Z) * Math.Cos(delta) > gear.ConeDistance + 1e-6),
+                "Without a hub nothing lies behind the back cone.");
+            Assert.Greater(SignedVolume(mesh), 0.0);
+            AssertMeshIsClosed(mesh);
+        }
+
+        [Test]
+        public void TestHubAndBore_UnmountedGearHasHubButNoBore()
+        {
+            var gear = new BevelGearComponent("U") { Teeth = 20, Module = 2.0, FaceWidth = 10.0 };
+
+            Assert.AreEqual(0.0, gear.EffectiveBoreDiameter, Tol);
+            Assert.AreEqual(0.4 * gear.RootDiameter, gear.EffectiveHubDiameter, Tol);
+
+            var mesh = gear.BuildGeometry().Mesh;
+            Assert.Greater(SignedVolume(mesh), 0.0);
+            AssertMeshIsClosed(mesh);
+        }
+
+        [Test]
+        public void TestHubAndBore_TheBoreIsLimitedAndBadValuesAreRejected()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard).Solve();
+            gear.CarrierShaft.Diameter = 100.0;
+            Assert.AreEqual(gear.MaxBoreDiameter, gear.EffectiveBoreDiameter, Tol, "An oversize shaft limits the automatic bore.");
+            Assert.Less(gear.EffectiveBoreDiameter, gear.EffectiveHubDiameter);
+
+            gear.BoreDiameter = gear.MaxBoreDiameter + 1.0;
+            Assert.Throws<InvalidOperationException>(() => gear.Validate());
+
+            gear.BoreDiameter = 10.0;
+            gear.HubDiameter = 9.0;
+            Assert.Throws<InvalidOperationException>(() => gear.Validate(), "The hub must be larger than the bore.");
+
+            gear.HubDiameter = gear.MaxHubDiameter + 1.0;
+            Assert.Throws<InvalidOperationException>(() => gear.Validate(), "The hub must stay inside the root circle.");
+
+            gear.HubDiameter = 0.0;
+            gear.HubLength = -1.0;
+            Assert.Throws<InvalidOperationException>(() => gear.Validate());
+        }
+
+        [Test]
+        public void TestHubAndBore_BackConeValues()
+        {
+            KhkPair(BevelGearType.Standard, out var pinion, out var gear).Solve();
+
+            Assert.AreEqual(90.0 - pinion.PitchConeAngleDeg, pinion.BackConeAngleDeg, 1e-9);
+            Assert.AreEqual(pinion.PitchDiameter / 2.0 / Math.Cos(pinion.PitchConeAngleRad), pinion.BackConeDistance, 1e-9);
+            Assert.AreEqual(pinion.Teeth / Math.Cos(pinion.PitchConeAngleRad), 2.0 * pinion.BackConeDistance / pinion.Module, 1e-9, "The virtual tooth count.");
+            Assert.AreEqual(63.43495, pinion.BackConeAngleDeg, 1e-5);
+            Assert.AreEqual(26.56505, gear.BackConeAngleDeg, 1e-5);
+        }
+
+        [Test]
+        public void TestHubAndBore_ShaftCoversTheHub()
+        {
+            var assembly = Pair(out var gear, out _, BevelGearType.Standard, 40, 20);
+            assembly.Solve();
+
+            var shaft = gear.CarrierShaft;
+            shaft.GetAxialSpan(out var start, out var end);
+            gear.GetBodyAxialExtent(out var bodyStart, out var bodyEnd);
+            var offset = shaft.Mounts[0].AxialOffset;
+
+            Assert.AreEqual(offset + bodyStart - shaft.EndMargin, start, 1e-9);
+            Assert.AreEqual(offset + bodyEnd + shaft.EndMargin, end, 1e-9);
+            Assert.Less(bodyStart, -gear.FaceWidth / 2.0, "The hub reaches behind the face width.");
+        }
+
+        [Test]
+        public void TestHubAndBore_2DOutlineShowsTheHubAndBoreCircles()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard).Solve();
+            gear.BoreDiameter = 8.0;
+            gear.HubDiameter = 14.0;
+
+            var polylines = gear.BuildGeometry().Polylines;
+            var rootRadius = gear.RootDiameter / 2.0;
+            var radii = polylines.Select(p => p.Select(pt => Math.Sqrt(pt.X * pt.X + pt.Y * pt.Y)).ToList())
+                .Where(r => r.Max() - r.Min() < 1e-9 && r[0] < rootRadius - 1e-6).Select(r => r[0]).OrderBy(r => r).ToList();
+
+            CollectionAssert.AreEqual(new[] { 4.0, 7.0 }, radii.Select(r => Math.Round(r, 9)).ToArray());
+        }
+
+        [Test]
+        public void TestSerializer_RoundTripsTheHubAndBore()
+        {
+            var assembly = Pair(out var original, out _, BevelGearType.Standard);
+            original.BoreDiameter = 8.0;
+            original.HasHub = false;
+            original.HubDiameter = 15.0;
+            original.HubLength = 7.0;
+            assembly.Solve();
+
+            var loaded = AssemblySerializer.FromJson(AssemblySerializer.ToJson(assembly));
+
+            var first = (BevelGearComponent)loaded.Shafts[0].Mounts[0].Component;
+            Assert.AreEqual(8.0, first.BoreDiameter, Tol);
+            Assert.IsFalse(first.HasHub);
+            Assert.AreEqual(15.0, first.HubDiameter, Tol);
+            Assert.AreEqual(7.0, first.HubLength, Tol);
+        }
+
+        [Test]
+        public void TestSerializer_FileWithoutAHubLoadsWithTheAutomaticHubAndBore()
+        {
+            var assembly = Pair(out _, out _, BevelGearType.Standard);
+            var json = AssemblySerializer.ToJson(assembly)
+                .Replace("\"HasHub\"", "\"IgnoredA\"").Replace("\"BoreDiameter\"", "\"IgnoredB\"")
+                .Replace("\"HubDiameter\"", "\"IgnoredC\"").Replace("\"HubLength\"", "\"IgnoredD\"");
+
+            var loaded = AssemblySerializer.FromJson(json);
+
+            var gear = (BevelGearComponent)loaded.Shafts[0].Mounts[0].Component;
+            Assert.IsTrue(gear.HasHub);
+            Assert.AreEqual(0.0, gear.BoreDiameter, Tol);
+            Assert.AreEqual(0.0, gear.HubDiameter, Tol);
+            Assert.AreEqual(0.0, gear.HubLength, Tol);
+            Assert.AreEqual(gear.CarrierShaft.Diameter, gear.EffectiveBoreDiameter, Tol);
         }
 
         [Test]

@@ -106,13 +106,22 @@ namespace Bolsover.Gears.Calculator.Assemblies
         /// <param name="tanCone">Tangent of the pitch cone half angle; zero gives flat ends perpendicular to the axis.</param>
         /// <param name="apexZ">Z of the cone apex.</param>
         /// <param name="smallEndScale">Scale about the apex of the small end relative to the large end.</param>
+        /// <param name="boreRadius">
+        /// Radius of the bore through the blank; zero for none. With a bore or a hub the large end is a ring on the back cone from the
+        /// teeth in to the hub (or the bore), and the small end a ring on the front cone out to the bore.
+        /// </param>
+        /// <param name="hubRadius">Radius of the hub behind the back cone; zero or a value not above the bore radius for none.</param>
+        /// <param name="hubLength">Length of the hub behind the back cone, along the axis (mm).</param>
         public static GearMesh3DBuilder.Mesh3D LoftToApex(
             IReadOnlyList<GearPoint> outline,
             double zLarge,
             double pitchRadius,
             double tanCone,
             double apexZ,
-            double smallEndScale)
+            double smallEndScale,
+            double boreRadius = 0.0,
+            double hubRadius = 0.0,
+            double hubLength = 0.0)
         {
             var mesh = new GearMesh3DBuilder.Mesh3D();
             if (outline == null || outline.Count < 3) return mesh;
@@ -148,12 +157,105 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 mesh.TriangleIndices.AddRange(new[] { baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3 });
             }
 
-            // Caps: a fan from the axis at the level of the root circle (the flat inside of the blank).
-            var centreLarge = new GearPoint3D(0.0, 0.0, LargeZ(minRadius));
-            AddConeCap(mesh, small, Small(centreLarge), true);
-            AddConeCap(mesh, large, centreLarge, false);
+            boreRadius = Math.Max(0.0, boreRadius);
+            var hasHub = hubRadius > boreRadius && hubLength > 0.0;
+            var innerRadius = hasHub ? hubRadius : boreRadius;
+            if (innerRadius <= 0.0)
+            {
+                // Caps: a fan from the axis at the level of the root circle (the flat inside of the blank).
+                var centreLarge = new GearPoint3D(0.0, 0.0, LargeZ(minRadius));
+                AddConeCap(mesh, small, Small(centreLarge), true);
+                AddConeCap(mesh, large, centreLarge, false);
+                mesh.CalculateNormals();
+                return mesh;
+            }
+
+            var dirX = new double[n];
+            var dirY = new double[n];
+            for (var i = 0; i < n; i++)
+            {
+                var radius = Math.Sqrt(pts[i].X * pts[i].X + pts[i].Y * pts[i].Y);
+                dirX[i] = radius > 1e-12 ? pts[i].X / radius : 1.0;
+                dirY[i] = radius > 1e-12 ? pts[i].Y / radius : 0.0;
+            }
+
+            GearPoint3D OnRing(int i, double radius, double z) => new GearPoint3D(dirX[i] * radius, dirY[i] * radius, z);
+
+            // Large end: the back cone from the teeth in to the hub (or the bore), facing away from the apex.
+            var zInner = LargeZ(innerRadius);
+            for (var i = 0; i < n; i++)
+            {
+                var j = (i + 1) % n;
+                AddQuad(mesh, OnRing(i, innerRadius, zInner), OnRing(j, innerRadius, zInner), large[j], large[i]);
+            }
+
+            // Small end: the front cone from the teeth in to the bore, or a fan to the cone apex of the blank when there is no bore.
+            var zToeBore = 0.0;
+            if (boreRadius > 0.0)
+            {
+                zToeBore = apexZ + (LargeZ(boreRadius / smallEndScale) - apexZ) * smallEndScale;
+                for (var i = 0; i < n; i++)
+                {
+                    var j = (i + 1) % n;
+                    AddQuad(mesh, OnRing(i, boreRadius, zToeBore), small[i], small[j], OnRing(j, boreRadius, zToeBore));
+                }
+            }
+            else
+            {
+                AddConeCap(mesh, small, Small(new GearPoint3D(0.0, 0.0, LargeZ(0.0))), true);
+            }
+
+            var zBoreBottom = zInner;
+            if (hasHub)
+            {
+                // Hub: a cylinder behind the back cone, closed by a flat end face (a ring when there is a bore).
+                var zBack = zInner - hubLength;
+                zBoreBottom = zBack;
+                for (var i = 0; i < n; i++)
+                {
+                    var j = (i + 1) % n;
+                    AddQuad(mesh, OnRing(i, hubRadius, zBack), OnRing(j, hubRadius, zBack), OnRing(j, hubRadius, zInner), OnRing(i, hubRadius, zInner));
+                }
+
+                if (boreRadius > 0.0)
+                {
+                    for (var i = 0; i < n; i++)
+                    {
+                        var j = (i + 1) % n;
+                        AddQuad(mesh, OnRing(i, boreRadius, zBack), OnRing(j, boreRadius, zBack), OnRing(j, hubRadius, zBack), OnRing(i, hubRadius, zBack));
+                    }
+                }
+                else
+                {
+                    var hubEnd = new GearPoint3D[n];
+                    for (var i = 0; i < n; i++) hubEnd[i] = OnRing(i, hubRadius, zBack);
+                    AddConeCap(mesh, hubEnd, new GearPoint3D(0.0, 0.0, zBack), false);
+                }
+            }
+
+            // Bore: a cylinder whose faces point towards the axis.
+            if (boreRadius > 0.0)
+            {
+                for (var i = 0; i < n; i++)
+                {
+                    var j = (i + 1) % n;
+                    AddQuad(mesh, OnRing(i, boreRadius, zBoreBottom), OnRing(i, boreRadius, zToeBore), OnRing(j, boreRadius, zToeBore), OnRing(j, boreRadius, zBoreBottom));
+                }
+            }
+
             mesh.CalculateNormals();
             return mesh;
+        }
+
+        /// <summary>Adds a quad with its own four vertices as the triangles (a, b, c) and (a, c, d).</summary>
+        private static void AddQuad(GearMesh3DBuilder.Mesh3D mesh, GearPoint3D a, GearPoint3D b, GearPoint3D c, GearPoint3D d)
+        {
+            var k = mesh.Vertices.Count;
+            mesh.Vertices.Add(a);
+            mesh.Vertices.Add(b);
+            mesh.Vertices.Add(c);
+            mesh.Vertices.Add(d);
+            mesh.TriangleIndices.AddRange(new[] { k, k + 1, k + 2, k, k + 2, k + 3 });
         }
 
         private static void AddConeCap(GearMesh3DBuilder.Mesh3D mesh, GearPoint3D[] ring, GearPoint3D centre, bool facesUp)

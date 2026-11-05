@@ -480,6 +480,68 @@ namespace Bolsover.Gears.Gui.Presenters
         public double RootConeAngle => _gear.RootConeAngleDeg;
 
         [Category("Cone")]
+        [DisplayName("Back cone angle (deg)")]
+        [Description("Half angle of the back cone, 90 degrees less the pitch cone angle. The back face of the teeth lies on this cone.")]
+        public double BackConeAngle => _gear.BackConeAngleDeg;
+
+        [Category("Cone")]
+        [DisplayName("Back cone distance (mm)")]
+        public double BackConeDistance => _gear.BackConeDistance;
+
+        [Category("Hub and bore")]
+        [DisplayName("Bore diameter (mm, 0 = shaft)")]
+        [Description("0 uses the diameter of the shaft that carries the gear. The bore is limited to 0.6 times the root diameter.")]
+        public double BoreDiameter
+        {
+            get => _gear.BoreDiameter;
+            set => _gear.BoreDiameter = Math.Max(0.0, value);
+        }
+
+        [Category("Hub and bore")]
+        [DisplayName("Hub")]
+        [Description("Draws a hub behind the back cone.")]
+        public bool HasHub
+        {
+            get => _gear.HasHub;
+            set => _gear.HasHub = value;
+        }
+
+        [Category("Hub and bore")]
+        [DisplayName("Hub diameter (mm, 0 = automatic)")]
+        [Description("0 gives 1.8 times the bore. It must be larger than the bore and not more than 0.85 times the root diameter.")]
+        public double HubDiameter
+        {
+            get => _gear.HubDiameter;
+            set => _gear.HubDiameter = Math.Max(0.0, value);
+        }
+
+        [Category("Hub and bore")]
+        [DisplayName("Hub length (mm, 0 = automatic)")]
+        [Description("Projection of the hub behind the back cone, along the axis. 0 gives 0.75 times the bore, but at least half the face width.")]
+        public double HubLength
+        {
+            get => _gear.HubLength;
+            set => _gear.HubLength = Math.Max(0.0, value);
+        }
+
+        [Category("Hub and bore")]
+        [DisplayName("Bore used (mm)")]
+        public double EffectiveBoreDiameter => _gear.EffectiveBoreDiameter;
+
+        [Category("Hub and bore")]
+        [DisplayName("Hub diameter used (mm)")]
+        public double EffectiveHubDiameter => _gear.EffectiveHubDiameter;
+
+        [Category("Hub and bore")]
+        [DisplayName("Hub length used (mm)")]
+        public double EffectiveHubLength => _gear.EffectiveHubLength;
+
+        [Category("Hub and bore")]
+        [DisplayName("Overall length along axis (mm)")]
+        [Description("From the back of the hub to the front of the teeth.")]
+        public double OverallLength => _gear.OverallAxialLength;
+
+        [Category("Cone")]
         [DisplayName("Tip diameter (mm)")]
         public double TipDiameter => _gear.TipDiameter;
 

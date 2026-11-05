@@ -35,6 +35,17 @@ A component's *phase* is its rotation about its axis in radians. For a rack the 
 * The property grid also reports the quantities of the usual bevel gear tables (for example KHK / HZPT): dedendum angle `atan(hf / Re)`, addendum angle (Standard `atan(ha / Re)`; Gleason: the dedendum angle of the mate), tip cone angle `delta + theta_a`, root cone angle `delta - theta_f`, tip diameter `d + 2 ha cos(delta)`, pitch apex to crown `Re cos(delta) - ha sin(delta)` and the recommended face width limit (the smaller of `Re / 3` and `10 m`).
 * The 3D solid and the 2D outline are built from the same large-end profile, so the tip and root radii are exactly `d/2 + ha cos(delta)` and `d/2 - hf cos(delta)`. At the large end every profile point lies on the back cone (the surface perpendicular to the pitch cone), so the tooth tips sit nearer the apex than the pitch circle, by `ha sin(delta)`, as in the usual section drawings. The small end is the large end scaled about the pitch apex, so the tooth edges, tip lines and root lines all run to the apex. For Standard teeth this gives exactly the tip and root cones of the tables. For Gleason teeth the tables use a constant-clearance taper; the solid keeps the proportional taper, so the tooth depth at the small end differs slightly (a few hundredths of a millimetre for a face width of one third of the cone distance).
 
+#### Back cone, hub and bore
+
+The 3D solid of a bevel gear is the toothed slab between the back cone (the surface perpendicular to the pitch cone at the cone distance `Re`) and the front cone, a face width `b` nearer the apex. The solid has a bore through the slab and a hub projecting behind the back cone. The back cone face runs from the teeth in to the hub, so the teeth rest on a cone and not on a flat disc. The 2D outline shows the hub and the bore as circles inside the teeth.
+
+* Back cone angle: `90° - delta`, and back cone distance `d / (2 cos(delta))`. The virtual tooth count `Zv = z / cos(delta)` is `2 * back cone distance / m`. Both appear in the property grid under "Cone".
+* Bore diameter (property grid, "Hub and bore"): `0` uses the diameter of the shaft that carries the gear, so the shaft runs exactly through the bore. A gear that is not mounted on a shaft has no bore until a value is entered. The bore must not exceed 0.6 times the root diameter `d - 2 hf cos(delta)`; an automatic bore is limited to that value, a larger entered value is rejected.
+* Hub: the hub switch turns the hub on or off. Hub diameter `0` gives 1.8 times the bore (0.4 times the root diameter when there is no bore); an entered value must be larger than the bore and not more than 0.85 times the root diameter. Hub length is the projection behind the back cone along the axis; `0` gives 0.75 times the bore, but at least half the face width.
+* The grid also reports the bore, hub diameter and hub length actually used, and the overall length along the axis from the back of the hub to the front of the teeth.
+* The shaft is sized from the whole body of the gear, hub included, so the shaft still covers the hub. Spacing and overlap checks between gears on one shaft still use the face width.
+* The bore, hub switch, hub diameter and hub length are saved with the gear. Files saved earlier have none of them and open with the automatic values and a hub.
+
 #### Standard and Gleason tooth proportions
 
 The *Bevel type* property (and the *Start with* menu entries *Bevel gear (standard)* and *Bevel gear (Gleason)*) selects the tooth depth system. Set it on the driving gear; the meshed gear follows.

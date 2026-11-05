@@ -215,6 +215,10 @@ namespace Bolsover.Gears.Model.Assemblies
                     dto.ShaftAngleDeg = g.ShaftAngleDeg;
                     dto.Backlash = g.Backlash;
                     dto.BevelType = g.BevelType.ToString();
+                    dto.BoreDiameter = g.BoreDiameter;
+                    dto.HasHub = g.HasHub;
+                    dto.HubDiameter = g.HubDiameter;
+                    dto.HubLength = g.HubLength;
                     break;
                 case WormComponent g:
                     dto.Type = "Worm";
@@ -275,7 +279,11 @@ namespace Bolsover.Gears.Model.Assemblies
                         MateTeeth = dto.MateTeeth ?? 0,
                         ShaftAngleDeg = dto.ShaftAngleDeg ?? 90.0,
                         Backlash = dto.Backlash ?? 0.0,
-                        BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard
+                        BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard,
+                        BoreDiameter = dto.BoreDiameter ?? 0.0,
+                        HasHub = dto.HasHub ?? true,
+                        HubDiameter = dto.HubDiameter ?? 0.0,
+                        HubLength = dto.HubLength ?? 0.0
                     };
                     break;
                 case "Worm":
@@ -353,6 +361,12 @@ namespace Bolsover.Gears.Model.Assemblies
 
             /// <summary>Bevel tooth system (Standard or Gleason); absent in older files, which are Standard.</summary>
             public string BevelType { get; set; }
+
+            /// <summary>Bevel bore and hub (mm); zero means automatic. Absent in older files, which get the automatic values and a hub.</summary>
+            public double? BoreDiameter { get; set; }
+            public bool? HasHub { get; set; }
+            public double? HubDiameter { get; set; }
+            public double? HubLength { get; set; }
             public int? Starts { get; set; }
             public double? DiameterQuotient { get; set; }
             public double? LeadAngleDeg { get; set; }

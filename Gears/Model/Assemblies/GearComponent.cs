@@ -62,6 +62,19 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Face width (mm), measured along the gear axis.</summary>
         public double FaceWidth { get; set; } = 15.0;
 
+        /// <summary>The shaft this component is mounted on, or null when it is not mounted; set by <see cref="Shaft.Mount"/>.</summary>
+        public Shaft CarrierShaft { get; internal set; }
+
+        /// <summary>
+        /// Axial extent of the whole body in the local frame (mm), including parts outside the face width such as a hub. The shaft
+        /// is sized to cover it. The default is the face width centred on the mid-plane.
+        /// </summary>
+        public virtual void GetBodyAxialExtent(out double start, out double end)
+        {
+            start = -FaceWidth / 2.0;
+            end = FaceWidth / 2.0;
+        }
+
         /// <summary>Number of teeth (used for gear ratios).</summary>
         public abstract int ToothCount { get; }
 

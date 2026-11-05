@@ -46,6 +46,14 @@ namespace Bolsover.Gears.Model.Assemblies
             start = AxialOffset - half;
             end = AxialOffset + half;
         }
+
+        /// <summary>Axial extent of the whole gear body along the shaft axis (mm), including a hub outside the face width.</summary>
+        public void GetBodyAxialExtent(out double start, out double end)
+        {
+            Component.GetBodyAxialExtent(out var lo, out var hi);
+            start = AxialOffset + lo;
+            end = AxialOffset + hi;
+        }
     }
 
     /// <summary>
@@ -100,7 +108,7 @@ namespace Bolsover.Gears.Model.Assemblies
             var max = double.MinValue;
             foreach (var mount in _mounts)
             {
-                mount.GetAxialExtent(out var s, out var e);
+                mount.GetBodyAxialExtent(out var s, out var e);
                 if (s < min) min = s;
                 if (e > max) max = e;
             }
@@ -139,6 +147,7 @@ namespace Bolsover.Gears.Model.Assemblies
             }
 
             var mount = new ShaftMount(component, axialOffset) { Shaft = this };
+            component.CarrierShaft = this;
             _mounts.Add(mount);
             return mount;
         }
@@ -150,6 +159,7 @@ namespace Bolsover.Gears.Model.Assemblies
             {
                 if (!ReferenceEquals(_mounts[i].Component, component)) continue;
                 _mounts[i].Shaft = null;
+                if (ReferenceEquals(component.CarrierShaft, this)) component.CarrierShaft = null;
                 _mounts.RemoveAt(i);
                 return true;
             }
