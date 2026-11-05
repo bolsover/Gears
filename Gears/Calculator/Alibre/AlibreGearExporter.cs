@@ -68,13 +68,16 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>Name of the default axis of a new Alibre part that the bevel gear blank is revolved and the valleys are patterned about.</summary>
         public const string BevelGearAxisName = "X-Axis";
 
+        /// <summary>Name of the default plane of a new Alibre part that the axis of the back cone plane is made on (with the offset plane); the axis then runs along Z through pointC.</summary>
+        public const string BevelAxisFromPlaneName = "ZX-Plane";
+
         public const string BevelBlankSketchName = "GearBlankProfile";
         public const string BevelBlankFeatureName = "GearBlank";
         public const string BevelOffsetPlaneName = "BackConeOffsetPlane";
         public const string BevelConeAxisName = "BackConeAxis";
         public const string BevelConePlaneName = "BackConePlane";
         public const string BevelToothSketchName = "ToothValleyProfile";
-        public const string BevelNodeSketchName = "ApexNode";
+        public const string BevelApexPointName = "PitchConeApex";
         public const string BevelValleyFeatureName = "ToothValley";
         public const string BevelPatternFeatureName = "ToothValleyPattern";
 
@@ -303,12 +306,12 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         /// <summary>
         /// Creates a straight bevel gear in a new Alibre part, following the construction of the 3D view in the editor:
-        /// 1. a sketch of the closed gear blank profile on the XY plane (gear axis along X), with a sketch node at the apex of the front cone,
-        /// 2. a revolve of the blank about the X axis,
-        /// 3. a plane offset from the YZ plane to the point where the back cone meets the X axis, an axis where that plane meets the XY
-        ///    plane, and a plane turned about that axis to lie on the back cone,
+        /// 1. a sketch of the closed gear blank profile on the XY plane (gear axis along X),
+        /// 2. a revolve of the blank about the X axis, and a design point at the pitch cone apex (created with <c>IADDesignPoints.CreatePoint</c>),
+        /// 3. a plane offset from the YZ plane to the point where the back cone meets the X axis, an axis where that plane meets the ZX
+        ///    plane (it runs along Z through that point), and a plane turned about that axis to lie on the back cone,
         /// 4. a sketch of one tooth valley (Tredgold, with trochoidal root fillets) on the back cone plane,
-        /// 5. a loft cut from the valley sketch to the apex node,
+        /// 5. a loft cut from the valley sketch to the apex design point,
         /// 6. a circular pattern of the cut about the X axis, which forms all the teeth.
         /// The bore and hub of the editor model are not part of the export.
         /// </summary>
@@ -329,9 +332,6 @@ namespace Bolsover.Gears.Calculator.Alibre
                 stage = "drawing the gear blank profile";
                 var closed = DrawFigures(blankSketch, plan.BlankFigures, null);
 
-                stage = "adding the sketch node at the apex of the front cone";
-                var apexNode = AddSketchNode(blankSketch, plan.ApexNodeX);
-
                 stage = "revolving the gear blank about the " + BevelGearAxisName;
                 IADPartFeature blank;
                 try
@@ -345,11 +345,16 @@ namespace Bolsover.Gears.Calculator.Alibre
 
                 CheckFeature(blank, "The revolved gear blank");
 
+                stage = "adding the design point at the apex of the pitch cone";
+                var apexPoint = session.DesignPoints.CreatePoint(plan.ApexNodeX, 0.0, 0.0, BevelApexPointName);
+                if (apexPoint == null) throw new InvalidOperationException("The design point at the pitch cone apex was not created.");
+
                 stage = "adding a plane offset from the " + BevelOffsetFromPlaneName + " to the back cone apex";
                 var offsetPlane = AddBackConeOffsetPlane(session, plan);
 
-                stage = "adding an axis where the offset plane meets the " + SketchPlaneName;
-                var coneAxis = session.DesignAxes.CreateBy2Planes(null, offsetPlane, null, xyPlane, BevelConeAxisName);
+                stage = "adding an axis where the offset plane meets the " + BevelAxisFromPlaneName;
+                var zxPlane = session.DesignPlanes.Item(BevelAxisFromPlaneName);
+                var coneAxis = session.DesignAxes.CreateBy2Planes(null, offsetPlane, null, zxPlane, BevelConeAxisName);
 
                 stage = "adding a plane on the back cone";
                 var conePlane = AddBackConePlane(session, offsetPlane, coneAxis, plan);
@@ -363,11 +368,11 @@ namespace Bolsover.Gears.Calculator.Alibre
                 stage = "drawing the tooth valley profile";
                 var toothClosed = DrawMappedFigures(toothSketch, plan.ToothFigures, map);
 
-                stage = "cutting a tooth valley with a loft to the apex node";
+                stage = "cutting a tooth valley with a loft to the apex design point";
                 IADPartFeature valley;
                 try
                 {
-                    valley = AddValleyLoftCut(session, toothSketch, apexNode, plan, xyPlane);
+                    valley = AddValleyLoftCut(session, toothSketch, apexPoint);
                 }
                 catch (InvalidOperationException) when (!toothClosed)
                 {
@@ -391,19 +396,6 @@ namespace Bolsover.Gears.Calculator.Alibre
             }
         }
 
-        /// <summary>Adds a sketch node on the X axis (the apex of the front cone) to an open or closed sketch; returns the sketch point.</summary>
-        private static object AddSketchNode(IADSketch sketch, double x)
-        {
-            sketch.BeginChange();
-            try
-            {
-                return sketch.Figures.AddSketchPoint(x, 0.0);
-            }
-            finally
-            {
-                sketch.EndChange();
-            }
-        }
 
         /// <summary>
         /// Adds the plane offset from the YZ plane to the point where the back cone meets the X axis. Alibre's offset direction is not
@@ -586,12 +578,12 @@ namespace Bolsover.Gears.Calculator.Alibre
         }
 
         /// <summary>
-        /// Cuts one tooth valley with a loft from the valley sketch to the sketch node at the apex of the front cone. Alibre can accept the
-        /// call and still report the feature as failed, so each attempt is checked and the next form is tried: the node as drawn in the
-        /// blank sketch, the same with empty tangent and guide collectors, and finally a separate sketch that holds only the node.
+        /// Cuts one tooth valley with a loft from the valley sketch to the design point at the pitch cone apex. Alibre can accept the
+        /// call and still report the feature as failed, so each attempt is checked and the next form is tried: the point with null tangent
+        /// and guide collectors, then the same with empty collectors.
         /// Throws <see cref="InvalidOperationException"/> when no attempt gives a valid loft cut.
         /// </summary>
-        private IADPartFeature AddValleyLoftCut(IADPartSession session, IADSketch toothSketch, object apexNode, BevelGearSketch plan, IADDesignPlane xyPlane)
+        private IADPartFeature AddValleyLoftCut(IADPartSession session, IADSketch toothSketch, IADDesignPoint apexPoint)
         {
             var failures = new List<string>();
 
@@ -637,22 +629,10 @@ namespace Bolsover.Gears.Calculator.Alibre
                 return null;
             }
 
-            var result = Attempt("node in the blank sketch", apexNode, false) ?? Attempt("node in the blank sketch, empty collectors", apexNode, true);
+            var result = Attempt("design point", apexPoint, false) ?? Attempt("design point, empty collectors", apexPoint, true);
             if (result != null) return result;
 
-            try
-            {
-                var nodeSketch = session.Sketches.AddSketch(null, xyPlane, BevelNodeSketchName);
-                var node = AddSketchNode(nodeSketch, plan.ApexNodeX);
-                result = Attempt("node in its own sketch", node, false) ?? Attempt("node in its own sketch, empty collectors", node, true);
-                if (result != null) return result;
-            }
-            catch (Exception ex)
-            {
-                failures.Add("node in its own sketch: " + ex.Message);
-            }
-
-            throw new InvalidOperationException($"the loft cut of the tooth valley to the apex node was not accepted ({string.Join("; ", failures)})");
+            throw new InvalidOperationException($"the loft cut of the tooth valley to the apex design point was not accepted ({string.Join("; ", failures)})");
         }
 
         /// <summary>Creates the new Alibre part that a component is built in.</summary>
