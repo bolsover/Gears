@@ -54,8 +54,17 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Angle between the two shaft axes in degrees (90 for a standard bevel pair).</summary>
         public double ShaftAngleDeg { get; set; } = 90.0;
 
-        /// <summary>Circular backlash (mm).</summary>
+        /// <summary>Circular backlash (mm). It is only reported; the solid is cut to the nominal tooth thickness.</summary>
         public double Backlash { get; set; }
+
+        /// <summary>
+        /// Corner radius of the generating rack tip as a multiple of the module, from 0 (a sharp corner and a pure trochoidal root fillet,
+        /// the default) to below 1. A rounded corner gives a larger root fillet.
+        /// </summary>
+        public double RackTipRadiusFactor { get; set; }
+
+        /// <summary>Corner radius of the generating rack tip (mm).</summary>
+        public double RackTipRadius => RackTipRadiusFactor * Module;
 
         /// <summary>
         /// Bore diameter (mm). Zero means automatic: the diameter of the shaft carrying the gear (no bore when the gear is not mounted).
@@ -266,6 +275,30 @@ namespace Bolsover.Gears.Model.Assemblies
 
             var tipRadius = TipDiameter / 2.0;
             end = Math.Max(halfAxial, ApexAxialPosition + (LargeEndZ(tipRadius) - ApexAxialPosition) * scale);
+
+            // The solid made from the blank profile has a flat back face at pointF and ends at the toe corner pointG.
+            try
+            {
+                var blank = CreateBlankProfile();
+                var offset = BlankAxialOffset;
+                var back = -blank.PointF.X + offset;
+                var hubLength = EffectiveBoreDiameter < EffectiveHubDiameter ? EffectiveHubLength : 0.0;
+                start = back - hubLength;
+                end = -Math.Min(blank.PointG.X, blank.PointH.X) + offset;
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                // An invalid combination is reported by Validate and BuildGeometry; the extent stays that of the simple cone body.
+            }
+        }
+
+        /// <summary>Shift along the axis from the blank frame (X along the axis, apex towards negative X) to the local frame (Z axis, apex on +Z): z = offset - x.</summary>
+        private double BlankAxialOffset => -FaceWidth * Math.Cos(PitchConeAngleRad) / 2.0;
+
+        /// <summary>The closed profile sketch of the gear blank, with the proportions of this gear and its mate.</summary>
+        public BevelBlankProfile CreateBlankProfile()
+        {
+            return new BevelBlankProfile(Teeth, EffectiveMateTeeth, Module, FaceWidth, ShaftAngleDeg, bevelType: BevelType);
         }
 
         public void Validate()
@@ -281,6 +314,11 @@ namespace Bolsover.Gears.Model.Assemblies
             if (ShaftAngleDeg <= 0 || ShaftAngleDeg >= 180)
             {
                 throw new InvalidOperationException($"Bevel gear '{Id}': the shaft angle must be between 0 and 180 degrees.");
+            }
+
+            if (!(RackTipRadiusFactor >= 0.0 && RackTipRadiusFactor < 1.0))
+            {
+                throw new InvalidOperationException($"Bevel gear '{Id}': the rack tip radius must be from 0 to below 1 module.");
             }
 
             if (FaceWidth >= ConeDistance)
@@ -321,50 +359,55 @@ namespace Bolsover.Gears.Model.Assemblies
         {
             Validate();
 
-            var virtualTeeth = VirtualTeeth;
             var profile = AlibreGearGenerator.GenerateExternalToothProfile(
-                virtualTeeth, Module, PressureAngleDeg, ProfileShiftMm, false, null, Clearance, Backlash, 0.0);
+                VirtualTeeth, Module, PressureAngleDeg, ProfileShiftMm, false, null, Clearance, Backlash, 0.0);
 
-            // Radial distances from the pitch circle shrink by cos(delta) when the back cone profile is projected onto the large-end
-            // plane, so the tip and root radii are exactly d/2 + ha cos(delta) and d/2 - hf cos(delta). The angle is stretched so
-            // that the tooth pitch on the pitch circle is that of the real gear.
-            var pitchRadius = PitchDiameter / 2.0;
-            var virtualPitchRadius = Module * virtualTeeth / 2.0;
-            var radialScale = Math.Cos(PitchConeAngleRad);
-            var angleScale = virtualTeeth / (double)Teeth;
-            var tooth = new List<List<GearPoint>>();
-            foreach (var segment in AlibreGearGenerator.BuildToothOutline(profile, false))
+            // The solid is the blank revolved about its axis with the Tredgold tooth valleys cut and patterned (see BevelBlankProfile and
+            // BevelToothSketch). The blank frame has its axis along X and the cone apex towards negative X.
+            var blank = CreateBlankProfile();
+            var sketch = new BevelToothSketch(blank, PressureAngleDeg, rackTipRadiusFactor: RackTipRadiusFactor);
+
+            // The bore and the hub are limited so that they stay inside the root of the teeth.
+            var bore = Math.Min(EffectiveBoreDiameter / 2.0, 0.9 * blank.PointH.Y);
+            var hubRadius = EffectiveHubDiameter / 2.0;
+            var hubLength = EffectiveHubLength;
+            if (hubRadius > 0.95 * blank.PointD.Y) hubRadius = 0.95 * blank.PointD.Y;
+            var hasHub = hubRadius > bore && hubLength > 0.0;
+            var blankMesh = blank.BuildToothedMesh(sketch, 0, bore, hasHub ? hubRadius : 0.0, hasHub ? hubLength : 0.0);
+
+            // Into the local frame: the axis is Z with the apex on +Z, a proper rotation (x, y, z) -> (y, -z, -x) plus the axial shift. The
+            // turn by half a pitch puts a tooth, not a valley, on the +X axis like the other gears, which the mesh phase assumes.
+            var offset = BlankAxialOffset;
+            var phase = Math.PI / Teeth;
+            var cosPhase = Math.Cos(phase);
+            var sinPhase = Math.Sin(phase);
+            var mesh = new GearMesh3DBuilder.Mesh3D();
+            foreach (var v in blankMesh.Vertices)
             {
-                var mapped = new List<GearPoint>(segment.Count);
-                foreach (var point in segment)
-                {
-                    var radius = pitchRadius + (Math.Sqrt(point.X * point.X + point.Y * point.Y) - virtualPitchRadius) * radialScale;
-                    var angle = Math.Atan2(point.Y, point.X) * angleScale;
-                    mapped.Add(new GearPoint(radius * Math.Cos(angle), radius * Math.Sin(angle)));
-                }
-
-                tooth.Add(mapped);
+                var x = v.Y;
+                var y = -v.Z;
+                mesh.Vertices.Add(new GearPoint3D(x * cosPhase - y * sinPhase, x * sinPhase + y * cosPhase, offset - v.X));
             }
 
-            var polylines = AlibreGearGenerator.BuildFullGear(Teeth, tooth);
-            var outline = SolidMeshBuilder.Flatten(polylines);
+            mesh.TriangleIndices.AddRange(blankMesh.TriangleIndices);
+            mesh.CalculateNormals();
+
+            // The 2D outline is the sketch outline projected onto the plane of the large end, with the same flip and turn.
+            var cosDelta = Math.Cos(PitchConeAngleRad);
+            var outline = new List<GearPoint>();
+            foreach (var point in sketch.BuildOutline(Teeth))
+            {
+                var radius = blank.BackConePoint(point.Radius).Y;
+                var angle = -point.Angle / cosDelta + phase;
+                outline.Add(new GearPoint(radius * Math.Cos(angle), radius * Math.Sin(angle)));
+            }
+
+            if (outline.Count > 0) outline.Add(outline[0]);
+            var polylines = new List<List<GearPoint>> { outline };
 
             // The hub and bore show in the 2D view as circles inside the tooth outline.
-            var bore = EffectiveBoreDiameter;
-            var hub = EffectiveHubDiameter;
-            var hasHub = hub > bore && EffectiveHubLength > 0.0;
-            if (hasHub) polylines.Add(Circle(hub / 2.0));
-            if (bore > 0.0) polylines.Add(Circle(bore / 2.0));
-
-            // The tooth ends are square to the pitch cone (back cone at the large end) and every tooth edge runs to the apex,
-            // so the tip, pitch and root cones meet at one point as in the usual drawings.
-            var cone = PitchConeAngleRad;
-            var halfAxial = FaceWidth * Math.Cos(cone) / 2.0;
-            var smallEndScale = (ConeDistance - FaceWidth) / ConeDistance;
-            var tanCone = Math.Cos(cone) > 0.05 ? Math.Tan(cone) : 0.0;
-            var mesh = SolidMeshBuilder.LoftToApex(
-                outline, -halfAxial, PitchDiameter / 2.0, tanCone, ApexAxialPosition, smallEndScale,
-                bore / 2.0, hasHub ? hub / 2.0 : 0.0, hasHub ? EffectiveHubLength : 0.0);
+            if (hasHub) polylines.Add(Circle(hubRadius));
+            if (bore > 0.0) polylines.Add(Circle(bore));
 
             return new GearGeometry(profile, polylines, mesh);
         }

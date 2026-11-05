@@ -164,7 +164,8 @@ namespace UnitTests
             var apexZ = gear.ApexAxialPosition;
             var delta = gear.PitchConeAngleRad;
             var re = gear.ConeDistance;
-            var scale = (re - gear.FaceWidth) / re;
+            // The face width runs along the tip cone line (the blank's lineH), so the toe is scaled about the apex by the blank's ratio.
+            var scale = gear.CreateBlankProfile().ToeScale;
 
             var rootRadius = gear.RootDiameter / 2.0;
             var heel = mesh.Vertices.Where(v => Math.Sqrt(v.X * v.X + v.Y * v.Y + (v.Z - apexZ) * (v.Z - apexZ)) >= re - 1e-9
@@ -270,16 +271,18 @@ namespace UnitTests
             Assert.IsNotEmpty(bore, "The bore has a wall of radius 4.");
             Assert.IsEmpty(mesh.Vertices.Where(v => Radial(v) < 4.0 - 1e-6), "Nothing is inside the bore.");
 
+            // The blank has a flat back face (pointF to pointD, square to the axis); the hub stands 6 mm out of it.
+            var blank = gear.CreateBlankProfile();
+            var backFaceZ = -FaceWidthOffset(gear) - blank.PointF.X;
             var hubRing = mesh.Vertices.Where(v => Math.Abs(Radial(v) - 8.0) < 1e-6).ToList();
             Assert.IsNotEmpty(hubRing);
-            var onBackCone = hubRing.Where(v => Math.Abs(Along(v) - gear.ConeDistance) < 1e-6).ToList();
-            Assert.IsNotEmpty(onBackCone, "The hub meets the back cone, which is perpendicular to the pitch cone at the cone distance.");
-            var hubEnd = hubRing.Where(v => Math.Abs(Along(v) - gear.ConeDistance) > 1e-6).ToList();
+            var onBackFace = hubRing.Where(v => Math.Abs(v.Z - backFaceZ) < 1e-6).ToList();
+            Assert.IsNotEmpty(onBackFace, "The hub meets the flat back face of the blank.");
+            var hubEnd = hubRing.Where(v => Math.Abs(v.Z - backFaceZ) > 1e-6).ToList();
             Assert.IsNotEmpty(hubEnd);
             foreach (var v in hubEnd)
             {
-                var onCone = onBackCone[0];
-                Assert.AreEqual(onCone.Z - 6.0, v.Z, 1e-6, "The hub projects 6 mm behind the back cone.");
+                Assert.AreEqual(backFaceZ - 6.0, v.Z, 1e-6, "The hub projects 6 mm behind the back face.");
             }
 
             gear.GetBodyAxialExtent(out var start, out var end);
@@ -295,17 +298,19 @@ namespace UnitTests
             Pair(out var gear, out _, BevelGearType.Standard, 40, 20).Solve();
 
             var mesh = gear.BuildGeometry().Mesh;
-            var apexZ = gear.ApexAxialPosition;
-            var delta = gear.PitchConeAngleRad;
+            var blank = gear.CreateBlankProfile();
             var boreRadius = gear.EffectiveBoreDiameter / 2.0;
             var wall = mesh.Vertices.Where(v => Math.Abs(Math.Sqrt(v.X * v.X + v.Y * v.Y) - boreRadius) < 1e-6).ToList();
 
-            var along = wall.Select(v => boreRadius * Math.Sin(delta) + (apexZ - v.Z) * Math.Cos(delta)).ToList();
-            Assert.That(along.Min(), Is.EqualTo(gear.ConeDistance - gear.FaceWidth).Within(1e-6), "The front cone is a face width in from the back cone.");
-            var expectedBack = gear.ConeDistance + gear.EffectiveHubLength * Math.Cos(delta)
-                               - (gear.EffectiveHubDiameter - gear.EffectiveBoreDiameter) / 2.0 * Math.Sin(delta);
-            Assert.That(along.Max(), Is.EqualTo(expectedBack).Within(1e-6), "The bore reaches back to the end of the hub.");
+            // The bore runs from the toe face (pointH to the axis) back to the end of the hub behind the flat back face.
+            var toeFaceZ = -FaceWidthOffset(gear) - blank.PointH.X;
+            var hubEndZ = -FaceWidthOffset(gear) - blank.PointF.X - gear.EffectiveHubLength;
+            Assert.That(wall.Max(v => v.Z), Is.EqualTo(toeFaceZ).Within(1e-6), "The bore reaches the toe face.");
+            Assert.That(wall.Min(v => v.Z), Is.EqualTo(hubEndZ).Within(1e-6), "The bore reaches back to the end of the hub.");
         }
+
+        /// <summary>Axial shift of the blank frame into the local frame is minus this value: z = -(FaceWidth cos(delta) / 2) - x.</summary>
+        private static double FaceWidthOffset(BevelGearComponent gear) => gear.FaceWidth * Math.Cos(gear.PitchConeAngleRad) / 2.0;
 
         [Test]
         public void TestHubAndBore_NoHubKeepsTheBoreAndTheBackConeRunsStraightToIt()
@@ -542,6 +547,80 @@ namespace UnitTests
             var loaded = AssemblySerializer.FromJson(json);
 
             Assert.AreEqual(BevelGearType.Standard, ((BevelGearComponent)loaded.Shafts[0].Mounts[0].Component).BevelType);
+        }
+
+        [Test]
+        public void TestRackTip_RoundedTipChangesTheRootFilletAndKeepsASolid()
+        {
+            Pair(out var sharp, out _, BevelGearType.Standard, 20, 40).Solve();
+            var sharpMesh = sharp.BuildGeometry().Mesh;
+
+            Pair(out var rounded, out _, BevelGearType.Standard, 20, 40).Solve();
+            rounded.RackTipRadiusFactor = 0.25;
+            var roundedMesh = rounded.BuildGeometry().Mesh;
+
+            Assert.Greater(SignedVolume(roundedMesh), 0.0, "Faces must point outwards.");
+            AssertMeshIsClosed(roundedMesh);
+            Assert.Greater(Math.Abs(SignedVolume(sharpMesh) - SignedVolume(roundedMesh)), 1e-6, "A rounded rack tip gives a different root fillet.");
+        }
+
+        [Test]
+        public void TestRackTip_FactorOutsideTheRangeIsRejected()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard).Solve();
+
+            gear.RackTipRadiusFactor = 1.0;
+            Assert.Throws<InvalidOperationException>(() => gear.BuildGeometry());
+            gear.RackTipRadiusFactor = -0.1;
+            Assert.Throws<InvalidOperationException>(() => gear.BuildGeometry());
+        }
+
+        [Test]
+        public void TestSerializer_RoundTripsTheRackTipRadius()
+        {
+            var assembly = Pair(out var gear, out _, BevelGearType.Standard);
+            gear.RackTipRadiusFactor = 0.3;
+            assembly.Solve();
+
+            var loaded = AssemblySerializer.FromJson(AssemblySerializer.ToJson(assembly));
+
+            Assert.AreEqual(0.3, ((BevelGearComponent)loaded.Shafts[0].Mounts[0].Component).RackTipRadiusFactor, Tol);
+        }
+
+        [Test]
+        public void TestSerializer_FileWithoutARackTipRadiusLoadsAsASharpTip()
+        {
+            var assembly = Pair(out var gear, out _, BevelGearType.Standard);
+            gear.RackTipRadiusFactor = 0.3;
+            var json = AssemblySerializer.ToJson(assembly).Replace("\"RackTipRadiusFactor\"", "\"Ignored\"");
+
+            var loaded = AssemblySerializer.FromJson(json);
+
+            Assert.AreEqual(0.0, ((BevelGearComponent)loaded.Shafts[0].Mounts[0].Component).RackTipRadiusFactor, Tol);
+        }
+
+        [TestCase(BevelGearType.Standard, 20, 40, 90.0)]
+        [TestCase(BevelGearType.Gleason, 20, 36, 75.0)]
+        public void TestOutline_ToothIsCentredOnThePositiveXAxis(BevelGearType type, int z1, int z2, double shaftAngleDeg)
+        {
+            Pair(out var gear, out _, type, z1, z2, shaftAngleDeg).Solve();
+
+            var outline = gear.BuildGeometry().Polylines[0];
+
+            var tipRadius = outline.Max(p => Math.Sqrt(p.X * p.X + p.Y * p.Y));
+            var nearAxis = outline.Where(p => p.X > 0.0).OrderBy(p => Math.Abs(p.Y)).First();
+            Assert.AreEqual(tipRadius, Math.Sqrt(nearAxis.X * nearAxis.X + nearAxis.Y * nearAxis.Y), 1e-6, "A tooth tip, not a valley, lies on the +X axis.");
+        }
+
+        [Test]
+        public void TestOutline_ReachesTheToothTipAndRootRadiiOfTheGear()
+        {
+            Pair(out var gear, out _, BevelGearType.Standard, 20, 40).Solve();
+
+            var radii = gear.BuildGeometry().Polylines[0].Select(p => Math.Sqrt(p.X * p.X + p.Y * p.Y)).ToList();
+
+            Assert.AreEqual(gear.TipDiameter / 2.0, radii.Max(), 1e-6);
+            Assert.AreEqual(gear.RootDiameter / 2.0, radii.Min(), 1e-6);
         }
     }
 }

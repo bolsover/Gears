@@ -215,6 +215,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     dto.ShaftAngleDeg = g.ShaftAngleDeg;
                     dto.Backlash = g.Backlash;
                     dto.BevelType = g.BevelType.ToString();
+                    dto.RackTipRadiusFactor = g.RackTipRadiusFactor;
                     dto.BoreDiameter = g.BoreDiameter;
                     dto.HasHub = g.HasHub;
                     dto.HubDiameter = g.HubDiameter;
@@ -280,6 +281,7 @@ namespace Bolsover.Gears.Model.Assemblies
                         ShaftAngleDeg = dto.ShaftAngleDeg ?? 90.0,
                         Backlash = dto.Backlash ?? 0.0,
                         BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard,
+                        RackTipRadiusFactor = dto.RackTipRadiusFactor ?? 0.0,
                         BoreDiameter = dto.BoreDiameter ?? 0.0,
                         HasHub = dto.HasHub ?? true,
                         HubDiameter = dto.HubDiameter ?? 0.0,
@@ -361,6 +363,9 @@ namespace Bolsover.Gears.Model.Assemblies
 
             /// <summary>Bevel tooth system (Standard or Gleason); absent in older files, which are Standard.</summary>
             public string BevelType { get; set; }
+
+            /// <summary>Bevel rack tip corner radius as a multiple of the module; absent in older files, which get a sharp corner.</summary>
+            public double? RackTipRadiusFactor { get; set; }
 
             /// <summary>Bevel bore and hub (mm); zero means automatic. Absent in older files, which get the automatic values and a hub.</summary>
             public double? BoreDiameter { get; set; }

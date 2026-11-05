@@ -338,7 +338,8 @@ namespace Bolsover.Gears.Gui.Presenters
                         PressureAngleDeg = bevel.PressureAngleDeg,
                         FaceWidth = bevel.FaceWidth,
                         ShaftAngleDeg = bevel.ShaftAngleDeg,
-                        BevelType = bevel.BevelType
+                        BevelType = bevel.BevelType,
+                        RackTipRadiusFactor = bevel.RackTipRadiusFactor
                     };
                     break;
                 }

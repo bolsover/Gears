@@ -530,7 +530,7 @@ namespace UnitTests
             double FromApex(Bolsover.Gears.Model.GearPoint3D v) => Math.Sqrt(v.X * v.X + v.Y * v.Y + (v.Z - apexZ) * (v.Z - apexZ));
             var bigEnd = geometry.Mesh.Vertices.Where(v => FromApex(v) >= g1.ConeDistance - 1e-9).Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)).Max();
             var smallEnd = geometry.Mesh.Vertices.Where(v => FromApex(v) < g1.ConeDistance - 1e-9).Select(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)).Max();
-            Assert.AreEqual((g1.ConeDistance - g1.FaceWidth) / g1.ConeDistance, smallEnd / bigEnd, 1e-6);
+            Assert.AreEqual(g1.CreateBlankProfile().ToeScale, smallEnd / bigEnd, 1e-6);
 
             var expectedTip = g1.PitchDiameter / 2.0 + g1.Addendum * Math.Cos(g1.PitchConeAngleRad);
             Assert.AreEqual(expectedTip, bigEnd, 1e-6, "Tip radius = pitch radius + addendum * cos(delta).");

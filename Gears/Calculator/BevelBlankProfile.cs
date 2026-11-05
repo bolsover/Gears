@@ -219,40 +219,74 @@ namespace Bolsover.Gears.Calculator
         /// </summary>
         /// <param name="sketch">The valley sketch made for this blank.</param>
         /// <param name="valleys">Number of valleys to cut (1 to the number of teeth); 0 or less cuts them all.</param>
-        public GearMesh3DBuilder.Mesh3D BuildToothedMesh(BevelToothSketch sketch, int valleys = 0)
+        /// <param name="boreRadius">Radius of a bore through the blank along the axis; zero for none. It must be smaller than the root radius at the toe.</param>
+        /// <param name="hubRadius">Radius of a hub standing out of the back face; zero or a value not above the bore radius for none.</param>
+        /// <param name="hubLength">Length of the hub behind the back face, along the axis.</param>
+        public GearMesh3DBuilder.Mesh3D BuildToothedMesh(BevelToothSketch sketch, int valleys = 0, double boreRadius = 0.0, double hubRadius = 0.0, double hubLength = 0.0)
         {
             if (sketch == null) throw new ArgumentNullException(nameof(sketch));
             if (!ReferenceEquals(sketch.Profile, this)) throw new ArgumentException("The sketch belongs to a different blank.", nameof(sketch));
 
+            boreRadius = Math.Max(0.0, boreRadius);
+            if (boreRadius > 0.0 && !(boreRadius < PointH.Y)) throw new ArgumentException("The bore must be smaller than the root radius at the toe.", nameof(boreRadius));
+            var hasHub = hubRadius > boreRadius && hubLength > 0.0;
+            if (hasHub && !(hubRadius < PointD.Y)) throw new ArgumentException("The hub must be smaller than the root radius at the heel.", nameof(hubRadius));
+
             var outline = sketch.BuildOutline(valleys <= 0 ? Teeth : valleys);
             var cosDelta = Math.Cos(PitchConeAngleRad);
             var count = outline.Count;
-            var backFace = new GearPoint3D[count];
-            var heelRoot = new GearPoint3D[count];
-            var heel = new GearPoint3D[count];
-            var toe = new GearPoint3D[count];
-            var toeRoot = new GearPoint3D[count];
-            var toeFace = new GearPoint3D[count];
+            var angles = new double[count];
             for (var i = 0; i < count; i++)
             {
                 // The developed back cone is a full turn of 2 pi cos(delta); on the cone itself the turn is 2 pi.
-                var angle = outline[i].Angle / cosDelta;
-                var onBackCone = BackConePoint(outline[i].Radius);
-                backFace[i] = Revolve(PointF, angle);
-                heelRoot[i] = Revolve(PointD, angle);
-                heel[i] = Revolve(onBackCone, angle);
-                toe[i] = Revolve(ToToe(onBackCone), angle);
-                toeRoot[i] = Revolve(PointH, angle);
-                toeFace[i] = Revolve(PointI, angle);
+                angles[i] = outline[i].Angle / cosDelta;
             }
 
-            // The same order as the sketch F, D, E, G, H, I: back face, heel (back cone), loft along the teeth, toe, toe face.
+            GearPoint3D[] Ring(BevelBlankPoint p)
+            {
+                var ring = new GearPoint3D[count];
+                for (var i = 0; i < count; i++) ring[i] = Revolve(p, angles[i]);
+                return ring;
+            }
+
+            // The profile runs counter-clockwise like the sketch F, D, E, G, H, I: from the bore (or the axis) behind the back face,
+            // over the hub, up the back face to D, along the back cone and the teeth to the toe, down the toe face to the bore (or axis).
+            var rings = new List<GearPoint3D[]>();
+            BevelBlankPoint first;
+            if (hasHub)
+            {
+                first = new BevelBlankPoint(PointD.X + hubLength, boreRadius);
+                rings.Add(Ring(first));
+                rings.Add(Ring(new BevelBlankPoint(PointD.X + hubLength, hubRadius)));
+                rings.Add(Ring(new BevelBlankPoint(PointD.X, hubRadius)));
+            }
+            else
+            {
+                first = new BevelBlankPoint(PointD.X, boreRadius);
+                rings.Add(Ring(first));
+            }
+
+            rings.Add(Ring(PointD));
+            var heel = new GearPoint3D[count];
+            var toe = new GearPoint3D[count];
+            for (var i = 0; i < count; i++)
+            {
+                var onBackCone = BackConePoint(outline[i].Radius);
+                heel[i] = Revolve(onBackCone, angles[i]);
+                toe[i] = Revolve(ToToe(onBackCone), angles[i]);
+            }
+
+            rings.Add(heel);
+            rings.Add(toe);
+            rings.Add(Ring(PointH));
+            var last = new BevelBlankPoint(PointH.X, boreRadius);
+            rings.Add(Ring(last));
+
             var mesh = new GearMesh3DBuilder.Mesh3D();
-            AddBand(mesh, backFace, heelRoot);
-            AddBand(mesh, heelRoot, heel);
-            AddBand(mesh, heel, toe);
-            AddBand(mesh, toe, toeRoot);
-            AddBand(mesh, toeRoot, toeFace);
+            for (var r = 0; r + 1 < rings.Count; r++) AddBand(mesh, rings[r], rings[r + 1]);
+
+            // The bore: from the toe end back to the start of the profile (collapsed on the axis when there is no bore).
+            if (boreRadius > 0.0) AddBand(mesh, rings[rings.Count - 1], rings[0]);
             mesh.CalculateNormals();
             return mesh;
         }

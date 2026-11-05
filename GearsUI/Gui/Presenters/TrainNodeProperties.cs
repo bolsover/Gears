@@ -394,11 +394,13 @@ namespace Bolsover.Gears.Gui.Presenters
     public sealed class BevelNodeProperties : ComponentNodePropertiesBase
     {
         private readonly BevelGearComponent _gear;
+        private readonly GearTrainPresenter _owner;
 
         public BevelNodeProperties(GearTrainPresenter presenter, BevelGearComponent gear, ShaftMount mount, GearMeshRelation relation)
             : base(presenter, gear, mount, relation)
         {
             _gear = gear;
+            _owner = presenter;
         }
 
         [Category("Teeth")]
@@ -424,6 +426,34 @@ namespace Bolsover.Gears.Gui.Presenters
         {
             get => _gear.BevelType;
             set => _gear.BevelType = value;
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Mating teeth")]
+        [Description("Tooth count of the mating bevel gear, which sets the pitch cone angle. For a meshed gear this changes the teeth of the gear it meshes with.")]
+        public int MateTeeth
+        {
+            get => _gear.MateTeeth > 0 ? _gear.MateTeeth : _gear.Teeth;
+            set
+            {
+                var teeth = Math.Max(1, value);
+                _gear.MateTeeth = teeth;
+                foreach (var relation in _owner.Assembly.Relations)
+                {
+                    if (relation.MeshType != MeshType.Bevel) continue;
+                    var partner = ReferenceEquals(relation.Driver, _gear) ? relation.Driven : ReferenceEquals(relation.Driven, _gear) ? relation.Driver : null;
+                    if (partner is BevelGearComponent mate) mate.Teeth = teeth;
+                }
+            }
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Rack tip radius (x module)")]
+        [Description("Corner radius of the generating rack tip as a multiple of the module. 0 gives a sharp corner and a trochoidal root fillet; a larger value gives a larger root fillet. Must be below 1.")]
+        public double RackTipRadiusFactor
+        {
+            get => _gear.RackTipRadiusFactor;
+            set => _gear.RackTipRadiusFactor = Math.Max(0.0, value);
         }
 
         [Category("Tooth depth")]
