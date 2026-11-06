@@ -154,7 +154,7 @@ namespace Bolsover.Gears.Gui
 
             var material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
-            material.Children.Add(new SpecularMaterial(new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 255, 255, 255)), 40.0));
+            material.Children.Add(new SpecularMaterial(new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255)), 10.0));
 
             var model = new GeometryModel3D
             {

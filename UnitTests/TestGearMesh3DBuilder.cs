@@ -31,8 +31,8 @@ namespace UnitTests
             var faceWidth = 20.0;
             var mesh = GearMesh3DBuilder.BuildExtrudedGearMesh(profile, faceWidth);
 
-            // 3 front + 3 back + 1 center front + 1 center back = 8 vertices
-            Assert.AreEqual(8, mesh.Vertices.Count);
+            // 3 front + 3 back side-wall vertices, plus 2 flat end faces each with 1 centre + 3 ring vertices = 14 vertices
+            Assert.AreEqual(14, mesh.Vertices.Count);
 
             // 3 side quads (6 triangles = 18 indices) + 3 front cap triangles (9 indices) + 3 back cap triangles (9 indices) = 36 indices
             Assert.AreEqual(36, mesh.TriangleIndices.Count);
@@ -43,6 +43,82 @@ namespace UnitTests
 
             // Check normals count equals vertices count
             Assert.AreEqual(mesh.Vertices.Count, mesh.Normals.Count);
+        }
+
+        [Test]
+        public void TestBuildGearMesh_ExternalGear_EndFacesAreFlatWithAxialNormals()
+        {
+            var profile = AlibreGearGenerator.GenerateExternalToothProfile(20, 2.0, 20.0, 0.0, false);
+            var faceWidth = 15.0;
+            var mesh = GearMesh3DBuilder.BuildGearMesh(profile, 20, faceWidth, isInternal: false, isFullGear: true);
+            AssertEndFacesAreFlat(mesh, faceWidth);
+        }
+
+        [Test]
+        public void TestBuildGearMesh_HelicalExternalGear_EndFacesAreFlatWithAxialNormals()
+        {
+            var profile = AlibreGearGenerator.GenerateExternalToothProfile(
+                20, 2.0, 20.0, 0.0, false, null, null, null, 25.0);
+            var faceWidth = 20.0;
+            var mesh = GearMesh3DBuilder.BuildGearMesh(
+                profile, 20, faceWidth, isInternal: false, isFullGear: true, helixAngleDeg: 25.0, helicalDirection: "R");
+            AssertEndFacesAreFlat(mesh, faceWidth);
+        }
+
+        [Test]
+        public void TestBuildGearMesh_InternalGear_EndFacesAreFlatWithAxialNormals()
+        {
+            var profile = AlibreGearGenerator.GenerateInternalToothProfile(30, 2.0, 20.0, 5.0, 0.0, false);
+            var faceWidth = 15.0;
+            var mesh = GearMesh3DBuilder.BuildGearMesh(profile, 30, faceWidth, isInternal: true, isFullGear: true, rimThickness: 5.0);
+            AssertEndFacesAreFlat(mesh, faceWidth);
+        }
+
+        private static void AssertEndFacesAreFlat(GearMesh3DBuilder.Mesh3D mesh, double faceWidth)
+        {
+            var half = faceWidth / 2.0;
+            var frontCount = 0;
+            var backCount = 0;
+            for (var i = 0; i < mesh.Vertices.Count; i++)
+            {
+                var n = mesh.Normals[i];
+                var isFront = System.Math.Abs(mesh.Vertices[i].Z - half) < 1e-9;
+                var isBack = System.Math.Abs(mesh.Vertices[i].Z + half) < 1e-9;
+                if (System.Math.Abs(n.Z - 1.0) < 1e-9 && System.Math.Abs(n.X) < 1e-9 && System.Math.Abs(n.Y) < 1e-9)
+                {
+                    Assert.IsTrue(isFront, "A +Z flat normal must belong to a vertex on the front face plane.");
+                    frontCount++;
+                }
+                else if (System.Math.Abs(n.Z + 1.0) < 1e-9 && System.Math.Abs(n.X) < 1e-9 && System.Math.Abs(n.Y) < 1e-9)
+                {
+                    Assert.IsTrue(isBack, $"A -Z flat normal must belong to a vertex on the back face plane. Vertex {i} of {mesh.Vertices.Count}: ({mesh.Vertices[i].X}, {mesh.Vertices[i].Y}, {mesh.Vertices[i].Z}), half={half}");
+                    backCount++;
+                }
+            }
+
+            Assert.Greater(frontCount, 0, "Front face must have flat +Z normals.");
+            Assert.Greater(backCount, 0, "Back face must have flat -Z normals.");
+
+            // Every triangle that lies entirely in a face plane must use only axial normals (no blending with side walls).
+            for (var t = 0; t + 2 < mesh.TriangleIndices.Count; t += 3)
+            {
+                var i0 = mesh.TriangleIndices[t];
+                var i1 = mesh.TriangleIndices[t + 1];
+                var i2 = mesh.TriangleIndices[t + 2];
+                foreach (var plane in new[] { half, -half })
+                {
+                    if (System.Math.Abs(mesh.Vertices[i0].Z - plane) < 1e-9 &&
+                        System.Math.Abs(mesh.Vertices[i1].Z - plane) < 1e-9 &&
+                        System.Math.Abs(mesh.Vertices[i2].Z - plane) < 1e-9)
+                    {
+                        var expectedZ = plane > 0 ? 1.0 : -1.0;
+                        foreach (var idx in new[] { i0, i1, i2 })
+                        {
+                            Assert.AreEqual(expectedZ, mesh.Normals[idx].Z, 1e-9, "End face normal must be axial.");
+                        }
+                    }
+                }
+            }
         }
 
         [Test]

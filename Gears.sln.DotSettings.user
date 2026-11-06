@@ -64,15 +64,11 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=aabb4658_002De5a5_002D4032_002D9fed_002D5864cc6788a5/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Agent Session" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;Or&gt;&#xD;
     &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestBevelBlankProfile&lt;/TestId&gt;&#xD;
+      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearMesh3DBuilder&lt;/TestId&gt;&#xD;
     &lt;/TestAncestor&gt;&#xD;
     &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestBevelGearTypes&lt;/TestId&gt;&#xD;
+      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestHelixMeshAdapter&lt;/TestId&gt;&#xD;
     &lt;/TestAncestor&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B::.NETFramework,Version=v4.8.1::UnitTests.TestGearAddOn&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;ProjectFile&gt;18E5057A-98C4-4BBF-8BCB-0498C3AC2A9B/f:TestBevelBlankProfile.cs&lt;/ProjectFile&gt;&#xD;
   &lt;/Or&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	

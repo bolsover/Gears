@@ -357,14 +357,27 @@ namespace Bolsover.Gears.Calculator
                 }
             }
 
+            // End faces use their own vertices (not shared with the side walls) so that they are flat
+            // with exact +Z / -Z normals and no shading gradient from the adjacent walls.
+            var frontCapBase = mesh.Vertices.Count;
+            for (var i = 0; i < stride; i++)
+            {
+                mesh.Vertices.Add(mesh.Vertices[i]);
+            }
+            var backCapBase = mesh.Vertices.Count;
+            for (var i = 0; i < stride; i++)
+            {
+                mesh.Vertices.Add(mesh.Vertices[slices * stride + i]);
+            }
+
             // Front Annular Cap (k = 0, z = +halfWidth, +Z normal)
             for (var i = 0; i < segmentCount; i++)
             {
                 var next = (i + 1) % n;
-                var fi0 = i;
-                var fi1 = next;
-                var fo0 = n + i;
-                var fo1 = n + next;
+                var fi0 = frontCapBase + i;
+                var fi1 = frontCapBase + next;
+                var fo0 = frontCapBase + n + i;
+                var fo1 = frontCapBase + n + next;
 
                 mesh.TriangleIndices.Add(fi0);
                 mesh.TriangleIndices.Add(fo0);
@@ -376,7 +389,7 @@ namespace Bolsover.Gears.Calculator
             }
 
             // Back Annular Cap (k = slices, z = -halfWidth, -Z normal)
-            var backOffset = slices * stride;
+            var backOffset = backCapBase;
             for (var i = 0; i < segmentCount; i++)
             {
                 var next = (i + 1) % n;
@@ -433,7 +446,21 @@ namespace Bolsover.Gears.Calculator
             }
 
             mesh.CalculateNormals();
+            SetAxialNormals(mesh, frontCapBase, stride, 1.0);
+            SetAxialNormals(mesh, backCapBase, stride, -1.0);
             return mesh;
+        }
+
+        /// <summary>
+        /// Forces the normals of a run of end-face vertices to be exactly axial so the face renders as a flat disk.
+        /// </summary>
+        private static void SetAxialNormals(Mesh3D mesh, int startIndex, int count, double normalZ)
+        {
+            if (mesh.Normals.Count != mesh.Vertices.Count) return;
+            for (var i = startIndex; i < startIndex + count && i < mesh.Normals.Count; i++)
+            {
+                mesh.Normals[i] = new GearPoint3D(0, 0, normalZ);
+            }
         }
 
         /// <summary>
@@ -511,27 +538,40 @@ namespace Bolsover.Gears.Calculator
                 }
             }
 
+            var backBase = slices * n;
+
+            // End faces use their own vertices (not shared with the side walls) so that they are flat disks
+            // with exact +Z / -Z normals and no shading gradient from the adjacent tooth flanks.
             // Front Cap (k = 0, z = +halfWidth, normal +Z)
             var centerFrontIdx = mesh.Vertices.Count;
             mesh.Vertices.Add(new GearPoint3D(0, 0, halfWidth));
+            var frontRingBase = mesh.Vertices.Count;
+            for (var i = 0; i < n; i++)
+            {
+                mesh.Vertices.Add(mesh.Vertices[i]);
+            }
             for (var i = 0; i < segmentCount; i++)
             {
                 var next = (i + 1) % n;
                 mesh.TriangleIndices.Add(centerFrontIdx);
-                mesh.TriangleIndices.Add(i);
-                mesh.TriangleIndices.Add(next);
+                mesh.TriangleIndices.Add(frontRingBase + i);
+                mesh.TriangleIndices.Add(frontRingBase + next);
             }
 
             // Back Cap (k = slices, z = -halfWidth, normal -Z)
-            var backBase = slices * n;
             var centerBackIdx = mesh.Vertices.Count;
             mesh.Vertices.Add(new GearPoint3D(0, 0, -halfWidth));
+            var backRingBase = mesh.Vertices.Count;
+            for (var i = 0; i < n; i++)
+            {
+                mesh.Vertices.Add(mesh.Vertices[backBase + i]);
+            }
             for (var i = 0; i < segmentCount; i++)
             {
                 var next = (i + 1) % n;
                 mesh.TriangleIndices.Add(centerBackIdx);
-                mesh.TriangleIndices.Add(backBase + next);
-                mesh.TriangleIndices.Add(backBase + i);
+                mesh.TriangleIndices.Add(backRingBase + next);
+                mesh.TriangleIndices.Add(backRingBase + i);
             }
 
             // Radial side walls if not a closed loop (single tooth sector)
@@ -574,6 +614,8 @@ namespace Bolsover.Gears.Calculator
             }
 
             mesh.CalculateNormals();
+            SetAxialNormals(mesh, centerFrontIdx, n + 1, 1.0);
+            SetAxialNormals(mesh, centerBackIdx, n + 1, -1.0);
             return mesh;
         }
 
