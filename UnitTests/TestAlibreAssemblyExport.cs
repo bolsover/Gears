@@ -137,6 +137,93 @@ namespace UnitTests
         }
 
         [Test]
+        public void ShaftPartSketch_IsACircleOfTheShaftRadiusExtrudedToItsLengthInCentimetres()
+        {
+            var shaft = new Shaft("s1") { Diameter = 12.0, Length = 50.0 };
+            shaft.Mount(Gear("g1"), 0.0);
+
+            var plan = ShaftPartSketchBuilder.Build(shaft);
+
+            Assert.AreEqual(0.6, plan.Radius, 1e-9, "6 mm radius is 0.6 cm.");
+            Assert.AreEqual(5.0, plan.Length, 1e-9, "50 mm is 5 cm.");
+            Assert.IsFalse(plan.IsCarrier);
+            StringAssert.Contains("s1", plan.PartName);
+        }
+
+        [Test]
+        public void ShaftPartSketch_RejectsAShaftWithoutSize()
+        {
+            Assert.Throws<InvalidOperationException>(() => ShaftPartSketchBuilder.Build(new Shaft("s") { Diameter = 0.0 }));
+            Assert.Throws<ArgumentNullException>(() => ShaftPartSketchBuilder.Build(null));
+        }
+
+        [Test]
+        public void PlanetaryStage_CarrierIsRecognisedAndSizedAsAPlate()
+        {
+            var stage = new PlanetaryGearSet("P");
+            var assembly = stage.BuildAssembly();
+
+            var carriers = assembly.Shafts.Where(PlanetaryGearSet.IsCarrier).ToList();
+
+            Assert.AreEqual(1, carriers.Count);
+            var plan = ShaftPartSketchBuilder.Build(carriers[0]);
+            Assert.IsTrue(plan.IsCarrier);
+            Assert.AreEqual(carriers[0].Diameter / 2.0 * 0.1, plan.Radius, 1e-9);
+            Assert.AreEqual(carriers[0].Length * 0.1, plan.Length, 1e-9, "The carrier plate is as thick as its length.");
+            Assert.IsFalse(assembly.Shafts.Where(s => !ReferenceEquals(s, carriers[0])).Any(PlanetaryGearSet.IsCarrier));
+        }
+
+        [Test]
+        public void GetShaftAssemblyParts_FollowsTheOptions()
+        {
+            var assembly = new PlanetaryGearSet("P").BuildAssembly();
+            var carrier = assembly.Shafts.Single(PlanetaryGearSet.IsCarrier);
+            // The shaft of the internal ring gear is not drawn (it has an open bore), so it has no part either.
+            var ringShaft = assembly.Shafts.Single(s => s.Mounts.Any(m => m.Component is InvoluteGearComponent g && g.IsInternal));
+            var gearShafts = assembly.Shafts.Count - 2;
+
+            Assert.AreEqual(0, AlibreGearExporter.GetShaftAssemblyParts(assembly, null).Count);
+            Assert.AreEqual(0, AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions()).Count);
+
+            var carriersOnly = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeCarriers = true });
+            Assert.AreEqual(1, carriersOnly.Count);
+            Assert.AreSame(carrier, carriersOnly[0].Key);
+
+            var shaftsOnly = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true });
+            Assert.AreEqual(gearShafts, shaftsOnly.Count);
+            CollectionAssert.DoesNotContain(shaftsOnly.Select(p => p.Key).ToList(), carrier);
+            CollectionAssert.DoesNotContain(shaftsOnly.Select(p => p.Key).ToList(), ringShaft);
+
+            var both = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true, IncludeCarriers = true });
+            Assert.AreEqual(gearShafts + 1, both.Count);
+        }
+
+        [Test]
+        public void GetShaftAssemblyParts_SkipsAShaftThatOnlyCarriesARack()
+        {
+            var assembly = new GearAssembly();
+            assembly.AddShaft(new Shaft("rackCarrier")).Mount(new RackComponent("r"));
+            assembly.AddShaft(new Shaft("s1")).Mount(Gear("g1"));
+
+            var parts = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true });
+
+            CollectionAssert.AreEqual(new[] { "s1" }, parts.Select(p => p.Key.Id).ToArray());
+        }
+
+        [Test]
+        public void ShaftPlacement_StartsAtTheStartOfTheShaftAlongItsAxis()
+        {
+            var shaft = new Shaft("s", new Placement3D(new Vector3D(10.0, 0.0, 0.0))) { Length = 40.0 };
+            shaft.Mount(Gear("g", 20, 10.0), 5.0);
+            shaft.GetAxialSpan(out var start, out _);
+
+            var origin = AlibreGearExporter.GetShaftPlacement(shaft).Translation;
+
+            Assert.AreEqual(10.0, origin.X, 1e-9);
+            Assert.AreEqual(start, origin.Z, 1e-9, "The part runs from z = 0 to its length, the span starts at the shaft start.");
+        }
+
+        [Test]
         public void IsExportable_CoversTheSupportedFamilies()
         {
             Assert.IsTrue(AlibreGearExporter.IsExportable(Gear("g")));

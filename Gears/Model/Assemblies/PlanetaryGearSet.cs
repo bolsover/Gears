@@ -91,6 +91,18 @@ namespace Bolsover.Gears.Model.Assemblies
         private const double PlateThickness = 4.0;
         private const double PlateGap = 2.0;
 
+        /// <summary>Ending of the identifier of the carrier shaft that <see cref="BuildAssembly"/> adds: <c>{Id}.Carrier</c>.</summary>
+        public const string CarrierIdSuffix = ".Carrier";
+
+        /// <summary>
+        /// True for the carrier plate of a planetary stage: a shaft named like <c>{Id}.Carrier</c> that carries no gear. The name is what survives
+        /// saving and loading the gear train.
+        /// </summary>
+        public static bool IsCarrier(Shaft shaft)
+        {
+            return shaft != null && shaft.Mounts.Count == 0 && shaft.Id.EndsWith(CarrierIdSuffix, StringComparison.Ordinal);
+        }
+
         public PlanetaryGearSet(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -312,7 +324,7 @@ namespace Bolsover.Gears.Model.Assemblies
 
             var plateRadius = centre + 0.6 * planetPitchDiameter / 2.0;
             var carrierShaft = new Shaft(
-                $"{Id}.Carrier",
+                Id + CarrierIdSuffix,
                 new Placement3D(new Vector3D(0, 0, -FaceWidth / 2.0 - PlateGap - PlateThickness)))
             {
                 Diameter = 2.0 * plateRadius,

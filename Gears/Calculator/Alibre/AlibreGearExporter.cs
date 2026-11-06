@@ -56,6 +56,9 @@ namespace Bolsover.Gears.Calculator.Alibre
         public bool AxialPlaneSketchYIsNegativeZ { get; set; }
 
         public const string SketchName = "ToothProfile";
+        public const string ShaftSketchName = "ShaftSection";
+        public const string ShaftFeatureName = "Shaft";
+        public const string CarrierFeatureName = "CarrierPlate";
         public const string PathSketchName = "ToothPath";
         public const string ThreadPatternFeatureName = "ThreadPattern";
         public const string RackPatternFeatureName = "RackTeeth";
@@ -660,9 +663,10 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// Throws <see cref="InvalidOperationException"/> when the train has fewer than <see cref="MinimumAssemblyParts"/> gears,
         /// holds a gear family that cannot be exported yet, or Alibre rejects a step.
         /// </summary>
-        public IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName)
+        public IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName, AssemblyExportOptions options = null)
         {
             var parts = GetAssemblyParts(train);
+            var shaftParts = GetShaftAssemblyParts(train, options);
 
             var stage = "creating the assembly";
             var folder = string.IsNullOrWhiteSpace(AssemblyFolder)
@@ -697,21 +701,19 @@ namespace Bolsover.Gears.Calculator.Alibre
                     var session = ExportComponent(part.Key);
                     log.Add("built part '" + current + "'");
                     saved.Add(session);
+                    SavePart(session, current, folder, index, log);
+                }
 
-                    // One folder per part, as a gear train often holds several gears with the same name. A rejected save is not fatal:
-                    // the part is then added to the assembly from its open session.
-                    try
-                    {
-                        var partFolder = Path.Combine(folder, index.ToString("00"));
-                        Directory.CreateDirectory(partFolder);
-                        object destination = partFolder;
-                        session.SaveNew(ref destination);
-                        log.Add("saved part '" + current + "' to " + partFolder);
-                    }
-                    catch (Exception saveError)
-                    {
-                        log.Add("saving part '" + current + "' failed: " + saveError.Message);
-                    }
+                foreach (var shaftPart in shaftParts)
+                {
+                    var current = shaftPart.Key.Id;
+                    index++;
+
+                    stage = "building " + (PlanetaryGearSet.IsCarrier(shaftPart.Key) ? "carrier '" : "shaft '") + current + "'";
+                    var session = Export(shaftPart.Key);
+                    log.Add("built " + stage.Substring("building ".Length));
+                    saved.Add(session);
+                    SavePart(session, current, folder, index, log);
                 }
 
                 stage = "creating the assembly";
@@ -730,7 +732,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                 var occurrences = rootOccurrence.Occurrences;
                 var factory = assembly.GeometryFactory;
 
-                for (var i = 0; i < saved.Count; i++)
+                for (var i = 0; i < parts.Count; i++)
                 {
                     var current = parts[i].Key.Id;
                     stage = "adding part '" + current + "' to the assembly";
@@ -738,6 +740,16 @@ namespace Bolsover.Gears.Calculator.Alibre
                     var transformation = factory.CreateTransform(ref matrix);
                     AddPart(occurrences, saved[i], transformation);
                     log.Add("added part '" + current + "' to the assembly");
+                }
+
+                for (var i = 0; i < shaftParts.Count; i++)
+                {
+                    var current = shaftParts[i].Key.Id;
+                    stage = "adding shaft part '" + current + "' to the assembly";
+                    Array matrix = ToAlibreMatrix(shaftParts[i].Value);
+                    var transformation = factory.CreateTransform(ref matrix);
+                    AddPart(occurrences, saved[parts.Count + i], transformation);
+                    log.Add("added shaft part '" + current + "' to the assembly");
                 }
 
                 stage = "regenerating the assembly";
@@ -753,6 +765,26 @@ namespace Bolsover.Gears.Calculator.Alibre
                 throw new InvalidOperationException(
                     $"Alibre export of the gear train to an assembly failed while {stage}: {ex.Message}"
                     + (logPath == null ? "" : " (details: " + logPath + ")"), ex);
+            }
+        }
+
+        /// <summary>
+        /// Saves a part to its own numbered folder, as a gear train often holds several parts with the same name. A rejected save is not fatal:
+        /// the part is then added to the assembly from its open session.
+        /// </summary>
+        private static void SavePart(IADPartSession session, string name, string folder, int index, List<string> log)
+        {
+            try
+            {
+                var partFolder = Path.Combine(folder, index.ToString("00"));
+                Directory.CreateDirectory(partFolder);
+                object destination = partFolder;
+                session.SaveNew(ref destination);
+                log.Add("saved part '" + name + "' to " + partFolder);
+            }
+            catch (Exception saveError)
+            {
+                log.Add("saving part '" + name + "' failed: " + saveError.Message);
             }
         }
 
@@ -854,6 +886,81 @@ namespace Bolsover.Gears.Calculator.Alibre
             }
 
             return parts;
+        }
+
+        /// <summary>
+        /// The shafts and planetary carriers of a train that <paramref name="options"/> asks for, with the location of each one in the assembly
+        /// (the shaft placement, then the start of the shaft along its axis). A shaft that only carries a rack has no part. Needs no Alibre.
+        /// </summary>
+        public static IReadOnlyList<KeyValuePair<Shaft, Transform3D>> GetShaftAssemblyParts(GearAssembly train, AssemblyExportOptions options)
+        {
+            if (train == null) throw new ArgumentNullException(nameof(train));
+
+            var parts = new List<KeyValuePair<Shaft, Transform3D>>();
+            if (options == null || (!options.IncludeShafts && !options.IncludeCarriers)) return parts;
+
+            foreach (var shaft in train.Shafts)
+            {
+                var include = PlanetaryGearSet.IsCarrier(shaft) ? options.IncludeCarriers : options.IncludeShafts && ShaftPartSketchBuilder.IsExportable(shaft);
+                if (include) parts.Add(new KeyValuePair<Shaft, Transform3D>(shaft, GetShaftPlacement(shaft)));
+            }
+
+            return parts;
+        }
+
+        /// <summary>
+        /// Location of an exported shaft or carrier part in the assembly: the shaft placement, then the start of the shaft along its axis,
+        /// because the part is extruded from the sketch plane up to its length.
+        /// </summary>
+        public static Transform3D GetShaftPlacement(Shaft shaft)
+        {
+            if (shaft == null) throw new ArgumentNullException(nameof(shaft));
+
+            return shaft.Placement.ToTransform()
+                .Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, ShaftPartSketchBuilder.GetStart(shaft))));
+        }
+
+        /// <summary>
+        /// Creates a shaft, or the plate of a planetary carrier, in a new Alibre part: a circle on the XY plane extruded along Z to the length of
+        /// the shaft. Throws <see cref="InvalidOperationException"/> when the shaft has no positive size or Alibre rejects a step.
+        /// </summary>
+        public IADPartSession Export(Shaft shaft)
+        {
+            var plan = ShaftPartSketchBuilder.Build(shaft);
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(plan.PartName);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, ShaftSketchName);
+
+                stage = "drawing the circle";
+                sketch.BeginChange();
+                try
+                {
+                    sketch.Figures.AddCircle(0.0, 0.0, plan.Radius);
+                }
+                finally
+                {
+                    sketch.EndChange();
+                }
+
+                stage = "extruding the " + (plan.IsCarrier ? "carrier plate" : "shaft");
+                var body = session.Features.AddExtrudedBoss(sketch, plan.Length, ADPartFeatureEndCondition.AD_TO_DEPTH, null, null, 0.0,
+                    ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, plan.IsCarrier ? CarrierFeatureName : ShaftFeatureName, "", "");
+                CheckFeature(body, plan.IsCarrier ? "The carrier plate" : "The shaft");
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of shaft '{shaft.Id}' failed while {stage}: {ex.Message}", ex);
+            }
         }
 
         /// <summary>True for the gear families that <see cref="ExportAssembly"/> and the single-part export can build.</summary>

@@ -63,7 +63,7 @@ namespace UnitTests
             IAlibreAddOn addOn = CreateAddOn();
 
             Assert.AreEqual("Gears", addOn.MenuItemText(GearTrainAddOn.MenuIdRoot));
-            Assert.AreEqual("Gear Train", addOn.MenuItemText(GearTrainAddOn.MenuIdGearTrain));
+            Assert.AreEqual("Gears", addOn.MenuItemText(GearTrainAddOn.MenuIdGearTrain));
             Assert.AreEqual(string.Empty, addOn.MenuItemText(-1));
             Assert.IsNotEmpty(addOn.MenuItemToolTip(GearTrainAddOn.MenuIdGearTrain));
 

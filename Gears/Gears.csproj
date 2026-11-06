@@ -167,6 +167,7 @@
         <Compile Include="Calculator\Alibre\SingleToothSketchBuilder.cs" />
         <Compile Include="Calculator\Alibre\RackToothSketch.cs" />
         <Compile Include="Calculator\Alibre\WormThreadSketch.cs" />
+        <Compile Include="Calculator\Alibre\ShaftPartSketch.cs" />
         <Compile Include="Calculator\Assemblies\GearParameterTables.cs" />
         <Compile Include="Calculator\Assemblies\ImperialUnits.cs" />
         <Compile Include="Calculator\Assemblies\ProfileShiftFitter.cs" />
