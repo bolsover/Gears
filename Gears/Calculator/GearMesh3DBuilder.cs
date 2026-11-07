@@ -152,7 +152,8 @@ namespace Bolsover.Gears.Calculator
             bool isFullGear,
             double rimThickness = 0.0,
             double helixAngleDeg = 0.0,
-            string helicalDirection = "R")
+            string helicalDirection = "R",
+            bool isHerringbone = false)
         {
             if (profile == null || z <= 0 || faceWidth <= 0) return new Mesh3D();
 
@@ -211,7 +212,7 @@ namespace Bolsover.Gears.Calculator
                     rimRadius = maxR + Math.Max(rimThickness, 1.0);
                 }
 
-                return BuildInternalGearMesh(innerLoop, rimRadius, faceWidth, isFullGear, helixAngleDeg, helicalDirection, pitchRadius);
+                return BuildInternalGearMesh(innerLoop, rimRadius, faceWidth, isFullGear, helixAngleDeg, helicalDirection, pitchRadius, isHerringbone);
             }
             else
             {
@@ -243,7 +244,7 @@ namespace Bolsover.Gears.Calculator
 
                 outerLoop = RemoveConsecutiveDuplicates(outerLoop);
 
-                return BuildExternalGearMesh(outerLoop, faceWidth, isFullGear, helixAngleDeg, helicalDirection, pitchRadius);
+                return BuildExternalGearMesh(outerLoop, faceWidth, isFullGear, helixAngleDeg, helicalDirection, pitchRadius, isHerringbone);
             }
         }
 
@@ -259,7 +260,8 @@ namespace Bolsover.Gears.Calculator
             bool isClosedLoop,
             double helixAngleDeg = 0.0,
             string helicalDirection = "R",
-            double pitchRadius = 0.0)
+            double pitchRadius = 0.0,
+            bool isHerringbone = false)
         {
             var mesh = new Mesh3D();
             if (innerProfile == null || innerProfile.Count < 3 || faceWidth <= 0) return mesh;
@@ -287,7 +289,7 @@ namespace Bolsover.Gears.Calculator
                 outer.Add(new GearPoint(p.X / mag * effectiveRim, p.Y / mag * effectiveRim));
             }
 
-            var slices = isHelical ? Math.Max(8, Math.Min(32, (int)Math.Ceiling(faceWidth / 1.5))) : 1;
+            var slices = SliceCount(faceWidth, isHelical, isHerringbone);
             var dz = faceWidth / slices;
             var stride = 2 * n;
 
@@ -295,7 +297,7 @@ namespace Bolsover.Gears.Calculator
             for (var k = 0; k <= slices; k++)
             {
                 var z = halfWidth - k * dz;
-                var theta = isHelical ? (sign * Math.Tan(betaRad) / pitchRadius * z) : 0.0;
+                var theta = isHelical ? (sign * Math.Tan(betaRad) / pitchRadius * TwistLength(z, isHerringbone)) : 0.0;
                 var cosT = Math.Cos(theta);
                 var sinT = Math.Sin(theta);
 
@@ -473,7 +475,8 @@ namespace Bolsover.Gears.Calculator
             bool isClosedLoop,
             double helixAngleDeg = 0.0,
             string helicalDirection = "R",
-            double pitchRadius = 0.0)
+            double pitchRadius = 0.0,
+            bool isHerringbone = false)
         {
             var mesh = new Mesh3D();
             if (outerProfile == null || outerProfile.Count < 3 || faceWidth <= 0) return mesh;
@@ -490,14 +493,14 @@ namespace Bolsover.Gears.Calculator
                               helicalDirection.Trim().StartsWith("R", StringComparison.OrdinalIgnoreCase);
             var sign = isRightHand ? 1.0 : -1.0;
 
-            var slices = isHelical ? Math.Max(8, Math.Min(32, (int)Math.Ceiling(faceWidth / 1.5))) : 1;
+            var slices = SliceCount(faceWidth, isHelical, isHerringbone);
             var dz = faceWidth / slices;
 
             // Generate vertices for each slice layer: k = 0 (z = +halfWidth) to k = slices (z = -halfWidth)
             for (var k = 0; k <= slices; k++)
             {
                 var z = halfWidth - k * dz;
-                var theta = isHelical ? (sign * Math.Tan(betaRad) / pitchRadius * z) : 0.0;
+                var theta = isHelical ? (sign * Math.Tan(betaRad) / pitchRadius * TwistLength(z, isHerringbone)) : 0.0;
                 var cosT = Math.Cos(theta);
                 var sinT = Math.Sin(theta);
 
@@ -617,6 +620,27 @@ namespace Bolsover.Gears.Calculator
             SetAxialNormals(mesh, centerFrontIdx, n + 1, 1.0);
             SetAxialNormals(mesh, centerBackIdx, n + 1, -1.0);
             return mesh;
+        }
+
+        /// <summary>
+        /// Number of slices along the face width. A herringbone gear gets an even number so that a slice boundary lies on the middle plane,
+        /// where the two mirrored helical halves meet.
+        /// </summary>
+        private static int SliceCount(double faceWidth, bool isHelical, bool isHerringbone)
+        {
+            if (!isHelical) return 1;
+            var slices = Math.Max(8, Math.Min(32, (int)Math.Ceiling(faceWidth / 1.5)));
+            if (isHerringbone && slices % 2 != 0) slices++;
+            return slices;
+        }
+
+        /// <summary>
+        /// The axial distance over which the profile has turned at height <paramref name="z"/>. A herringbone gear is a helical gear mirrored
+        /// about the middle plane z = 0, so the turn depends on |z| and both end faces are turned alike.
+        /// </summary>
+        private static double TwistLength(double z, bool isHerringbone)
+        {
+            return isHerringbone ? Math.Abs(z) : z;
         }
 
         private static void EnsureCcw(List<GearPoint> loop, bool isClosedLoop)

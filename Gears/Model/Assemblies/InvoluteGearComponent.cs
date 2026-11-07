@@ -6,7 +6,8 @@ namespace Bolsover.Gears.Model.Assemblies
     /// <summary>
     /// An involute spur or helical gear (external or internal), generated with the existing
     /// <see cref="AlibreGearGenerator"/> and <see cref="GearMesh3DBuilder"/>.
-    /// A helix angle of zero gives a spur gear.
+    /// A helix angle of zero gives a spur gear. With <see cref="IsHerringbone"/> set the gear is a herringbone (double helical) gear:
+    /// a helical gear mirrored about its middle plane, so that the helix of the second half runs the opposite way.
     /// </summary>
     public class InvoluteGearComponent : GearComponent
     {
@@ -41,9 +42,18 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>True to build all teeth; false to build a single tooth.</summary>
         public bool ShowFullGear { get; set; } = true;
 
+        /// <summary>
+        /// True for a herringbone gear: the helical gear is mirrored about one face, so the face width is made of two halves of
+        /// <see cref="GearComponent.FaceWidth"/> / 2 with opposite hands, which meet at the middle plane. Has no effect when the helix angle is zero.
+        /// The axial thrust of the two halves cancels.
+        /// </summary>
+        public bool IsHerringbone { get; set; }
+
         public bool IsHelical => HelixAngleDeg > 1e-6;
 
-        public override string TypeName => IsInternal ? "Internal gear" : (IsHelical ? "Helical gear" : "Spur gear");
+        public override string TypeName => IsInternal
+            ? "Internal gear"
+            : (IsHelical ? (IsHerringbone ? "Herringbone gear" : "Helical gear") : "Spur gear");
 
         /// <summary>An internal gear has an open bore, so a shaft cylinder is not drawn through it.</summary>
         public override bool NeedsShaftMesh => !IsInternal;
@@ -78,7 +88,7 @@ namespace Bolsover.Gears.Model.Assemblies
                 ? AlibreGearGenerator.BuildFullGear(Teeth, tooth)
                 : tooth;
 
-            var mesh = GearMesh3DBuilder.BuildGearMesh(profile, Teeth, FaceWidth, IsInternal, ShowFullGear, RimThickness, HelixAngleDeg, HelicalDirection);
+            var mesh = GearMesh3DBuilder.BuildGearMesh(profile, Teeth, FaceWidth, IsInternal, ShowFullGear, RimThickness, HelixAngleDeg, HelicalDirection, IsHerringbone && IsHelical);
 
             return new GearGeometry(profile, polylines, mesh);
         }

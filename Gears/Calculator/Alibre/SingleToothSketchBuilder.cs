@@ -171,28 +171,33 @@ namespace Bolsover.Gears.Calculator.Alibre
             }
 
             var depth = Q(gear.FaceWidth);
-            var helix = gear.IsHelical ? BuildHelix(gear, parameters["pitchRadius"], depth) : null;
+            var herringbone = gear.IsHerringbone && gear.IsHelical;
 
-            return new SingleToothSketch(gear.Teeth, depth, string.IsNullOrWhiteSpace(partName) ? PartName(gear) : partName, figures, circles, isInternal, helix);
+            // A herringbone gear is one helical half of half the face width, mirrored across the sketch plane.
+            var helix = gear.IsHelical ? BuildHelix(gear, parameters["pitchRadius"], herringbone ? depth / 2.0 : depth) : null;
+
+            return new SingleToothSketch(gear.Teeth, depth, string.IsNullOrWhiteSpace(partName) ? PartName(gear) : partName, figures, circles, isInternal, helix,
+                herringbone);
         }
 
         /// <summary>
-        /// The name given to the Alibre part, for example <c>SpurGear_Z20_M2p5</c>, <c>HelicalGear_Z20_M2p5_B15R</c> or
-        /// <c>InternalGear_Z40_M2</c>.
+        /// The name given to the Alibre part, for example <c>SpurGear_Z20_M2p5</c>, <c>HelicalGear_Z20_M2p5_B15R</c>,
+        /// <c>HerringboneGear_Z20_M2p5_B15R</c> or <c>InternalGear_Z40_M2</c>.
         /// </summary>
         public static string PartName(InvoluteGearComponent gear)
         {
             var module = FormatNumber(gear.Module);
+            var helical = gear.IsHelical ? (gear.IsHerringbone ? "HerringboneGear" : "HelicalGear") : null;
             var kind = gear.IsInternal
-                ? (gear.IsHelical ? "InternalHelicalGear" : "InternalGear")
-                : (gear.IsHelical ? "HelicalGear" : "SpurGear");
+                ? (gear.IsHelical ? "Internal" + helical : "InternalGear")
+                : (helical ?? "SpurGear");
             var name = $"{kind}_Z{gear.Teeth}_M{module}";
             if (gear.IsHelical) name += $"_B{FormatNumber(gear.HelixAngleDeg)}{gear.HelicalDirection}";
             return name;
         }
 
         /// <summary>
-        /// The helix of a helical tooth. Over the face width H the transverse section of the tooth turns through
+        /// The helix of a helical tooth (for a herringbone gear, of one half). Over the height H the transverse section of the tooth turns through
         /// H tan(beta) / r (the same rule the 3D preview uses), so one full turn takes the lead 2 pi r / tan(beta), with r the pitch
         /// radius. Right and left hand follow the gear's hand.
         /// </summary>

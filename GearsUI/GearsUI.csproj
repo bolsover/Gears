@@ -177,6 +177,10 @@
     <Compile Include="Gui\HelixMeshAdapter.cs" />
     <Compile Include="Gui\Presenters\GearTrainPresenter.cs" />
     <Compile Include="Gui\Presenters\TrainNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\PropertyLayout.cs" />
+    <Compile Include="Gui\Views\PropertyLayoutDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Gui\Views\IGearTrainView.cs" />
     <Compile Include="Gui\Views\HtmlDocumentForm.cs">
       <SubType>Form</SubType>

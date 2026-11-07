@@ -83,6 +83,17 @@ The editor (`GearTrainForm`, the main window of the program) starts a train with
 The *File* menu saves and loads a train as JSON and exports the scene as STL or OBJ. *Animate* turns the input shaft
 at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
 
+### Choosing and sorting the properties
+
+The property grid lists the properties of the selected shaft, gear or planetary stage in categories. The bar above it controls what is listed:
+
+* **Sort** orders the list: *By category (A-Z)* (the default), *Alphabetical (one list)* or *Custom order*, which keeps the categories and uses the order you chose.
+* **Choose properties...** opens a dialog for the selected kind of item (spur gear, rack, bevel gear, worm, worm wheel, planetary stage or shaft). Tick the properties to show, move them up or down, or use *Sort A-Z* (which switches to custom order). *Show all*, *Show none* and *Reset* help to start again.
+* **Notes** are items you add yourself: type a name and a value in the empty last row of the notes table (select a row and press Delete to remove one). Each note appears in the grid in the *Notes* category and its value can be edited there. Names must differ from each other and from the property names.
+* **Save as default** (also *Apply and save as default* in the dialog) keeps the layout, the sort mode and the notes in `%APPDATA%\Gears\property-layout.json`. The file is read when the editor starts; a missing or damaged file gives the built-in layout.
+
+A layout belongs to a kind of item, so all spur gears share one layout. Hiding a property only removes it from the grid; its value still takes part in the calculation. Properties added in a later version of the program appear at the end of the list.
+
 ### Clearance, backlash, profile shift and centre distance
 
 Select an involute gear in the editor to change these in the property grid. Meshing involute gears (spur, helical, internal) use all four:

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bolsover.Gears.Calculator;
 using Bolsover.Gears.Calculator.Assemblies;
 using Bolsover.Gears.Model;
@@ -45,6 +46,12 @@ namespace Bolsover.Gears.Model.Assemblies
 
         public bool IsHelical => HelixAngleDeg > 1e-6;
 
+        /// <summary>
+        /// True for a herringbone rack: a helical rack mirrored about its middle plane, so each half of the face width has the helix angle
+        /// with the opposite hand. Ignored (the rack stays straight) when the helix angle is zero.
+        /// </summary>
+        public bool IsHerringbone { get; set; }
+
         /// <summary>Cosine of the helix angle (1 for a straight rack).</summary>
         private double CosHelix => IsHelical ? Math.Cos(HelixAngleDeg * Math.PI / 180.0) : 1.0;
 
@@ -80,7 +87,7 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>A rack has no pitch circle; zero is returned and the pitch line velocity is its linear speed.</summary>
         public override double PitchDiameter => 0.0;
 
-        public override string TypeName => IsHelical ? "Helical rack" : "Rack";
+        public override string TypeName => IsHelical ? (IsHerringbone ? "Herringbone rack" : "Helical rack") : "Rack";
 
         public override bool IsLinear => true;
 
@@ -159,7 +166,22 @@ namespace Bolsover.Gears.Model.Assemblies
         {
             var outline = BuildOutline();
             var closed = new List<GearPoint>(outline) { outline[0] };
-            var mesh = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, -FaceWidth / 2.0, 1.0, false, ShearPerZ);
+            GearMesh3DBuilder.Mesh3D mesh;
+            if (IsHelical && IsHerringbone)
+            {
+                // Both halves lean the same way away from the mid-plane (x = shear * |z|), so the teeth form a V.
+                mesh = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, 0.0, 1.0, false, ShearPerZ);
+                var lower = SolidMeshBuilder.Loft(outline, 0.0, 1.0, -FaceWidth / 2.0, 1.0, false, -ShearPerZ);
+                var offset = mesh.Vertices.Count;
+                mesh.Vertices.AddRange(lower.Vertices);
+                mesh.TriangleIndices.AddRange(lower.TriangleIndices.Select(i => i + offset));
+                mesh.CalculateNormals();
+            }
+            else
+            {
+                mesh = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, -FaceWidth / 2.0, 1.0, false, ShearPerZ);
+            }
+
             return new GearGeometry(null, new List<List<GearPoint>> { closed }, mesh);
         }
 

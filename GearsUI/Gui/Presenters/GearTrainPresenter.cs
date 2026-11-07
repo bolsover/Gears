@@ -248,7 +248,7 @@ namespace Bolsover.Gears.Gui.Presenters
 
         /// <summary>
         /// Adds a new shaft with a gear that meshes with <paramref name="driver"/>. The gear takes over module,
-        /// pressure angle and face width, uses the opposite helix hand for an external pair, and sits in the same plane as the driver.
+        /// pressure angle, face width and herringbone option, uses the opposite helix hand for an external pair, and sits in the same plane as the driver.
         /// A gear that is both driven and a driver is an idler; several gears driven by one driver form a branching train.
         /// </summary>
         /// <param name="driver">The gear to mesh with; it must be an involute gear mounted in the assembly.</param>
@@ -323,7 +323,8 @@ namespace Bolsover.Gears.Gui.Presenters
                         PressureAngleDeg = pinion.PressureAngleDeg,
                         FaceWidth = pinion.FaceWidth,
                         HelixAngleDeg = pinion.IsHelical ? pinion.HelixAngleDeg : 0.0,
-                        HelicalDirection = pinion.HelicalDirection == "R" ? "L" : "R"
+                        HelicalDirection = pinion.HelicalDirection == "R" ? "L" : "R",
+                        IsHerringbone = pinion.IsHelical && pinion.IsHerringbone
                     };
                     break;
                 }
@@ -722,6 +723,7 @@ namespace Bolsover.Gears.Gui.Presenters
                 gear.FaceWidth = template.FaceWidth;
                 gear.HelixAngleDeg = template.HelixAngleDeg;
                 gear.HelicalDirection = template.HelicalDirection;
+                gear.IsHerringbone = template.IsHerringbone;
                 gear.Clearance = template.Clearance;
                 gear.Backlash = template.Backlash;
                 gear.ShowFullGear = template.ShowFullGear;

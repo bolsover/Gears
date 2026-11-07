@@ -97,6 +97,69 @@ namespace UnitTests
         }
 
         [Test]
+        public void TestEditor_MeshedGear_OfAHerringboneGear_IsHerringboneWithTheOppositeHand()
+        {
+            var presenter = NewPresenter(out var view);
+            var driver = (InvoluteGearComponent)presenter.Selected;
+            driver.HelixAngleDeg = 20.0;
+            driver.HelicalDirection = "R";
+            driver.IsHerringbone = true;
+
+            var meshed = presenter.AddMeshedGear(driver, 30);
+            var viaMate = (InvoluteGearComponent)presenter.AddMate(driver, MeshType.Parallel, 25);
+
+            Assert.IsFalse(view.IsError, view.Message);
+            foreach (var gear in new[] { meshed, viaMate })
+            {
+                Assert.IsTrue(gear.IsHerringbone, "The meshed gear is herringbone like its driver.");
+                Assert.AreEqual("Herringbone gear", gear.TypeName);
+                Assert.AreEqual(20.0, gear.HelixAngleDeg, Tol);
+                Assert.AreEqual("L", gear.HelicalDirection);
+            }
+        }
+
+        [Test]
+        public void TestEditor_MeshedGear_OfAHelicalOrSpurGear_IsNotHerringbone()
+        {
+            var presenter = NewPresenter(out _);
+            var driver = (InvoluteGearComponent)presenter.Selected;
+
+            Assert.IsFalse(presenter.AddMeshedGear(driver, 30).IsHerringbone, "A spur driver gives a spur gear.");
+
+            driver.HelixAngleDeg = 20.0;
+            Assert.IsFalse(presenter.AddMeshedGear(driver, 30).IsHerringbone, "A helical driver gives a helical gear.");
+        }
+
+        [Test]
+        public void TestEditor_Rack_OfAHerringbonePinion_IsHerringbone()
+        {
+            var presenter = NewPresenter(out var view);
+            var pinion = (InvoluteGearComponent)presenter.Selected;
+            pinion.HelixAngleDeg = 20.0;
+            pinion.HelicalDirection = "R";
+            pinion.IsHerringbone = true;
+
+            var rack = (RackComponent)presenter.AddMate(pinion, MeshType.Rack);
+
+            Assert.IsFalse(view.IsError, view.Message);
+            Assert.IsTrue(rack.IsHerringbone, "The rack is herringbone like its pinion.");
+            Assert.AreEqual("Herringbone rack", rack.TypeName);
+            Assert.AreEqual(20.0, rack.HelixAngleDeg, Tol);
+            Assert.AreEqual("L", rack.HelicalDirection);
+        }
+
+        [Test]
+        public void TestEditor_Rack_OfAHelicalOrSpurPinion_IsNotHerringbone()
+        {
+            var presenter = NewPresenter(out _);
+            var pinion = (InvoluteGearComponent)presenter.Selected;
+            Assert.IsFalse(((RackComponent)presenter.AddMate(pinion, MeshType.Rack)).IsHerringbone);
+
+            pinion.HelixAngleDeg = 20.0;
+            Assert.IsFalse(((RackComponent)presenter.AddMate(pinion, MeshType.Rack)).IsHerringbone);
+        }
+
+        [Test]
         public void TestEditor_Rack_CanBeAddedToAPinion()
         {
             var presenter = NewPresenter(out var view);

@@ -16,7 +16,7 @@ namespace Bolsover.Gears.Calculator.Alibre
     public sealed class RackToothSketch
     {
         public RackToothSketch(int teeth, double pitch, double extrusionDepth, string partName, IReadOnlyList<ToothSketchFigure> figures,
-            double helixAngleDeg = 0.0, bool rightHand = true, double shearPerDepth = 0.0)
+            double helixAngleDeg = 0.0, bool rightHand = true, double shearPerDepth = 0.0, bool isHerringbone = false)
         {
             Teeth = teeth;
             Pitch = pitch;
@@ -26,6 +26,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             HelixAngleDeg = helixAngleDeg;
             RightHand = rightHand;
             ShearPerDepth = shearPerDepth;
+            IsHerringbone = isHerringbone && IsHelical;
         }
 
         /// <summary>Number of teeth, which is the number of instances of the linear pattern.</summary>
@@ -53,8 +54,17 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         public bool IsHelical => HelixAngleDeg > 1e-6;
 
-        /// <summary>Sideways shift (X, centimetres) of the far end of the tooth relative to the sketch plane.</summary>
-        public double ShearTotal => ShearPerDepth * ExtrusionDepth;
+        /// <summary>
+        /// True for a herringbone rack: the tooth is swept over half the depth from the sketch plane and mirrored across it, so the part runs
+        /// from -depth / 2 to +depth / 2. Only a helical rack can be herringbone.
+        /// </summary>
+        public bool IsHerringbone { get; }
+
+        /// <summary>Depth over which the tooth is swept: the thickness of the rack, or half of it for a herringbone rack.</summary>
+        public double SweepDepth => IsHerringbone ? ExtrusionDepth / 2.0 : ExtrusionDepth;
+
+        /// <summary>Sideways shift (X, centimetres) of the far end of the swept tooth relative to the sketch plane.</summary>
+        public double ShearTotal => ShearPerDepth * SweepDepth;
 
         /// <summary>True when the figures form one closed loop: every end point meets exactly one other end point.</summary>
         public bool IsClosed(double tolerance = 1e-6)
@@ -149,13 +159,16 @@ namespace Bolsover.Gears.Calculator.Alibre
 
             var depth = Q(rack.FaceWidth);
             return new RackToothSketch(rack.Teeth, Q(pitch), depth, PartName(rack), figures,
-                rack.IsHelical ? rack.HelixAngleDeg : 0.0, rack.HelicalDirection == "R", rack.ShearPerZ);
+                rack.IsHelical ? rack.HelixAngleDeg : 0.0, rack.HelicalDirection == "R", rack.ShearPerZ, rack.IsHerringbone);
         }
 
-        /// <summary>The name of the Alibre part, for example <c>Rack_Z12_M2</c> or <c>HelicalRack_Z12_M2_B15R</c>.</summary>
+        /// <summary>
+        /// The name of the Alibre part, for example <c>Rack_Z12_M2</c>, <c>HelicalRack_Z12_M2_B15R</c> or <c>HerringboneRack_Z12_M2_B15R</c>.
+        /// </summary>
         public static string PartName(RackComponent rack)
         {
-            var name = $"{(rack.IsHelical ? "HelicalRack" : "Rack")}_Z{rack.Teeth}_M{FormatNumber(rack.Module)}";
+            var kind = rack.IsHelical ? (rack.IsHerringbone ? "HerringboneRack" : "HelicalRack") : "Rack";
+            var name = $"{kind}_Z{rack.Teeth}_M{FormatNumber(rack.Module)}";
             if (rack.IsHelical) name += $"_B{FormatNumber(rack.HelixAngleDeg)}{rack.HelicalDirection}";
             return name;
         }

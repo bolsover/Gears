@@ -84,7 +84,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>True for a right-hand helix, false for a left-hand helix.</summary>
         public bool RightHand { get; }
 
-        /// <summary>Axial length of the helix: the face width.</summary>
+        /// <summary>Axial length of the helix: the face width, or half of it for a herringbone gear (see <see cref="SingleToothSketch.IsHerringbone"/>).</summary>
         public double Height { get; }
 
         /// <summary>Axial advance for one full turn: 2 pi pitch radius / tan(helix angle).</summary>
@@ -110,7 +110,7 @@ namespace Bolsover.Gears.Calculator.Alibre
     public sealed class SingleToothSketch
     {
         public SingleToothSketch(int teeth, double extrusionDepth, string partName, IReadOnlyList<ToothSketchFigure> figures,
-            IReadOnlyList<ToothSketchReferenceCircle> referenceCircles, bool isInternal = false, SingleToothHelix helix = null)
+            IReadOnlyList<ToothSketchReferenceCircle> referenceCircles, bool isInternal = false, SingleToothHelix helix = null, bool isHerringbone = false)
         {
             Teeth = teeth;
             ExtrusionDepth = extrusionDepth;
@@ -119,7 +119,14 @@ namespace Bolsover.Gears.Calculator.Alibre
             ReferenceCircles = referenceCircles;
             IsInternal = isInternal;
             Helix = helix;
+            IsHerringbone = isHerringbone && helix != null;
         }
+
+        /// <summary>
+        /// True for a herringbone gear: the tooth is swept along the helix over half the face width, starting at the sketch plane, and then
+        /// mirrored across the sketch plane, so the part runs from -FaceWidth / 2 to +FaceWidth / 2. Only a helical gear can be herringbone.
+        /// </summary>
+        public bool IsHerringbone { get; }
 
         /// <summary>True for an internal (ring) gear.</summary>
         public bool IsInternal { get; }

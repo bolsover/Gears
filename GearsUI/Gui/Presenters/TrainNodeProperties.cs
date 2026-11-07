@@ -93,6 +93,15 @@ namespace Bolsover.Gears.Gui.Presenters
         }
 
         [Category("Teeth")]
+        [DisplayName("Herringbone")]
+        [Description("A helical gear mirrored about its middle plane: each half of the face width has the helix angle, with opposite hands. Needs a helix angle above zero.")]
+        public bool IsHerringbone
+        {
+            get => _gear.IsHerringbone;
+            set => _gear.IsHerringbone = value;
+        }
+
+        [Category("Teeth")]
         [DisplayName("Internal gear")]
         public bool IsInternal
         {
@@ -375,6 +384,15 @@ namespace Bolsover.Gears.Gui.Presenters
         {
             get => _rack.HelicalDirection;
             set => _rack.HelicalDirection = value;
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Herringbone")]
+        [Description("A helical rack mirrored about its middle plane: each half of the face width has the helix angle, with opposite hands. Needs a helix angle above zero.")]
+        public bool IsHerringbone
+        {
+            get => _rack.IsHerringbone;
+            set => _rack.IsHerringbone = value;
         }
 
         [Category("Dimensions")]

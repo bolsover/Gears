@@ -160,6 +160,7 @@
     <Compile Include="TestGearAssembly.cs" />
     <Compile Include="TestGearTrain.cs" />
     <Compile Include="TestGearAdjustments.cs" />
+    <Compile Include="TestPropertyLayout.cs" />
     <Compile Include="TestImperialUnits.cs" />
     <Compile Include="TestGearScene2D.cs" />
     <Compile Include="TestBevelGearTypes.cs" />
@@ -174,6 +175,7 @@
     <Compile Include="TestAlibreBevelExport.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />
+    <Compile Include="TestHerringboneGear.cs" />
     <Compile Include="TestHelixMeshAdapter.cs" />
     <Compile Include="TestGearParameterCalculator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

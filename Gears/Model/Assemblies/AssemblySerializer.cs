@@ -189,6 +189,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     dto.Teeth = g.Teeth;
                     dto.HelixAngleDeg = g.HelixAngleDeg;
                     dto.HelicalDirection = g.HelicalDirection;
+                    if (g.IsHerringbone) dto.IsHerringbone = true;
                     dto.Clearance = g.Clearance;
                     dto.Backlash = g.Backlash;
                     dto.ProfileShift = g.ProfileShift;
@@ -206,6 +207,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     {
                         dto.HelixAngleDeg = g.HelixAngleDeg;
                         dto.HelicalDirection = g.HelicalDirection;
+                        if (g.IsHerringbone) dto.IsHerringbone = true;
                     }
                     break;
                 case BevelGearComponent g:
@@ -254,6 +256,7 @@ namespace Bolsover.Gears.Model.Assemblies
                         Teeth = dto.Teeth ?? 20,
                         HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
                         HelicalDirection = dto.HelicalDirection ?? "R",
+                        IsHerringbone = dto.IsHerringbone ?? false,
                         Clearance = dto.Clearance ?? 0.5,
                         Backlash = dto.Backlash ?? 0.0,
                         ProfileShift = dto.ProfileShift ?? 0.0,
@@ -270,7 +273,8 @@ namespace Bolsover.Gears.Model.Assemblies
                         Backlash = dto.Backlash ?? 0.0,
                         BodyHeight = dto.BodyHeight ?? 10.0,
                         HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
-                        HelicalDirection = dto.HelicalDirection ?? "R"
+                        HelicalDirection = dto.HelicalDirection ?? "R",
+                        IsHerringbone = dto.IsHerringbone ?? false
                     };
                     break;
                 case "Bevel":
@@ -353,6 +357,7 @@ namespace Bolsover.Gears.Model.Assemblies
             public double? Clearance { get; set; }
             public double? Backlash { get; set; }
             public double? ProfileShift { get; set; }
+            public bool? IsHerringbone { get; set; }
             public bool? IsInternal { get; set; }
             public double? RimThickness { get; set; }
             public bool? OptimalShift { get; set; }

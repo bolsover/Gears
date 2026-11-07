@@ -64,6 +64,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string RackPatternFeatureName = "RackTeeth";
         public const string ToothFeatureName = "Tooth";
         public const string PatternFeatureName = "ToothPattern";
+        public const string MirrorFeatureName = "ToothMirror";
 
         /// <summary>Name of the default plane of a new Alibre part that the back cone plane of a bevel gear is first offset from.</summary>
         public const string BevelOffsetFromPlaneName = "YZ-Plane";
@@ -130,7 +131,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>
         /// Creates a straight or helical rack in a new Alibre part: a closed sketch of one tooth cell on the XY plane, a single tooth
         /// formed by an extrusion to the face width (or, for a helical rack, a rigid sweep along a slanted path that shears the
-        /// section), and a linear pattern of that tooth along the X axis.
+        /// section), and a linear pattern of that tooth along the X axis. A herringbone rack is swept over half the face width, mirrored
+        /// across the sketch plane, and the tooth and its mirror are patterned together.
         /// </summary>
         public IADPartSession Export(RackComponent rack)
         {
@@ -161,7 +163,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                         pathSketch.BeginChange();
                         try
                         {
-                            pathSketch.Figures.AddLine(0.0, 0.0, plan.ShearTotal, ySign * plan.ExtrusionDepth);
+                            pathSketch.Figures.AddLine(0.0, 0.0, plan.ShearTotal, ySign * plan.SweepDepth);
                         }
                         finally
                         {
@@ -186,10 +188,18 @@ namespace Bolsover.Gears.Calculator.Alibre
                     throw new InvalidOperationException("Alibre reports that the tooth sketch is not closed: " + ex.Message, ex);
                 }
 
+                IADMirrorFeature mirror = null;
+                if (plan.IsHerringbone)
+                {
+                    // The tooth was swept over half the depth from the sketch plane; its mirror across that plane is the other half.
+                    stage = "mirroring the tooth across the " + SketchPlaneName;
+                    mirror = AddHerringboneMirror(session, tooth, plane);
+                }
+
                 if (plan.Teeth > 1)
                 {
                     stage = "patterning the tooth along the rack";
-                    AddRackPattern(session, tooth, plan);
+                    AddRackPattern(session, tooth, plan, mirror);
                 }
 
                 stage = "regenerating the part";
@@ -266,7 +276,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// the geometry directly (or the feature, if the geometry was tried first).
         /// Throws <see cref="InvalidOperationException"/> when no attempt gives a valid pattern.
         /// </summary>
-        private void AddRackPattern(IADPartSession session, IADPartFeature tooth, RackToothSketch plan)
+        private void AddRackPattern(IADPartSession session, IADPartFeature tooth, RackToothSketch plan, IADMirrorFeature mirror = null)
         {
             var axis = session.DesignAxes.Item(RackPatternAxisName);
             var secondAxis = session.DesignAxes.Item(RackPatternSecondAxisName);
@@ -279,6 +289,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                 {
                     var targets = _root.NewObjectCollector();
                     targets.Add(tooth);
+                    if (mirror != null) targets.Add(mirror);
 
                     var patternGeometry = attempt == 1 ? !PatternGeometry : PatternGeometry;
 
@@ -973,6 +984,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>
         /// Location of an exported part in the assembly: the shaft placement, then the axial offset along the shaft. An exported part is
         /// extruded from the sketch plane up to its face width, while the offset locates the mid-plane, hence the half face width.
+        /// A herringbone part is mirrored about the sketch plane, so it already lies on the mid-plane and has no such shift.
         /// </summary>
         public static Transform3D GetPartPlacement(Shaft shaft, ShaftMount mount)
         {
@@ -984,8 +996,16 @@ namespace Bolsover.Gears.Calculator.Alibre
                 return shaft.Placement.ToTransform().Compose(GetBevelPartFrame(bevel, mount.AxialOffset));
             }
 
-            return shaft.Placement.ToTransform()
-                .Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, mount.AxialOffset - mount.Component.FaceWidth / 2.0)));
+            // A herringbone part is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
+            var start = IsHerringbone(mount.Component) ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
+            return shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
+        }
+
+        /// <summary>True for a herringbone gear or rack that is exported with a mirror: a helical one with the herringbone option set.</summary>
+        public static bool IsHerringbone(GearComponent component)
+        {
+            return (component is InvoluteGearComponent gear && gear.IsHerringbone && gear.IsHelical)
+                   || (component is RackComponent rack && rack.IsHerringbone && rack.IsHelical);
         }
 
         /// <summary>
@@ -1101,9 +1121,18 @@ namespace Bolsover.Gears.Calculator.Alibre
                     throw new InvalidOperationException("Alibre reports that the tooth sketch is not closed: " + ex.Message, ex);
                 }
 
-                stage = "patterning the tooth";
                 var targets = _root.NewObjectCollector();
                 targets.Add(tooth);
+                if (plan.IsHerringbone)
+                {
+                    // The tooth was swept over half the face width from the sketch plane; mirroring it across that plane gives the
+                    // other half with the opposite hand, and both halves are patterned together.
+                    stage = "mirroring the tooth across the " + SketchPlaneName;
+                    var mirror = AddHerringboneMirror(session, tooth, plane);
+                    targets.Add(mirror);
+                }
+
+                stage = "patterning the tooth";
                 session.Features.AddCircularFeaturePattern(targets, plan.Teeth, plan.PatternAngle, null, axis, false, PatternGeometry, PatternFeatureName);
 
                 stage = "regenerating the part";
@@ -1114,6 +1143,22 @@ namespace Bolsover.Gears.Calculator.Alibre
             {
                 throw new InvalidOperationException($"Alibre export of gear '{gear.Id}' failed while {stage}: {ex.Message}", ex);
             }
+        }
+
+        /// <summary>
+        /// Mirrors the half-width helical tooth of a herringbone gear across the plane it was sketched on (<c>IADPartFeatures.AddMirrorFeaturePattern</c>).
+        /// The mirror of a right-hand helix is a left-hand helix, so the two halves form the V of a herringbone gear and meet on the plane.
+        /// Alibre can accept the call and still report the feature as failed, so the result is checked.
+        /// </summary>
+        private IADMirrorFeature AddHerringboneMirror(IADPartSession session, IADPartFeature tooth, IADDesignPlane mirrorPlane)
+        {
+            var toMirror = _root.NewObjectCollector();
+            toMirror.Add(tooth);
+
+            // The second argument is the occurrence, null in a part (as for the circular pattern).
+            var mirror = session.Features.AddMirrorFeaturePattern(toMirror, null, mirrorPlane, PatternGeometry, MirrorFeatureName);
+            CheckFeature(mirror, "The mirror of the helical tooth");
+            return mirror;
         }
 
         /// <summary>

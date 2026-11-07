@@ -94,6 +94,9 @@ namespace Bolsover.Gears.Gui.Views
         private object _selected;
         private ISet<GearComponent> _hidden;
         private AlibreGearExporter _alibreExporter;
+        private PropertyLayoutSettings _layout = PropertyLayoutStore.Load(PropertyLayoutStore.DefaultPath);
+        private object _gridSource;
+        private ToolStripMenuItem[] _sortItems;
 
         /// <summary>
         /// Uses the gears icon that is built into GearsUI.exe as the window icon. This also works when the editor is hosted in Alibre Design,
@@ -295,6 +298,7 @@ namespace Bolsover.Gears.Gui.Views
             var leftSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
             leftSplit.Panel1.Controls.Add(_tree);
             leftSplit.Panel2.Controls.Add(_grid);
+            leftSplit.Panel2.Controls.Add(CreatePropertyBar());
 
             var tabs = new TabControl { Dock = DockStyle.Fill };
             AddTab(tabs, "Summary", _summary);
@@ -362,6 +366,100 @@ namespace Bolsover.Gears.Gui.Views
             catch (ArgumentException)
             {
                 // The container is smaller than the requested distance; keep the default.
+            }
+        }
+
+        /// <summary>The bar above the property grid: sort mode, the property chooser and saving the layout as the default.</summary>
+        private ToolStrip CreatePropertyBar()
+        {
+            var sort = new ToolStripDropDownButton("&Sort") { ToolTipText = "How the property list is ordered." };
+            _sortItems = new[]
+            {
+                new ToolStripMenuItem("By category (A-Z)") { Tag = PropertySortMode.Category },
+                new ToolStripMenuItem("Alphabetical (one list)") { Tag = PropertySortMode.Alphabetical },
+                new ToolStripMenuItem("Custom order") { Tag = PropertySortMode.Custom, ToolTipText = "The order chosen in Choose properties." }
+            };
+            foreach (var item in _sortItems)
+            {
+                var mode = (PropertySortMode)item.Tag;
+                item.Click += (s, e) =>
+                {
+                    _layout.SortMode = mode;
+                    ApplyPropertyLayout();
+                };
+                sort.DropDownItems.Add(item);
+            }
+
+            var choose = new ToolStripButton("&Choose properties…")
+            {
+                ToolTipText = "Select which properties are shown, put them in order and add notes."
+            };
+            choose.Click += (s, e) => ChooseProperties();
+
+            var save = new ToolStripButton("Save as &default")
+            {
+                ToolTipText = "Keep the current property layout as the default for the next start."
+            };
+            save.Click += (s, e) => SavePropertyLayout();
+
+            var bar = new ToolStrip { Dock = DockStyle.Top, GripStyle = ToolStripGripStyle.Hidden };
+            bar.Items.AddRange(new ToolStripItem[] { sort, choose, save });
+            return bar;
+        }
+
+        /// <summary>Shows the selected item's properties in the grid, filtered and sorted as the layout says.</summary>
+        private void ApplyPropertyLayout()
+        {
+            switch (_layout.SortMode)
+            {
+                case PropertySortMode.Alphabetical:
+                    _grid.PropertySort = PropertySort.Alphabetical;
+                    break;
+                case PropertySortMode.Custom:
+                    _grid.PropertySort = PropertySort.Categorized;
+                    break;
+                default:
+                    _grid.PropertySort = PropertySort.CategorizedAlphabetical;
+                    break;
+            }
+
+            if (_sortItems != null)
+            {
+                foreach (var item in _sortItems) item.Checked = (PropertySortMode)item.Tag == _layout.SortMode;
+            }
+
+            _grid.SelectedObject = _gridSource == null
+                ? null
+                : new FilteredProperties(_gridSource, _layout.Find(PropertyLayoutSettings.KeyOf(_gridSource)), _layout.SortMode);
+        }
+
+        private void ChooseProperties()
+        {
+            if (_gridSource == null)
+            {
+                ShowMessage("Select a shaft, gear or planetary stage first.", true);
+                return;
+            }
+
+            using (var dialog = new PropertyLayoutDialog(_gridSource, _layout))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                _layout = dialog.Result;
+                ApplyPropertyLayout();
+                if (dialog.SaveAsDefault) SavePropertyLayout();
+            }
+        }
+
+        private void SavePropertyLayout()
+        {
+            try
+            {
+                PropertyLayoutStore.Save(_layout, PropertyLayoutStore.DefaultPath);
+                ShowMessage("Saved the property layout as the default: " + PropertyLayoutStore.DefaultPath, false);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                ShowMessage("The property layout could not be saved: " + ex.Message, true);
             }
         }
 
@@ -706,7 +804,8 @@ namespace Bolsover.Gears.Gui.Views
 
         public void ShowProperties(object properties)
         {
-            _grid.SelectedObject = properties;
+            _gridSource = properties;
+            ApplyPropertyLayout();
         }
 
         public void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears)
