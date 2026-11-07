@@ -67,6 +67,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string MirrorFeatureName = "ToothMirror";
         public const string FlangeSketchName = "FlangeSection";
         public const string FlangeFeatureName = "Flange";
+        public const string BeltSketchName = "BeltSection";
+        public const string BeltFeatureName = "Belt";
         public const string PulleyAxisName = "Z-Axis";
 
         /// <summary>Name of the default plane of a new Alibre part that the back cone plane of a bevel gear is first offset from.</summary>
@@ -681,6 +683,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         {
             var parts = GetAssemblyParts(train);
             var shaftParts = GetShaftAssemblyParts(train, options);
+            var beltParts = GetBeltAssemblyParts(train, options);
 
             var stage = "creating the assembly";
             var folder = string.IsNullOrWhiteSpace(AssemblyFolder)
@@ -730,6 +733,18 @@ namespace Bolsover.Gears.Calculator.Alibre
                     SavePart(session, current, folder, index, log);
                 }
 
+                foreach (var beltPart in beltParts)
+                {
+                    var current = beltPart.Key.Id;
+                    index++;
+
+                    stage = "building belt '" + current + "'";
+                    var session = Export(beltPart.Key);
+                    log.Add("built belt '" + current + "'");
+                    saved.Add(session);
+                    SavePart(session, current, folder, index, log);
+                }
+
                 stage = "creating the assembly";
                 var assembly = _root.CreateEmptyAssemblyEx(string.IsNullOrWhiteSpace(assemblyName) ? DefaultAssemblyName : assemblyName, true);
                 log.Add("created the assembly");
@@ -764,6 +779,16 @@ namespace Bolsover.Gears.Calculator.Alibre
                     var transformation = factory.CreateTransform(ref matrix);
                     AddPart(occurrences, saved[parts.Count + i], transformation);
                     log.Add("added shaft part '" + current + "' to the assembly");
+                }
+
+                for (var i = 0; i < beltParts.Count; i++)
+                {
+                    var current = beltParts[i].Key.Id;
+                    stage = "adding belt '" + current + "' to the assembly";
+                    Array matrix = ToAlibreMatrix(beltParts[i].Value);
+                    var transformation = factory.CreateTransform(ref matrix);
+                    AddPart(occurrences, saved[parts.Count + shaftParts.Count + i], transformation);
+                    log.Add("added belt '" + current + "' to the assembly");
                 }
 
                 stage = "regenerating the assembly";
@@ -923,6 +948,85 @@ namespace Bolsover.Gears.Calculator.Alibre
         }
 
         /// <summary>
+        /// The timing belts of a train, with the location of each one in the assembly, when <paramref name="options"/> asks for them. The belt
+        /// part has the driver pulley's axis at its origin and lies on its mid-plane, so it is placed like the driver pulley: the driver shaft
+        /// placement, then the axial offset of the driver mount. A belt whose driver is not mounted has no part. Needs no Alibre.
+        /// </summary>
+        public static IReadOnlyList<KeyValuePair<TimingBelt, Transform3D>> GetBeltAssemblyParts(GearAssembly train, AssemblyExportOptions options)
+        {
+            if (train == null) throw new ArgumentNullException(nameof(train));
+
+            var parts = new List<KeyValuePair<TimingBelt, Transform3D>>();
+            if (options == null || !options.IncludeBelts) return parts;
+
+            foreach (var belt in train.Belts)
+            {
+                var mount = train.FindMount(belt.Driver, out var shaft);
+                if (mount == null) continue;
+                parts.Add(new KeyValuePair<TimingBelt, Transform3D>(belt, GetBeltPlacement(shaft, mount)));
+            }
+
+            return parts;
+        }
+
+        /// <summary>Location of an exported belt part: the shaft placement of the driver pulley, then the axial offset of its mid-plane.</summary>
+        public static Transform3D GetBeltPlacement(Shaft driverShaft, ShaftMount driverMount)
+        {
+            if (driverShaft == null) throw new ArgumentNullException(nameof(driverShaft));
+            if (driverMount == null) throw new ArgumentNullException(nameof(driverMount));
+
+            return driverShaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, driverMount.AxialOffset)));
+        }
+
+        /// <summary>
+        /// Creates a timing belt in a new Alibre part as a plain strip without teeth: a sketch of the outer and the inner loop of the belt
+        /// (straight runs and an arc round each pulley) on the XY plane, extruded mid-plane to the belt width. The driver pulley's axis is the
+        /// Z axis and the driven pulley lies on the line of centres in the XY plane. Throws <see cref="InvalidOperationException"/> when the
+        /// belt cannot be drawn or Alibre rejects a step.
+        /// </summary>
+        public IADPartSession Export(TimingBelt belt)
+        {
+            var plan = BeltSketchBuilder.Build(belt);
+            if (!plan.IsClosed()) throw new InvalidOperationException($"The belt sketch of '{belt.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(plan.PartName);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, BeltSketchName);
+
+                stage = "drawing the belt loops";
+                var closed = DrawFigures(sketch, plan.Figures, null);
+
+                stage = "extruding the belt";
+                IADPartFeature body;
+                try
+                {
+                    // Mid-plane: half the width on each side of the sketch plane, like the pulleys the belt runs on.
+                    body = session.Features.AddExtrudedBoss(sketch, plan.Width, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, BeltFeatureName, "", "");
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the belt sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(body, "The extruded belt");
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of belt '{belt.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// Location of an exported shaft or carrier part in the assembly: the shaft placement, then the start of the shaft along its axis,
         /// because the part is extruded from the sketch plane up to its length.
         /// </summary>
@@ -987,7 +1091,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>
         /// Location of an exported part in the assembly: the shaft placement, then the axial offset along the shaft. An exported part is
         /// extruded from the sketch plane up to its face width, while the offset locates the mid-plane, hence the half face width.
-        /// A herringbone part is mirrored about the sketch plane, so it already lies on the mid-plane and has no such shift.
+        /// A herringbone part is mirrored about the sketch plane, and an HTD pulley is extruded mid-plane about it, so both already lie on
+        /// the mid-plane and have no such shift.
         /// </summary>
         public static Transform3D GetPartPlacement(Shaft shaft, ShaftMount mount)
         {
@@ -999,8 +1104,9 @@ namespace Bolsover.Gears.Calculator.Alibre
                 return shaft.Placement.ToTransform().Compose(GetBevelPartFrame(bevel, mount.AxialOffset));
             }
 
-            // A herringbone part is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
-            var start = IsHerringbone(mount.Component) ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
+            // A herringbone part or a pulley is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
+            var centred = IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent;
+            var start = centred ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
             return shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
         }
 
@@ -1089,9 +1195,10 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         /// <summary>
         /// Creates an HTD timing belt pulley in a new Alibre part: a closed sketch of one groove cell (a wedge one pitch wide) on the XY plane,
-        /// extruded to the width, a circular pattern of that cell about the Z axis, and, for a pulley with flanges, a revolve of each flange
-        /// rectangle (sketched on the plane that holds the Z axis) about the Z axis. The body runs from z = 0 to the width; the bore and hub
-        /// are not part of the export.
+        /// extruded mid-plane (half the width to each side of the plane), a circular pattern of that cell about the Z axis, and, for a pulley
+        /// with flanges, a revolve of the flange on the positive side (sketched on the plane that holds the Z axis) about the Z axis and a
+        /// mirror of that flange across the XY plane for the other one. The body runs from z = -width / 2 to z = width / 2, so the sketch
+        /// plane is the mid-plane; the bore and hub are not part of the export.
         /// </summary>
         public IADPartSession Export(HtdPulleyComponent pulley)
         {
@@ -1116,7 +1223,8 @@ namespace Bolsover.Gears.Calculator.Alibre
                 IADPartFeature tooth;
                 try
                 {
-                    tooth = session.Features.AddExtrudedBoss(sketch, cell.ExtrusionDepth, ADPartFeatureEndCondition.AD_TO_DEPTH, null, null, 0.0,
+                    // Mid-plane: half the width on each side of the sketch plane, so the pulley is centred on z = 0.
+                    tooth = session.Features.AddExtrudedBoss(sketch, cell.ExtrusionDepth, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
                         ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, ToothFeatureName, "", "");
                 }
                 catch (Exception ex) when (!closed)
@@ -1137,16 +1245,18 @@ namespace Bolsover.Gears.Calculator.Alibre
                 {
                     var ySign = AxialPlaneSketchYIsNegativeZ ? -1.0 : 1.0;
                     var axialPlane = session.DesignPlanes.Item(AxialSketchPlaneName);
-                    for (var i = 0; i < plan.Flanges.Count; i++)
-                    {
-                        stage = "drawing flange " + (i + 1);
-                        var flangeSketch = session.Sketches.AddSketch(null, axialPlane, FlangeSketchName + (i + 1));
-                        DrawFigures(flangeSketch, plan.Flanges[i], null, ySign);
 
-                        stage = "revolving flange " + (i + 1);
-                        var flange = session.Features.AddRevolvedBoss(flangeSketch, null, axis, 2.0 * Math.PI, FlangeFeatureName + (i + 1));
-                        CheckFeature(flange, "Flange " + (i + 1));
-                    }
+                    stage = "drawing flange 1";
+                    var flangeSketch = session.Sketches.AddSketch(null, axialPlane, FlangeSketchName + "1");
+                    DrawFigures(flangeSketch, plan.Flange, null, ySign);
+
+                    stage = "revolving flange 1";
+                    var flange = session.Features.AddRevolvedBoss(flangeSketch, null, axis, 2.0 * Math.PI, FlangeFeatureName + "1");
+                    CheckFeature(flange, "Flange 1");
+
+                    // Flange 2 is the mirror image of flange 1 across the sketch plane, which is the mid-plane of the pulley.
+                    stage = "mirroring flange 1 across the " + SketchPlaneName;
+                    AddMirror(session, flange, plane, FlangeFeatureName + "2", "Flange 2");
                 }
 
                 stage = "regenerating the part";
@@ -1229,12 +1339,18 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// </summary>
         private IADMirrorFeature AddHerringboneMirror(IADPartSession session, IADPartFeature tooth, IADDesignPlane mirrorPlane)
         {
+            return AddMirror(session, tooth, mirrorPlane, MirrorFeatureName, "The mirror of the helical tooth");
+        }
+
+        /// <summary>Mirrors one feature across a plane (<c>IADPartFeatures.AddMirrorFeaturePattern</c>) and checks the result.</summary>
+        private IADMirrorFeature AddMirror(IADPartSession session, IADPartFeature feature, IADDesignPlane mirrorPlane, string name, string description)
+        {
             var toMirror = _root.NewObjectCollector();
-            toMirror.Add(tooth);
+            toMirror.Add(feature);
 
             // The second argument is the occurrence, null in a part (as for the circular pattern).
-            var mirror = session.Features.AddMirrorFeaturePattern(toMirror, null, mirrorPlane, PatternGeometry, MirrorFeatureName);
-            CheckFeature(mirror, "The mirror of the helical tooth");
+            var mirror = session.Features.AddMirrorFeaturePattern(toMirror, null, mirrorPlane, PatternGeometry, name);
+            CheckFeature(mirror, description);
             return mirror;
         }
 

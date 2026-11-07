@@ -85,6 +85,11 @@ namespace Bolsover.Gears.Gui.Views
             CheckOnClick = true,
             ToolTipText = "Export Assembly to Alibre also adds a part for the carrier plate of every planetary stage."
         };
+        private readonly ToolStripMenuItem _btnIncludeBelts = new ToolStripMenuItem("Include timing belts in assembly export")
+        {
+            CheckOnClick = true,
+            ToolTipText = "Export Assembly to Alibre also adds a part for every timing belt: a plain strip without teeth, as wide as the belt, placed on the mid-planes of its pulleys."
+        };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
@@ -243,6 +248,7 @@ namespace Bolsover.Gears.Gui.Views
             ddFile.DropDownItems.Add(_btnExportAlibreAssembly);
             ddFile.DropDownItems.Add(_btnIncludeShafts);
             ddFile.DropDownItems.Add(_btnIncludeCarriers);
+            ddFile.DropDownItems.Add(_btnIncludeBelts);
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
@@ -639,10 +645,14 @@ namespace Bolsover.Gears.Gui.Views
             var options = new AssemblyExportOptions
             {
                 IncludeShafts = _btnIncludeShafts.Checked,
-                IncludeCarriers = _btnIncludeCarriers.Checked
+                IncludeCarriers = _btnIncludeCarriers.Checked,
+                IncludeBelts = _btnIncludeBelts.Checked
             };
             var extraParts = AlibreGearExporter.GetShaftAssemblyParts(_presenter.Assembly, options).Count;
-            var description = extraParts > 0 ? $"{count} gears and {extraParts} shaft or carrier part(s)" : $"{count} gears";
+            var beltCount = AlibreGearExporter.GetBeltAssemblyParts(_presenter.Assembly, options).Count;
+            var description = $"{count} gears";
+            if (extraParts > 0) description += $" and {extraParts} shaft or carrier part(s)";
+            if (beltCount > 0) description += $" and {beltCount} belt(s)";
 
             ShowMessage($"Exporting {description} to a new Alibre assembly…", false);
             try
@@ -741,11 +751,18 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (bevel gear, {1} teeth, module {2:0.###}, {3} system) to a new Alibre part.", bevel.Id, bevel.Teeth, bevel.Module, bevel.BevelType), false);
                     break;
                 }
+                case TimingBelt belt:
+                {
+                    ShowMessage($"Exporting {belt.Id} to Alibre...", false);
+                    _alibreExporter.Export(belt);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} belt without teeth, {2:0.###} mm wide, {3} teeth long) to a new Alibre part.", belt.Id, belt.Profile.Name, belt.Width, belt.BeltTeeth), false);
+                    break;
+                }
                 case Shaft shaft:
                     ExportShaftToAlibre(shaft);
                     break;
                 default:
-                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, HTD pulley, shaft or planetary carrier to export to Alibre.", true);
+                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.", true);
                     break;
             }
         }

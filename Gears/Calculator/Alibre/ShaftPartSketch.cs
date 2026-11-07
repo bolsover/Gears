@@ -12,6 +12,9 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         /// <summary>Add a part for the carrier plate of every planetary stage.</summary>
         public bool IncludeCarriers { get; set; }
+
+        /// <summary>Add a part for every timing belt of the train: a plain strip without teeth.</summary>
+        public bool IncludeBelts { get; set; }
     }
 
     /// <summary>

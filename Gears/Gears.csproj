@@ -190,6 +190,7 @@
         <Compile Include="Calculator\Assemblies\WormMeshSolver.cs" />
         <Compile Include="Model\Assemblies\RackComponent.cs" />
         <Compile Include="Calculator\Alibre\PulleySketch.cs" />
+        <Compile Include="Calculator\Alibre\BeltSketch.cs" />
         <Compile Include="Model\Assemblies\TimingBelt.cs" />
         <Compile Include="Calculator\Assemblies\TimingBeltMeshBuilder.cs" />
         <Compile Include="Model\Assemblies\HtdProfile.cs" />

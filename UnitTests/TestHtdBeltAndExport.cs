@@ -183,11 +183,12 @@ namespace UnitTests
             Assert.AreEqual("HtdPulley_5M_Z20_B15", plan.Tooth.PartName);
             Assert.AreEqual("HtdPulley_5M_Z20_B15", PulleySketchBuilder.PartName(pulley));
             Assert.IsFalse(plan.HasFlanges);
+            Assert.IsNull(plan.Flange);
             Assert.IsTrue(plan.IsFlangeClosed(), "A pulley without flanges has nothing to close.");
         }
 
         [Test]
-        public void TestPulleySketch_FlangesAreTwoClosedRectanglesOnEitherSideOfTheWidth()
+        public void TestPulleySketch_FlangeIsOneClosedRectangleAboveTheMidPlaneSlab()
         {
             var pulley = Pulley(HtdSeries.Htd8M, 30, true);
             pulley.FaceWidth = 20.0;
@@ -197,16 +198,15 @@ namespace UnitTests
             var plan = PulleySketchBuilder.Build(pulley);
 
             Assert.IsTrue(plan.HasFlanges);
-            Assert.AreEqual(2, plan.Flanges.Count);
+            Assert.IsNotNull(plan.Flange);
             Assert.IsTrue(plan.IsFlangeClosed());
 
             var radius = pulley.FlangeDiameter / 2.0 * 0.1;
-            var zs = plan.Flanges.Select(f => FigurePoints(f).Select(p => p.Y).Distinct().OrderBy(y => y).ToList()).OrderBy(z => z[0]).ToList();
-            Assert.AreEqual(-0.2, zs[0][0], 1e-9, "The lower flange starts one thickness below the sketch plane.");
-            Assert.AreEqual(0.0, zs[0][1], 1e-9);
-            Assert.AreEqual(2.0, zs[1][0], 1e-9, "The upper flange starts at the width.");
-            Assert.AreEqual(2.2, zs[1][1], 1e-9);
-            foreach (var flange in plan.Flanges) Assert.AreEqual(radius, FigurePoints(flange).Max(p => p.X), 1e-7, "Lengths are rounded to 7 decimals in millimetres.");
+            var zs = FigurePoints(plan.Flange).Select(p => p.Y).Distinct().OrderBy(y => y).ToList();
+            Assert.AreEqual(2, zs.Count);
+            Assert.AreEqual(1.0, zs[0], 1e-9, "Flange 1 starts at half the width above the mid-plane (the sketch plane).");
+            Assert.AreEqual(1.2, zs[1], 1e-9, "It is one thickness thick; flange 2 is its mirror image, so it is not in the plan.");
+            Assert.AreEqual(radius, FigurePoints(plan.Flange).Max(p => p.X), 1e-7, "Lengths are rounded to 7 decimals in millimetres.");
         }
 
         [Test]
@@ -227,8 +227,117 @@ namespace UnitTests
             Assert.AreEqual(2, parts.Count);
             Assert.AreSame(a, parts[0].Key);
             Assert.AreSame(b, parts[1].Key);
-            Assert.AreEqual(-a.FaceWidth / 2.0, parts[0].Value.Translation.Z, 1e-9, "The part starts half the width below the mid-plane.");
-            Assert.AreEqual(3.0 - b.FaceWidth / 2.0, parts[1].Value.Translation.Z, 1e-9);
+            Assert.AreEqual(0.0, parts[0].Value.Translation.Z, 1e-9, "The pulley is extruded mid-plane, so its sketch plane is the mid-plane.");
+            Assert.AreEqual(3.0, parts[1].Value.Translation.Z, 1e-9, "Only the axial offset of the mount locates the part.");
+            Assert.IsNotNull(a);
+        }
+
+        #endregion
+
+        #region Alibre belt export plan
+
+        /// <summary>Area of a belt loop (arcs sampled, lines straight) in square millimetres.</summary>
+        private static double LoopArea(IReadOnlyList<ToothSketchFigure> figures)
+        {
+            return WedgeArea(figures) * 100.0;
+        }
+
+        [Test]
+        public void TestBeltSketch_HasTwoClosedLoopsAndAPartName()
+        {
+            TwoPulleys(out _, out _, out var belt, 120.0, 20, 40);
+            belt.CentreLineAngleDeg = 25.0;
+
+            var plan = BeltSketchBuilder.Build(belt);
+
+            Assert.IsTrue(plan.IsClosed());
+            Assert.AreEqual(4, plan.OuterLoop.Count, "Two arcs and two straight runs.");
+            Assert.AreEqual(4, plan.InnerLoop.Count);
+            Assert.AreEqual(8, plan.Figures.Count);
+            Assert.AreEqual(belt.Width * 0.1, plan.Width, 1e-9, "The width is extruded in centimetres.");
+            Assert.AreEqual($"HtdBelt_5M_T{belt.BeltTeeth}_W{belt.Width:0.##}", plan.PartName);
+            Assert.AreEqual(plan.PartName, BeltSketchBuilder.PartName(belt));
+            Assert.IsTrue(plan.Figures.All(f => f.Kind != ToothSketchFigureKind.Spline), "The belt has no teeth, so no splines.");
+        }
+
+        [Test]
+        public void TestBeltSketch_LoopsMatchTheBeltOutlinesOfTheScene()
+        {
+            TwoPulleys(out _, out _, out var belt, 120.0, 20, 40);
+            belt.CentreLineAngleDeg = 25.0;
+            var plan = BeltSketchBuilder.Build(belt);
+
+            var inner = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential);
+            var outer = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness);
+
+            Assert.AreEqual(SolidMeshBuilder.SignedArea(inner), LoopArea(plan.InnerLoop), SolidMeshBuilder.SignedArea(inner) * 0.01);
+            Assert.AreEqual(SolidMeshBuilder.SignedArea(outer), LoopArea(plan.OuterLoop), SolidMeshBuilder.SignedArea(outer) * 0.01);
+            Assert.Greater(LoopArea(plan.OuterLoop), LoopArea(plan.InnerLoop));
+        }
+
+        [Test]
+        public void TestBeltSketch_ArcsRoundThePulleysAreConcentricWithThem()
+        {
+            TwoPulleys(out var a, out var b, out var belt, 120.0, 20, 40);
+            var plan = BeltSketchBuilder.Build(belt);
+
+            var arcs = plan.InnerLoop.Where(f => f.Kind == ToothSketchFigureKind.Arc).ToList();
+            Assert.AreEqual(2, arcs.Count);
+            var driver = arcs.First(f => Math.Abs(f.CentreX) < 1e-9);
+            var driven = arcs.First(f => Math.Abs(f.CentreX) >= 1e-9);
+            Assert.AreEqual(12.0, driven.CentreX, 1e-6, "The driven pulley is 120 mm along the line of centres, in centimetres.");
+            double Radius(ToothSketchFigure f) => Math.Sqrt(Math.Pow(f.StartX - f.CentreX, 2) + Math.Pow(f.StartY - f.CentreY, 2));
+            Assert.AreEqual(a.OutsideDiameter / 2.0 * 0.1, Radius(driver), 1e-6, "The belt rests on the outside diameter.");
+            Assert.AreEqual(b.OutsideDiameter / 2.0 * 0.1, Radius(driven), 1e-6);
+        }
+
+        [Test]
+        public void TestBeltSketch_AnInvalidBeltIsRejected()
+        {
+            var a = new HtdPulleyComponent("A") { Series = HtdSeries.Htd5M, Teeth = 20 };
+            var b = new HtdPulleyComponent("B") { Series = HtdSeries.Htd8M, Teeth = 20 };
+
+            Assert.Throws<InvalidOperationException>(() => BeltSketchBuilder.Build(new TimingBelt("X", a, b, 200.0)));
+        }
+
+        [Test]
+        public void TestAlibreExport_BeltsAreOnlyIncludedWhenAsked()
+        {
+            var assembly = TwoPulleys(out _, out _, out var belt, 120.0, 20, 40);
+
+            Assert.AreEqual(0, AlibreGearExporter.GetBeltAssemblyParts(assembly, null).Count);
+            Assert.AreEqual(0, AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true }).Count);
+
+            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeBelts = true });
+            Assert.AreEqual(1, parts.Count);
+            Assert.AreSame(belt, parts[0].Key);
+        }
+
+        [Test]
+        public void TestAlibreExport_BeltIsPlacedOnTheMidPlaneOfTheDriverPulley()
+        {
+            var assembly = TwoPulleys(out _, out _, out _, 120.0, 20, 40);
+            assembly.Solve();
+
+            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeBelts = true });
+
+            var translation = parts[0].Value.Translation;
+            Assert.AreEqual(0.0, translation.X, 1e-9, "The driver shaft is at the origin.");
+            Assert.AreEqual(0.0, translation.Y, 1e-9);
+            Assert.AreEqual(0.0, translation.Z, 1e-9, "The driver is mounted at offset 0 and the belt part is centred on its sketch plane.");
+        }
+
+        [Test]
+        public void TestAlibreExport_BeltFollowsTheDriverMountOffset()
+        {
+            var assembly = TwoPulleys(out var a, out _, out _, 120.0, 20, 40);
+            assembly.Shafts[0].Mounts[0].AxialOffset = 4.0;
+            assembly.Solve();
+
+            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeBelts = true });
+
+            Assert.AreEqual(4.0, parts[0].Value.Translation.Z, 1e-9);
+            Assert.IsNotNull(a);
         }
 
         #endregion

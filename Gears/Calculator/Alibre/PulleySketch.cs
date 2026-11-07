@@ -9,39 +9,36 @@ namespace Bolsover.Gears.Calculator.Alibre
     /// <summary>
     /// The plan for exporting one HTD pulley to Alibre. <see cref="Tooth"/> is the closed sketch of one groove cell: a wedge one pitch
     /// wide, centred on the groove, bounded by two radial lines to the axis, two arcs of the outside diameter and the groove (a
-    /// circular-arc bottom, two straight flanks and two rounded edges). It is extruded to the width and patterned about the Z axis, and
-    /// the copies tile into the solid pulley. The flanges, when there are any, are two rectangles in the plane that holds the Z axis
-    /// that are revolved about it. All lengths are in Alibre units (centimetres); the body runs from z = 0 to the width.
+    /// circular-arc bottom, two straight flanks and two rounded edges). It is extruded about the sketch plane (mid-plane) to the width and
+    /// patterned about the Z axis, and the copies tile into the solid pulley. When there are flanges, <see cref="Flange"/> is the
+    /// rectangle of the flange on the positive side, in the plane that holds the Z axis; it is revolved about the axis, and the flange on
+    /// the negative side is its mirror image across the sketch plane. All lengths are in Alibre units (centimetres); the body runs from
+    /// z = -width / 2 to z = width / 2.
     /// </summary>
     public sealed class PulleySketch
     {
-        public PulleySketch(SingleToothSketch tooth, IReadOnlyList<IReadOnlyList<ToothSketchFigure>> flanges)
+        public PulleySketch(SingleToothSketch tooth, IReadOnlyList<ToothSketchFigure> flange)
         {
             Tooth = tooth ?? throw new ArgumentNullException(nameof(tooth));
-            Flanges = flanges ?? new List<IReadOnlyList<ToothSketchFigure>>();
+            Flange = flange;
         }
 
         /// <summary>The wedge of one groove cell, with the number of grooves, the width and the part name.</summary>
         public SingleToothSketch Tooth { get; }
 
         /// <summary>
-        /// The closed rectangle of each flange (none for a pulley without flanges), in the axial plane: sketch x is the radius and sketch y
-        /// is the position along the axis. Each is revolved about the axis.
+        /// The closed rectangle of the flange on the positive side (null for a pulley without flanges), in the axial plane: sketch x is the
+        /// radius and sketch y is the position along the axis. It is revolved about the axis; the other flange is its mirror image.
         /// </summary>
-        public IReadOnlyList<IReadOnlyList<ToothSketchFigure>> Flanges { get; }
+        public IReadOnlyList<ToothSketchFigure> Flange { get; }
 
-        public bool HasFlanges => Flanges.Count > 0;
+        public bool HasFlanges => Flange != null;
 
-        /// <summary>True when the flange rectangles are closed loops.</summary>
+        /// <summary>True when the flange rectangle is a closed loop (or there is no flange).</summary>
         public bool IsFlangeClosed(double tolerance = 1e-6)
         {
-            foreach (var flange in Flanges)
-            {
-                var closed = new SingleToothSketch(1, 1.0, "flange", flange, null);
-                if (!closed.IsClosed(tolerance)) return false;
-            }
-
-            return true;
+            if (Flange == null) return true;
+            return new SingleToothSketch(1, 1.0, "flange", Flange, null).IsClosed(tolerance);
         }
     }
 
@@ -122,15 +119,14 @@ namespace Bolsover.Gears.Calculator.Alibre
             };
             var tooth = new SingleToothSketch(pulley.Teeth, Q(pulley.FaceWidth), PartName(pulley), figures, references);
 
-            var flanges = new List<IReadOnlyList<ToothSketchFigure>>();
+            IReadOnlyList<ToothSketchFigure> flange = null;
             if (pulley.HasFlanges)
             {
-                var flangeRadius = Q(pulley.FlangeDiameter / 2.0);
-                flanges.Add(Rectangle(flangeRadius, Q(pulley.FaceWidth), Q(pulley.FaceWidth + pulley.FlangeThickness)));
-                flanges.Add(Rectangle(flangeRadius, Q(-pulley.FlangeThickness), 0.0));
+                var halfWidth = pulley.FaceWidth / 2.0;
+                flange = Rectangle(Q(pulley.FlangeDiameter / 2.0), Q(halfWidth), Q(halfWidth + pulley.FlangeThickness));
             }
 
-            return new PulleySketch(tooth, flanges);
+            return new PulleySketch(tooth, flange);
         }
 
         private static IReadOnlyList<ToothSketchFigure> Rectangle(double radius, double z0, double z1)
