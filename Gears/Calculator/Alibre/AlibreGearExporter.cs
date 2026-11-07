@@ -65,6 +65,9 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string ToothFeatureName = "Tooth";
         public const string PatternFeatureName = "ToothPattern";
         public const string MirrorFeatureName = "ToothMirror";
+        public const string FlangeSketchName = "FlangeSection";
+        public const string FlangeFeatureName = "Flange";
+        public const string PulleyAxisName = "Z-Axis";
 
         /// <summary>Name of the default plane of a new Alibre part that the back cone plane of a bevel gear is first offset from.</summary>
         public const string BevelOffsetFromPlaneName = "YZ-Plane";
@@ -883,7 +886,7 @@ namespace Bolsover.Gears.Calculator.Alibre
                     if (!IsExportable(mount.Component))
                     {
                         throw new InvalidOperationException(
-                            $"Gear '{mount.Component.Id}' cannot be exported to Alibre yet; only involute gears, racks, worms, worm wheels and bevel gears can.");
+                            $"Gear '{mount.Component.Id}' cannot be exported to Alibre yet; only involute gears, racks, worms, worm wheels, bevel gears and HTD pulleys can.");
                     }
 
                     parts.Add(new KeyValuePair<GearComponent, Transform3D>(mount.Component, GetPartPlacement(shaft, mount)));
@@ -978,7 +981,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         public static bool IsExportable(GearComponent component)
         {
             return component is InvoluteGearComponent || component is RackComponent || component is WormComponent || component is WormWheelComponent
-                || component is BevelGearComponent;
+                || component is BevelGearComponent || component is HtdPulleyComponent;
         }
 
         /// <summary>
@@ -1070,6 +1073,8 @@ namespace Bolsover.Gears.Calculator.Alibre
                     return Export(wheel);
                 case BevelGearComponent bevel:
                     return Export(bevel);
+                case HtdPulleyComponent pulley:
+                    return Export(pulley);
                 default:
                     throw new InvalidOperationException($"Gear '{component.Id}' cannot be exported to Alibre yet.");
             }
@@ -1080,6 +1085,78 @@ namespace Bolsover.Gears.Calculator.Alibre
         {
             if (feature == null) throw new InvalidOperationException(description + " was not created.");
             if (feature.HasError) throw new InvalidOperationException(description + " has an error in Alibre, so it was not formed.");
+        }
+
+        /// <summary>
+        /// Creates an HTD timing belt pulley in a new Alibre part: a closed sketch of one groove cell (a wedge one pitch wide) on the XY plane,
+        /// extruded to the width, a circular pattern of that cell about the Z axis, and, for a pulley with flanges, a revolve of each flange
+        /// rectangle (sketched on the plane that holds the Z axis) about the Z axis. The body runs from z = 0 to the width; the bore and hub
+        /// are not part of the export.
+        /// </summary>
+        public IADPartSession Export(HtdPulleyComponent pulley)
+        {
+            var plan = PulleySketchBuilder.Build(pulley);
+            var cell = plan.Tooth;
+            if (!cell.IsClosed()) throw new InvalidOperationException($"The groove sketch of pulley '{pulley.Id}' is not closed, so it cannot be exported.");
+            if (!plan.IsFlangeClosed()) throw new InvalidOperationException($"The flange sketch of pulley '{pulley.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(cell.PartName);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, SketchName);
+
+                stage = "drawing the groove cell";
+                var closed = DrawFigures(sketch, cell.Figures, cell.ReferenceCircles);
+
+                stage = "extruding the groove cell";
+                IADPartFeature tooth;
+                try
+                {
+                    tooth = session.Features.AddExtrudedBoss(sketch, cell.ExtrusionDepth, ADPartFeatureEndCondition.AD_TO_DEPTH, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, ToothFeatureName, "", "");
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the groove sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(tooth, "The extruded groove cell");
+
+                var axis = session.DesignAxes.Item(PulleyAxisName);
+                var targets = _root.NewObjectCollector();
+                targets.Add(tooth);
+
+                stage = "patterning the groove cell";
+                session.Features.AddCircularFeaturePattern(targets, cell.Teeth, cell.PatternAngle, null, axis, false, PatternGeometry, PatternFeatureName);
+
+                if (plan.HasFlanges)
+                {
+                    var ySign = AxialPlaneSketchYIsNegativeZ ? -1.0 : 1.0;
+                    var axialPlane = session.DesignPlanes.Item(AxialSketchPlaneName);
+                    for (var i = 0; i < plan.Flanges.Count; i++)
+                    {
+                        stage = "drawing flange " + (i + 1);
+                        var flangeSketch = session.Sketches.AddSketch(null, axialPlane, FlangeSketchName + (i + 1));
+                        DrawFigures(flangeSketch, plan.Flanges[i], null, ySign);
+
+                        stage = "revolving flange " + (i + 1);
+                        var flange = session.Features.AddRevolvedBoss(flangeSketch, null, axis, 2.0 * Math.PI, FlangeFeatureName + (i + 1));
+                        CheckFeature(flange, "Flange " + (i + 1));
+                    }
+                }
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of pulley '{pulley.Id}' failed while {stage}: {ex.Message}", ex);
+            }
         }
 
         private IADPartSession Export(InvoluteGearComponent gear, string partName)

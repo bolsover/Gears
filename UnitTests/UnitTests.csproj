@@ -177,6 +177,8 @@
     <Compile Include="TestGearMesh3DBuilder.cs" />
     <Compile Include="TestHerringboneGear.cs" />
     <Compile Include="TestHelicalPlanetary.cs" />
+    <Compile Include="TestHtdPulley.cs" />
+    <Compile Include="TestHtdBeltAndExport.cs" />
     <Compile Include="TestHelixMeshAdapter.cs" />
     <Compile Include="TestGearParameterCalculator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

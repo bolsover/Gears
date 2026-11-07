@@ -189,6 +189,11 @@
         <Compile Include="Calculator\Assemblies\BevelMeshSolver.cs" />
         <Compile Include="Calculator\Assemblies\WormMeshSolver.cs" />
         <Compile Include="Model\Assemblies\RackComponent.cs" />
+        <Compile Include="Calculator\Alibre\PulleySketch.cs" />
+        <Compile Include="Model\Assemblies\TimingBelt.cs" />
+        <Compile Include="Calculator\Assemblies\TimingBeltMeshBuilder.cs" />
+        <Compile Include="Model\Assemblies\HtdProfile.cs" />
+        <Compile Include="Model\Assemblies\HtdPulleyComponent.cs" />
         <Compile Include="Model\Assemblies\BevelGearComponent.cs" />
         <Compile Include="Model\Assemblies\WormComponent.cs" />
         <Compile Include="Model\Assemblies\WormWheelComponent.cs" />

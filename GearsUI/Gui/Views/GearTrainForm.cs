@@ -252,6 +252,38 @@ namespace Bolsover.Gears.Gui.Views
                 ddStart, new ToolStripSeparator(), btnAddGear, btnAddMeshed, ddMate, new ToolStripSeparator(), btnFitShift, btnRemove
             });
 
+            var menuPulley = new ToolStripMenuItem("&Pulley");
+            var ddPulleyStart = new ToolStripMenuItem("&New train with HTD pulley")
+            {
+                ToolTipText = "Start a new train with one HTD timing belt pulley of the chosen series. It is drawn in the 2D and 3D views."
+            };
+            var ddPulleyAdd = new ToolStripMenuItem("&Add HTD pulley to shaft")
+            {
+                ToolTipText = "Add an HTD pulley of the chosen series to the selected shaft (or the shaft of the selected gear)."
+            };
+            foreach (var profile in HtdProfile.Profiles)
+            {
+                var series = profile.Series;
+                ddPulleyStart.DropDownItems.Add("HTD " + profile.Name + " (" + profile.Pitch.ToString("0", CultureInfo.InvariantCulture) + " mm pitch)", null,
+                    (s, e) => RunCommand(() => _presenter.NewPulley(series)));
+                ddPulleyAdd.DropDownItems.Add("HTD " + profile.Name + " (" + profile.Pitch.ToString("0", CultureInfo.InvariantCulture) + " mm pitch)", null,
+                    (s, e) => RunCommand(() => AddPulleyToSelectedShaft(series)));
+            }
+
+            menuPulley.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                ddPulleyStart, ddPulleyAdd, new ToolStripSeparator(),
+                new ToolStripMenuItem("Toggle &flanges of selected pulley", null, (s, e) => RunCommand(ToggleFlangesOfSelectedPulley)),
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("Add &belted pulley to selected pulley", null, (s, e) => RunCommand(AddBeltedPulleyToSelectedPulley))
+                {
+                    ToolTipText = "Adds a second pulley of the same series on a new shaft, joined to the selected pulley by a belt. Select the belt to set the centre distance."
+                },
+                new ToolStripMenuItem("&Remove selected belt", null, (s, e) => RunCommand(RemoveSelectedBelt)),
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("HTD profile &data…", null, (s, e) => ShowHtdData())
+            });
+
             var menuView = new ToolStripMenuItem("&View");
             menuView.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -289,7 +321,7 @@ namespace Bolsover.Gears.Gui.Views
             menuHelp.DropDownItems.Add("&Help", null, (s, e) => ShowDocument("Help", "README.html"));
             menuHelp.DropDownItems.Add("&License", null, (s, e) => ShowDocument("License", "LICENSE.html"));
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuView, menuSimulation, menuHelp });
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuPulley, menuView, menuSimulation, menuHelp });
             MainMenuStrip = menu;
 
             var statusBar = new StatusStrip();
@@ -695,6 +727,13 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (worm wheel, {1} teeth, axial module {2:0.###}, helix angle {3:0.###} degrees) to a new Alibre part.", wheel.Id, wheel.Teeth, wheel.Module, wheel.LeadAngleDeg), false);
                     break;
                 }
+                case HtdPulleyComponent pulley:
+                {
+                    ShowMessage($"Exporting {pulley.Id} to Alibre…", false);
+                    _alibreExporter.Export(pulley);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} pulley, {2} grooves, {3:0.###} mm pitch diameter) to a new Alibre part.", pulley.Id, pulley.Profile.Name, pulley.Teeth, pulley.PitchDiameter), false);
+                    break;
+                }
                 case BevelGearComponent bevel:
                 {
                     ShowMessage($"Exporting {bevel.Id} to Alibre…", false);
@@ -706,7 +745,7 @@ namespace Bolsover.Gears.Gui.Views
                     ExportShaftToAlibre(shaft);
                     break;
                 default:
-                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, shaft or planetary carrier to export to Alibre.", true);
+                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, HTD pulley, shaft or planetary carrier to export to Alibre.", true);
                     break;
             }
         }
@@ -735,6 +774,78 @@ namespace Bolsover.Gears.Gui.Views
             }
 
             _presenter.AddGearToShaft(shaft);
+        }
+
+        private void AddPulleyToSelectedShaft(HtdSeries series)
+        {
+            Shaft shaft = _selected as Shaft;
+            if (shaft == null && _selected is GearComponent gear) _presenter.Assembly.FindMount(gear, out shaft);
+            if (shaft == null) shaft = _presenter.InputShaft;
+            if (shaft == null)
+            {
+                ShowMessage("Select a shaft first, or start a new train with a pulley.", true);
+                return;
+            }
+
+            _presenter.AddPulleyToShaft(shaft, series);
+        }
+
+        private void AddBeltedPulleyToSelectedPulley()
+        {
+            if (!(_selected is HtdPulleyComponent pulley))
+            {
+                ShowMessage("Select an HTD pulley first.", true);
+                return;
+            }
+
+            _presenter.AddBeltedPulley(pulley);
+        }
+
+        private void RemoveSelectedBelt()
+        {
+            if (!(_selected is TimingBelt))
+            {
+                ShowMessage("Select a belt in the tree or in the views first.", true);
+                return;
+            }
+
+            _presenter.RemoveSelected();
+        }
+
+        private void ToggleFlangesOfSelectedPulley()
+        {
+            if (!(_selected is HtdPulleyComponent pulley))
+            {
+                ShowMessage("Select an HTD pulley first.", true);
+                return;
+            }
+
+            pulley.HasFlanges = !pulley.HasFlanges;
+            _presenter.Refresh();
+        }
+
+        /// <summary>Shows the HTD dimensions that the pulleys are built from.</summary>
+        private void ShowHtdData()
+        {
+            var ci = CultureInfo.InvariantCulture;
+            var text = new System.Text.StringBuilder();
+            text.AppendLine("HTD (High Torque Drive) timing belt pulleys, dimensions in mm");
+            text.AppendLine();
+            text.AppendLine("Series   Pitch   PLD      Groove depth   Head R   Foot R   Width   Min. grooves");
+            foreach (var p in HtdProfile.Profiles)
+            {
+                text.AppendLine(string.Format(ci, "{0,-8} {1,-7:0.###} {2,-8:0.####} {3,-14:0.##} {4,-8:0.##} {5,-8:0.##} {6,-7:0.##} {7}",
+                    p.Name, p.Pitch, p.PitchLineDifferential, p.ToothHeight, p.HeadRadius, p.FootRadius, p.ToothWidth, p.MinimumTeeth));
+            }
+
+            text.AppendLine();
+            text.AppendLine("Pitch diameter     d = z p / pi");
+            text.AppendLine("Outside diameter   d_o = d - 2 PLD   (PLD = pitch line differential)");
+            text.AppendLine("Root diameter      d_r = d_o - 2 x groove depth");
+            text.AppendLine();
+            text.AppendLine("A groove is the negative of the belt tooth: a bottom arc of the head radius, flanks with a 14 degree included angle,");
+            text.AppendLine("and an edge rounded with the foot radius. The 3M head radius, foot radius and width are approximate.");
+            MessageBox.Show(this, text.ToString(), "HTD pulley data", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void AddMeshedToSelectedGear()

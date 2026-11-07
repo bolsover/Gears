@@ -14,7 +14,8 @@ namespace Bolsover.Gears.Gui.Presenters
     {
         Assembly,
         Shaft,
-        Gear
+        Gear,
+        Belt
     }
 
     /// <summary>The kind of gear that a new train starts with.</summary>
@@ -61,6 +62,7 @@ namespace Bolsover.Gears.Gui.Presenters
         private int _gearCounter;
         private int _shaftCounter;
         private double _planetaryInputRad;
+        private int _beltCounter;
 
         public GearTrainPresenter(IGearTrainView view)
         {
@@ -126,6 +128,109 @@ namespace Bolsover.Gears.Gui.Presenters
             Refresh();
         }
 
+        /// <summary>
+        /// Starts a new train with one shaft carrying one HTD timing belt pulley of the given series. <paramref name="teeth"/> of zero or less
+        /// chooses 20 grooves, or the recommended minimum of the series when that is larger.
+        /// </summary>
+        public HtdPulleyComponent NewPulley(HtdSeries series, int teeth = 0)
+        {
+            ResetState();
+
+            var pulley = CreatePulley(series, teeth);
+            var shaft = CreateShaft();
+            shaft.Mount(pulley, 0.0);
+            Assembly.AddShaft(shaft);
+
+            Selected = pulley;
+            Refresh();
+            return pulley;
+        }
+
+        /// <summary>
+        /// Adds an HTD timing belt pulley to a shaft next to the existing parts, with a small axial gap. A pulley has no meshing partner,
+        /// so it is not connected to the other gears of the train.
+        /// </summary>
+        public HtdPulleyComponent AddPulleyToShaft(Shaft shaft, HtdSeries series, int teeth = 0)
+        {
+            EnsureNotPlanetary();
+            if (shaft == null) throw new ArgumentNullException(nameof(shaft));
+            if (!Assembly.Shafts.Contains(shaft)) throw new ArgumentException("The shaft is not part of the assembly.", nameof(shaft));
+
+            var pulley = CreatePulley(series, teeth);
+            pulley.GetBodyAxialExtent(out var start, out var end);
+
+            var offset = 0.0;
+            if (shaft.Mounts.Count > 0)
+            {
+                var last = double.MinValue;
+                foreach (var mount in shaft.Mounts)
+                {
+                    mount.GetAxialExtent(out _, out var e);
+                    if (e > last) last = e;
+                }
+
+                offset = last + AxialGap - start;
+            }
+
+            shaft.Mount(pulley, GearPrecision.Round(offset));
+            Selected = pulley;
+            Refresh();
+            return pulley;
+        }
+
+        /// <summary>
+        /// Adds a second pulley of the same belt series on a new shaft and joins it to <paramref name="driver"/> with a belt. The new shaft is
+        /// placed by the belt, <paramref name="centreDistance"/> from the driver's shaft (zero or less chooses a distance that leaves a gap of
+        /// at least 10 mm between the pulleys). <paramref name="teeth"/> of zero or less gives the new pulley as many grooves as the driver.
+        /// </summary>
+        public HtdPulleyComponent AddBeltedPulley(HtdPulleyComponent driver, int teeth = 0, double centreDistance = 0.0)
+        {
+            EnsureNotPlanetary();
+            if (driver == null) throw new ArgumentNullException(nameof(driver));
+            if (Assembly.FindMount(driver, out var driverShaft) == null) throw new ArgumentException("The pulley is not part of the assembly.", nameof(driver));
+
+            var driven = CreatePulley(driver.Series, teeth > 0 ? teeth : driver.Teeth);
+            driven.FaceWidth = driver.FaceWidth;
+            driven.HasFlanges = driver.HasFlanges;
+            driven.FlangeHeight = driver.FlangeHeight;
+            driven.FlangeThickness = driver.FlangeThickness;
+
+            var shaft = CreateShaft();
+            shaft.Diameter = driverShaft.Diameter;
+            shaft.Mount(driven, 0.0);
+
+            var belt = new TimingBelt("Belt " + (++_beltCounter), driver, driven, 0.0);
+            belt.CentreDistance = centreDistance > 0.0
+                ? centreDistance
+                : GearPrecision.Round(belt.MinimumCentreDistance + Math.Max(10.0, 0.5 * Math.Max(driver.OutsideDiameter, driven.OutsideDiameter)));
+
+            Assembly.AddShaft(shaft);
+            try
+            {
+                Assembly.AddBelt(belt);
+            }
+            catch
+            {
+                Assembly.RemoveShaft(shaft);
+                throw;
+            }
+
+            Selected = driven;
+            Refresh();
+            return driven;
+        }
+
+        private HtdPulleyComponent CreatePulley(HtdSeries series, int teeth)
+        {
+            var profile = HtdProfile.Get(series);
+            return new HtdPulleyComponent("Pulley " + (++_gearCounter))
+            {
+                Series = series,
+                Teeth = teeth > 0 ? teeth : Math.Max(20, profile.MinimumTeeth),
+                FaceWidth = profile.StandardBeltWidth
+            };
+        }
+
         /// <summary>Replaces the train by a planetary stage (sun, planets, ring and carrier plate).</summary>
         public void NewPlanetary(PlanetaryGearSet set = null)
         {
@@ -146,6 +251,7 @@ namespace Bolsover.Gears.Gui.Presenters
             Assembly = assembly;
             _gearCounter = MaxSuffix(assembly.Components.Select(c => c.Id));
             _shaftCounter = MaxSuffix(assembly.Shafts.Select(s => s.Id));
+            _beltCounter = MaxSuffix(assembly.Belts.Select(b => b.Id));
             Selected = assembly.Components.FirstOrDefault();
             Refresh();
         }
@@ -397,6 +503,10 @@ namespace Bolsover.Gears.Gui.Presenters
             {
                 RemoveGearBranch(gear);
             }
+            else if (Selected is TimingBelt belt)
+            {
+                Assembly.RemoveBelt(belt);
+            }
             else
             {
                 return;
@@ -409,7 +519,7 @@ namespace Bolsover.Gears.Gui.Presenters
         /// <summary>Selects a shaft or gear (or nothing) and updates the selection highlight and the property editor.</summary>
         public void Select(object tag)
         {
-            Selected = tag is Shaft || tag is GearComponent ? tag : null;
+            Selected = tag is Shaft || tag is GearComponent || tag is TimingBelt ? tag : null;
             _view.ShowSelection(Selected);
             _view.ShowProperties(CreateProperties(Selected));
             if (Scene != null) _view.ShowScene(Scene, Selected, _hidden);
@@ -589,6 +699,7 @@ namespace Bolsover.Gears.Gui.Presenters
             _hidden.Clear();
             _gearCounter = 0;
             _shaftCounter = 0;
+            _beltCounter = 0;
             Scene = null;
             Report = null;
             Selected = null;
@@ -788,13 +899,15 @@ namespace Bolsover.Gears.Gui.Presenters
         {
             if (Planetary != null) return new PlanetaryNodeProperties(this, Planetary);
 
-            if (selected is RackComponent || selected is BevelGearComponent || selected is WormComponent || selected is WormWheelComponent)
+            if (selected is RackComponent || selected is BevelGearComponent || selected is WormComponent || selected is WormWheelComponent
+                || selected is HtdPulleyComponent)
             {
                 var component = (GearComponent)selected;
                 var componentMount = Assembly.FindMount(component, out _);
                 if (componentMount == null) return null;
                 var relation = Assembly.FindDrivingRelation(component);
                 if (component is RackComponent rack) return new RackNodeProperties(this, rack, componentMount, relation);
+                if (component is HtdPulleyComponent pulley) return new PulleyNodeProperties(this, pulley, componentMount, relation);
                 if (component is BevelGearComponent bevel) return new BevelNodeProperties(this, bevel, componentMount, relation);
                 if (component is WormComponent worm) return new WormNodeProperties(this, worm, componentMount, relation);
                 return new WormWheelNodeProperties(this, (WormWheelComponent)component, componentMount, relation);
@@ -810,6 +923,11 @@ namespace Bolsover.Gears.Gui.Presenters
             if (selected is Shaft shaft && Assembly.Shafts.Contains(shaft))
             {
                 return new ShaftNodeProperties(this, shaft);
+            }
+
+            if (selected is TimingBelt belt && Assembly.Belts.Contains(belt))
+            {
+                return new BeltNodeProperties(belt);
             }
 
             return null;
@@ -833,10 +951,18 @@ namespace Bolsover.Gears.Gui.Presenters
                     var relation = Assembly.FindDrivingRelation(gear);
                     var text = $"{gear.Name}  z={gear.ToothCount}  @ {mount.AxialOffset.ToString("0.###", ci)} mm";
                     if (relation != null) text += $"  (driven by {relation.Driver.Name})";
+                    var drivingBelt = Assembly.FindDrivingBelt(gear);
+                    if (drivingBelt != null) text += $"  (belt from {drivingBelt.Driver.Name})";
                     shaftNode.Children.Add(new TrainTreeNode(text, TrainNodeKind.Gear, gear) { Visible = !_hidden.Contains(gear) });
                 }
 
                 root.Children.Add(shaftNode);
+            }
+
+            foreach (var belt in Assembly.Belts)
+            {
+                var beltText = $"{belt.Name}  HTD {belt.Profile.Name}  {belt.Driver.Name} -> {belt.Driven.Name}  {belt.BeltTeeth} teeth";
+                root.Children.Add(new TrainTreeNode(beltText, TrainNodeKind.Belt, belt));
             }
 
             return root;

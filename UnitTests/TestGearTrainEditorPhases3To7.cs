@@ -337,6 +337,85 @@ namespace UnitTests
             Assert.AreEqual("L", properties.HelicalDirection);
         }
 
+        [Test]
+        public void TestEditor_NewPulley_ShowsAnHtdPulleyInTheScene()
+        {
+            var presenter = NewPresenter(out var view);
+
+            var pulley = presenter.NewPulley(HtdSeries.Htd8M, 30);
+
+            Assert.IsFalse(view.IsError, view.Message);
+            Assert.AreEqual(1, presenter.Assembly.Shafts.Count);
+            Assert.AreSame(pulley, presenter.Selected);
+            Assert.AreEqual(HtdSeries.Htd8M, pulley.Series);
+            Assert.AreEqual(30, pulley.Teeth);
+            Assert.AreEqual(1, presenter.Scene.Items.Count);
+            Assert.Greater(presenter.Scene.Items[0].Mesh.Vertices.Count, 100);
+            Assert.AreEqual(pulley.PitchDiameter, presenter.Report.Gears.Single().PitchDiameter, 1e-6);
+        }
+
+        [Test]
+        public void TestEditor_NewPulley_WithoutATeethCountChoosesAUsableOne()
+        {
+            var presenter = NewPresenter(out var view);
+
+            foreach (var profile in HtdProfile.Profiles)
+            {
+                var pulley = presenter.NewPulley(profile.Series);
+
+                Assert.IsFalse(view.IsError, view.Message);
+                Assert.GreaterOrEqual(pulley.Teeth, profile.MinimumTeeth);
+                Assert.AreEqual(profile.StandardBeltWidth, pulley.FaceWidth, Tol);
+            }
+        }
+
+        [Test]
+        public void TestEditor_AddPulleyToShaft_PlacesItBesideTheExistingParts()
+        {
+            var presenter = NewPresenter(out var view);
+            presenter.NewTrain();
+            var shaft = presenter.InputShaft;
+
+            var first = presenter.AddPulleyToShaft(shaft, HtdSeries.Htd5M, 24);
+            var second = presenter.AddPulleyToShaft(shaft, HtdSeries.Htd5M, 24);
+
+            Assert.IsFalse(view.IsError, view.Message);
+            Assert.AreEqual(3, shaft.Mounts.Count);
+            var offsets = shaft.Mounts.Select(m => m.AxialOffset).ToList();
+            Assert.Less(offsets[0], offsets[1]);
+            Assert.Less(offsets[1], offsets[2]);
+            first.GetBodyAxialExtent(out var start, out var end);
+            var firstMount = presenter.Assembly.FindMount(first, out _);
+            var secondMount = presenter.Assembly.FindMount(second, out _);
+            Assert.GreaterOrEqual(secondMount.AxialOffset + start, firstMount.AxialOffset + end, "The pulleys do not overlap.");
+            Assert.AreEqual(3, presenter.Scene.Items.Count);
+        }
+
+        [Test]
+        public void TestEditor_PulleyPropertyGrid_EditsTheSeriesAndTheGrooves()
+        {
+            var presenter = NewPresenter(out _);
+            var pulley = presenter.NewPulley(HtdSeries.Htd5M, 20);
+            var mount = presenter.Assembly.FindMount(pulley, out _);
+
+            var properties = new PulleyNodeProperties(presenter, pulley, mount, null)
+            {
+                Series = HtdSeries.Htd14M,
+                Teeth = 40,
+                HasFlanges = true
+            };
+
+            Assert.AreEqual(HtdSeries.Htd14M, pulley.Series);
+            Assert.AreEqual(40, pulley.Teeth);
+            Assert.IsTrue(pulley.HasFlanges);
+            Assert.AreEqual(pulley.OutsideDiameter, properties.OutsideDiameter, Tol);
+            Assert.AreEqual(14.0, properties.Pitch, Tol);
+            Assert.AreEqual("HTD 14M pulley", properties.Type);
+
+            properties.Teeth = 1;
+            Assert.AreEqual(HtdPulleyComponent.AbsoluteMinimumTeeth, pulley.Teeth, "Too few grooves are raised to the smallest accepted number.");
+        }
+
         #endregion
 
         #region Save, load and export

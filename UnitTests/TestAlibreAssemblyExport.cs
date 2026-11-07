@@ -231,6 +231,7 @@ namespace UnitTests
             Assert.IsTrue(AlibreGearExporter.IsExportable(new WormComponent("w")));
             Assert.IsTrue(AlibreGearExporter.IsExportable(new WormWheelComponent("ww")));
             Assert.IsTrue(AlibreGearExporter.IsExportable(new BevelGearComponent("b")));
+            Assert.IsTrue(AlibreGearExporter.IsExportable(new HtdPulleyComponent("p")));
         }
     }
 }

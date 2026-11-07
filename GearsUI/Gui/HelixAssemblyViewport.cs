@@ -28,6 +28,7 @@ namespace Bolsover.Gears.Gui
 
         private static readonly System.Windows.Media.Color SelectedColor = System.Windows.Media.Color.FromRgb(255, 170, 0);
         private static readonly System.Windows.Media.Color ShaftColor = System.Windows.Media.Color.FromRgb(150, 150, 155);
+        private static readonly System.Windows.Media.Color BeltColor = System.Windows.Media.Color.FromRgb(55, 55, 60);
 
         private readonly List<Visual3D> _sceneVisuals = new List<Visual3D>();
         private readonly Dictionary<Model3D, object> _modelTags = new Dictionary<Model3D, object>();
@@ -94,6 +95,13 @@ namespace Bolsover.Gears.Gui
                 var index = shaftIndex.TryGetValue(item.Shaft, out var i) ? i : 0;
                 var color = ReferenceEquals(selected, item.Component) ? SelectedColor : Palette[index % Palette.Length];
                 AddMesh(item.Mesh, item.Component, color, wireframe);
+            }
+
+            foreach (var beltItem in scene.BeltItems)
+            {
+                if (hiddenGears != null && (hiddenGears.Contains(beltItem.Belt.Driver) || hiddenGears.Contains(beltItem.Belt.Driven))) continue;
+                var color = ReferenceEquals(selected, beltItem.Belt) ? SelectedColor : BeltColor;
+                AddMesh(beltItem.Mesh, beltItem.Belt, color, wireframe);
             }
 
             if (!_hasFitted && _sceneVisuals.Count > 0)

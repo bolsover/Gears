@@ -55,6 +55,33 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 return new GearParameterTable($"{involute.Name} ({involute.TypeName})", data.ParameterRows.ToList());
             }
 
+            if (gear is HtdPulleyComponent pulley)
+            {
+                var profile = pulley.Profile;
+                var pulleyRows = new List<GearParameterRow>
+                {
+                    new GearParameterRow("Belt Pitch", "p", "p", profile.Pitch, "mm"),
+                    new GearParameterRow("Number of Grooves", "z", "z", pulley.Teeth, "-"),
+                    new GearParameterRow("Pitch Diameter", "d", "z p / \\pi", pulley.PitchDiameter, "mm"),
+                    new GearParameterRow("Pitch Line Differential", "PLD", "PLD", profile.PitchLineDifferential, "mm"),
+                    new GearParameterRow("Outside Diameter", "d_o", "d - 2 PLD", pulley.OutsideDiameter, "mm"),
+                    new GearParameterRow("Groove Depth (Belt Tooth Height)", "h_t", "h_t", profile.ToothHeight, "mm"),
+                    new GearParameterRow("Root Diameter", "d_r", "d_o - 2 h_t", pulley.RootDiameter, "mm"),
+                    new GearParameterRow("Groove Bottom Radius (Belt Head Radius)", "R_1", "R_1", profile.HeadRadius, "mm"),
+                    new GearParameterRow("Groove Edge Radius (Belt Foot Radius)", "R_2", "R_2", profile.FootRadius, "mm"),
+                    new GearParameterRow("Groove Width at Outside Diameter", "w", "w", profile.ToothWidth, "mm"),
+                    new GearParameterRow("Flank Included Angle", "\\theta", "\\theta", HtdProfile.FlankAngleDeg, "°"),
+                    new GearParameterRow("Recommended Minimum Grooves", "z_min", "z_min", profile.MinimumTeeth, "-"),
+                    new GearParameterRow("Pulley Width", "b", "b", pulley.FaceWidth, "mm")
+                };
+                if (pulley.HasFlanges)
+                {
+                    pulleyRows.Add(new GearParameterRow("Flange Diameter", "d_f", "d_o + 2 h_f", pulley.FlangeDiameter, "mm"));
+                }
+
+                return new GearParameterTable($"{pulley.Name} ({pulley.TypeName})", pulleyRows);
+            }
+
             var rows = new List<GearParameterRow>
             {
                 new GearParameterRow("Module", "m", "m", gear.Module, "mm"),

@@ -13,6 +13,7 @@ All computed lengths and coordinates are given to **7 decimal places**; angles k
 | Bevel | `BevelGearComponent` | `Bevel` | Straight bevel gears, Tredgold approximation, any shaft angle. |
 | Worm and wheel | `WormComponent`, `WormWheelComponent` | `Worm` | Crossed shafts at 90 degrees. |
 | Planetary | `PlanetaryGearSet` | none | Sun, planets, ring and carrier plate; builds an ordinary assembly. |
+| HTD pulley | `HtdPulleyComponent` | none (joined by a `TimingBelt`) | Timing belt pulley of the 3M, 5M, 8M or 14M series; a belt places the second pulley's shaft. |
 
 A component's *phase* is its rotation about its axis in radians. For a rack the phase is the linear displacement in mm.
 
@@ -76,12 +77,33 @@ A 2:1 pair therefore has a gear addendum of `0.655 m` and a pinion addendum of `
 * `PlanetaryGearSet.BuildAssembly()` returns the posed stage as an assembly without relations (one shaft for the sun, each planet,
   the ring and the carrier plate), so the scene builder, viewer, export and serialiser work on it.
 
+### HTD timing belt pulleys
+
+An HTD (High Torque Drive) belt has a round, curved tooth. `HtdPulleyComponent` models the pulley for the series 3M, 5M, 8M and 14M; the number is the belt pitch `p` in mm. The dimensions are in `HtdProfile` and are listed by **Pulley > HTD profile data…**.
+
+* Pitch diameter `d = z p / pi`. Outside diameter `d_o = d - 2 PLD`, where `PLD` is the *pitch line differential* (the pitch line lies inside the belt's cord, so the pulley is a little smaller than its pitch diameter). Root diameter `d_r = d_o - 2 h_t`, where `h_t` is the belt tooth height, which is the depth of the groove.
+* A groove is the negative of the belt tooth: a bottom arc of the head radius `R1`, two straight flanks with a 14 degree included angle that are tangent to the arc, and a rounded edge of the foot radius `R2` where each flank meets the outside diameter.
+* Series data (mm): pitch 3, 5, 8, 14; groove depth 1.14, 2.06, 3.38, 6.02; pitch line differential 0.381, 0.5715, 0.6858, 1.397; recommended minimum grooves 10, 14, 22, 28. The values come from the belt makers' tables (Gates PowerGrip HTD, SIT, Protorque) and ISO 13050. **The 3M head radius, foot radius and tooth width were not found in a source that could be read; they are scaled from the 5M tooth and are approximate.** The data table says so.
+* **Flanges** (a disc each side of the toothed width), **bore**, **hub** (on the +Z side) and the **width** are properties of the pulley. A bore of `0` is a solid pulley (the shaft of the editor passes through it); the bore must be smaller than the root diameter. A hub needs a diameter larger than the bore and a length above `0`. The bore, hub, flanges and series are saved with the pulley; older files open without a bore or hub.
+* The 3D solid is built once for a set of properties. With a bore or a hub the toothed end faces are split into one cell per groove plus a ring out to a circle just inside the roots, and every circle has the same number of segments, so the faces meet without gaps.
+
+### Timing belts
+
+A `TimingBelt` joins two pulleys of the same series on different, parallel shafts. Like a mesh relation it places a shaft: the driven pulley's shaft is put `CentreDistance` from the driver's shaft, along the line of centres at `CentreLineAngleDeg` from the driver shaft's X axis, with the mid-planes of the two pulleys in line. If only the driven shaft is placed, the driver's shaft is placed from it instead. Both pulleys turn in the same direction; the driven one turns at `z_driver / z_driven` of the driver speed, so the animation, which only turns the first shaft, turns the whole belt drive.
+
+* The path is the open belt on the pitch circles: for pitch diameters `d1 <= d2` and centre distance `C`, `sin(alpha) = (d2 - d1) / (2 C)` and the pitch path length is `2 C cos(alpha) + (pi + 2 alpha) d2 / 2 + (pi - 2 alpha) d1 / 2`. The number of belt teeth is that length divided by the pitch, rounded to a whole tooth; the pitch length of the belt as made is teeth times pitch. The wrap of the small pulley is `180 - 2 alpha` degrees.
+* The belt is as wide as the narrower pulley. It is drawn as a plain strip from the outside diameter of the pulleys outwards by the back thickness (belt thickness minus tooth height). **The teeth of the belt are not modelled.**
+* The centre distance must exceed half the sum of the two largest diameters (flanges included), so that the pulleys do not touch; a pulley can be driven by one belt only. Removing a pulley removes its belts.
+* Belts are saved in the `Belts` list of the file. Files without it open without belts.
+
 ## Gear train editor
 
 The editor (`GearTrainForm`, the main window of the program) starts a train with a spur gear, a bevel gear, a worm or a planetary stage.
 *Add meshed gear* adds a parallel gear; *Add mate* adds a rack, bevel gear or worm wheel to the selected gear.
 The *File* menu saves and loads a train as JSON and exports the scene as STL or OBJ. *Animate* turns the input shaft
 at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
+
+The **Pulley** menu works with HTD pulleys: *New train with HTD pulley* and *Add HTD pulley to shaft* offer the four series; *Toggle flanges* switches the flanges of the selected pulley; *Add belted pulley to selected pulley* adds a pulley of the same series on a new shaft, joined to the selected pulley by a belt at a distance that leaves at least 10 mm between the pulleys; *Remove selected belt* removes the selected belt. Select the belt in the tree or in the 2D or 3D view to set its centre distance and line of centres angle in the property grid. The tree lists the belts under the train.
 
 ### Choosing and sorting the properties
 
@@ -124,6 +146,8 @@ Select an involute gear in the editor to change these in the property grid. Mesh
 * Bevel and worm geometry is an approximation intended for visualisation, DXF and STL hand-off, not a stress calculation.
 * Enveloping worm wheels and idler bevel gears are not supported.
 * A planetary stage is edited through its properties; other gears cannot be added to it.
+* Belts join two pulleys with an open belt on the pitch circles; belt teeth, tension, idlers and crossed or twisted belts are not modelled.
+* The bore and hub of a pulley are part of the 3D model only; they are not part of the Alibre export.
 
 
 ## Gear and mesh parameter tables
@@ -180,6 +204,8 @@ The export follows the usual manual steps, using the Alibre automation API (`Ali
 2. The sketch gets **one closed tooth**: spline curves for the two trochoids and two involutes, arcs for the addendum and root, and two radial lines to the axis. The outline from `AlibreGearGenerator` is exactly one pitch wide, so the two radial lines close it into a wedge, and the patterned wedges tile into a solid disc. The pitch, base, root and outside circles are added as reference circles.
 3. A single tooth is formed: a spur gear's sketch is extruded to the face width (`AddExtrudedBoss`); a helical gear's sketch is swept along a helix (`AddHelicalBoss`, see below).
 4. The tooth feature is patterned about the `Z-Axis` (`AddCircularFeaturePattern`) with *z* instances, at `2 pi / z` radians apart.
+
+**HTD pulley:** HTD pulleys are exported too (single part and assembly export). The sketch holds one groove cell, a wedge one pitch wide that is centred on the groove (two radial lines to the axis, two arcs of the outside diameter, and the groove: a spline for the bottom arc, two lines for the flanks and a spline for each rounded edge). It is extruded to the width, from `z = 0`, and patterned about the `Z-Axis` with one instance per groove, so the cells tile into the pulley. For a pulley with flanges, each flange is a rectangle sketched on the `ZX-Plane` (which holds the Z axis) and revolved about the `Z-Axis` with `AddRevolvedBoss`. The part is named `HtdPulley_<series>_Z<grooves>_B<width>`. As with the gears, the part lies from `z = 0` to the width, so the assembly export shifts it by half the width to put its mid-plane at the axial offset. The bore and hub are not exported, and a belt has no Alibre part. **The pulley export has not been run in Alibre**; it follows the pattern of the other exports, and the flange revolve (and, for the sketch plane that holds the axis, `AlibreGearExporter.AxialPlaneSketchYIsNegativeZ`) are the steps most likely to need adjusting.
 
 ### Internal gears
 

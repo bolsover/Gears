@@ -30,6 +30,7 @@ namespace Bolsover.Gears.Gui
 
         private static readonly Color SelectedColor = Color.FromArgb(255, 170, 0);
         private static readonly Color ShaftColor = Color.FromArgb(150, 150, 155);
+        private static readonly Color BeltColor = Color.FromArgb(55, 55, 60);
 
         private readonly List<Part> _parts = new List<Part>();
         private double _scale = 1.0;
@@ -104,6 +105,19 @@ namespace Bolsover.Gears.Gui
                     _parts.Add(new Part(shaftItem.Shaft, true, 0, new List<List<Pt>> { hull }));
                 }
 
+                foreach (var beltItem in scene.BeltItems)
+                {
+                    if (hiddenGears != null && (hiddenGears.Contains(beltItem.Belt.Driver) || hiddenGears.Contains(beltItem.Belt.Driven))) continue;
+
+                    var beltLines = new List<List<Pt>>();
+                    foreach (var polyline in beltItem.Polylines)
+                    {
+                        if (polyline.Count > 1) beltLines.Add(polyline.Select(p => new Pt(p.X, p.Y)).ToList());
+                    }
+
+                    if (beltLines.Count > 0) _parts.Add(new Part(beltItem.Belt, false, 0, beltLines) { IsBelt = true });
+                }
+
                 foreach (var item in scene.Items)
                 {
                     if (hiddenGears != null && hiddenGears.Contains(item.Component)) continue;
@@ -130,7 +144,8 @@ namespace Bolsover.Gears.Gui
 
                     // A pitch circle is only true to scale when the gear axis is perpendicular to the drawing plane.
                     var axis = item.LocalToWorld.TransformDirection(new Vector3D(0.0, 0.0, 1.0));
-                    if (item.Component is InvoluteGearComponent && Math.Abs(axis.Z) > 0.999 && item.Component.PitchDiameter > 0)
+                    if ((item.Component is InvoluteGearComponent || item.Component is HtdPulleyComponent)
+                        && Math.Abs(axis.Z) > 0.999 && item.Component.PitchDiameter > 0)
                     {
                         part.PitchRadius = item.Component.PitchDiameter / 2.0;
                     }
@@ -255,7 +270,8 @@ namespace Bolsover.Gears.Gui
             }
 
             foreach (var part in _parts.Where(p => p.IsShaft)) DrawShaft(g, part);
-            foreach (var part in _parts.Where(p => !p.IsShaft)) DrawGear(g, part);
+            foreach (var part in _parts.Where(p => p.IsBelt)) DrawBelt(g, part);
+            foreach (var part in _parts.Where(p => !p.IsShaft && !p.IsBelt)) DrawGear(g, part);
 
             using (var brush = new SolidBrush(Color.DimGray))
             {
@@ -284,6 +300,21 @@ namespace Bolsover.Gears.Gui
             {
                 g.FillPolygon(brush, points);
                 g.DrawPolygon(pen, points);
+            }
+        }
+
+        private void DrawBelt(Graphics g, Part part)
+        {
+            var selected = ReferenceEquals(_selected, part.Tag);
+            using (var path = new GraphicsPath(FillMode.Alternate))
+            {
+                foreach (var polyline in part.Polylines) path.AddPolygon(polyline.Select(ToScreen).ToArray());
+                using (var brush = new SolidBrush(Color.FromArgb(110, BeltColor)))
+                using (var pen = new Pen(selected ? SelectedColor : BeltColor, selected ? 2.5f : 1.2f))
+                {
+                    g.FillPath(brush, path);
+                    g.DrawPath(pen, path);
+                }
             }
         }
 
@@ -589,6 +620,10 @@ namespace Bolsover.Gears.Gui
 
             public object Tag { get; }
             public bool IsShaft { get; }
+
+            /// <summary>True for a timing belt: a ring between its two outlines.</summary>
+            public bool IsBelt { get; set; }
+
             public int ColorIndex { get; }
             public List<List<Pt>> Polylines { get; }
 

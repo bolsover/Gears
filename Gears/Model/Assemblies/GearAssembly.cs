@@ -22,9 +22,13 @@ namespace Bolsover.Gears.Model.Assemblies
     {
         private readonly List<Shaft> _shafts = new List<Shaft>();
         private readonly List<GearMeshRelation> _relations = new List<GearMeshRelation>();
+        private readonly List<TimingBelt> _belts = new List<TimingBelt>();
 
         public IReadOnlyList<Shaft> Shafts => _shafts;
         public IReadOnlyList<GearMeshRelation> Relations => _relations;
+
+        /// <summary>The timing belts that connect pulleys of different shafts.</summary>
+        public IReadOnlyList<TimingBelt> Belts => _belts;
 
         /// <summary>All gears mounted on the assembly's shafts.</summary>
         public IEnumerable<GearComponent> Components => _shafts.SelectMany(s => s.Mounts.Select(m => m.Component));
@@ -107,6 +111,58 @@ namespace Bolsover.Gears.Model.Assemblies
         public bool RemoveRelation(GearMeshRelation relation) => _relations.Remove(relation);
 
         /// <summary>
+        /// Adds a belt round two pulleys. Both pulleys must be mounted on different shafts of the assembly, and a pulley can be driven by one
+        /// belt only.
+        /// </summary>
+        public TimingBelt AddBelt(TimingBelt belt)
+        {
+            if (belt == null) throw new ArgumentNullException(nameof(belt));
+            if (_belts.Any(b => b.Id == belt.Id))
+            {
+                throw new ArgumentException($"A belt with identifier '{belt.Id}' already exists in the assembly.", nameof(belt));
+            }
+
+            if (FindMount(belt.Driver, out var driverShaft) == null)
+            {
+                throw new InvalidOperationException($"Pulley '{belt.Driver.Id}' is not mounted on a shaft of this assembly.");
+            }
+
+            if (FindMount(belt.Driven, out var drivenShaft) == null)
+            {
+                throw new InvalidOperationException($"Pulley '{belt.Driven.Id}' is not mounted on a shaft of this assembly.");
+            }
+
+            if (ReferenceEquals(driverShaft, drivenShaft))
+            {
+                throw new InvalidOperationException($"Pulleys '{belt.Driver.Id}' and '{belt.Driven.Id}' are on the same shaft and cannot be joined by a belt.");
+            }
+
+            if (_belts.Any(b => ReferenceEquals(b.Driven, belt.Driven)) || _relations.Any(r => ReferenceEquals(r.Driven, belt.Driven)))
+            {
+                throw new InvalidOperationException($"Pulley '{belt.Driven.Id}' is already driven by another belt or gear.");
+            }
+
+            belt.Validate();
+            _belts.Add(belt);
+            return belt;
+        }
+
+        /// <summary>Removes a belt. Returns false when it is not part of the assembly.</summary>
+        public bool RemoveBelt(TimingBelt belt) => _belts.Remove(belt);
+
+        /// <summary>Returns the belt that drives the pulley, or null.</summary>
+        public TimingBelt FindDrivingBelt(GearComponent component)
+        {
+            return _belts.FirstOrDefault(b => ReferenceEquals(b.Driven, component));
+        }
+
+        /// <summary>Returns the belts that run round the pulley (as driver or driven).</summary>
+        public IEnumerable<TimingBelt> FindBelts(GearComponent component)
+        {
+            return _belts.Where(b => ReferenceEquals(b.Driver, component) || ReferenceEquals(b.Driven, component));
+        }
+
+        /// <summary>
         /// Removes a shaft with its gears and every relation that involves one of those gears.
         /// Returns false when the shaft is not part of the assembly.
         /// </summary>
@@ -129,6 +185,7 @@ namespace Bolsover.Gears.Model.Assemblies
         {
             if (FindMount(component, out var shaft) == null) return false;
             _relations.RemoveAll(r => ReferenceEquals(r.Driver, component) || ReferenceEquals(r.Driven, component));
+            _belts.RemoveAll(b => ReferenceEquals(b.Driver, component) || ReferenceEquals(b.Driven, component));
             return shaft.Unmount(component);
         }
 
@@ -178,14 +235,22 @@ namespace Bolsover.Gears.Model.Assemblies
                 relation.Result = null;
             }
 
-            if (_shafts.Count == 0 || _relations.Count == 0) return;
+            if (_shafts.Count == 0 || (_relations.Count == 0 && _belts.Count == 0)) return;
 
             var placed = new HashSet<Shaft> { _shafts[0] };
             var pending = new List<GearMeshRelation>(_relations);
+            var pendingBelts = new List<TimingBelt>(_belts);
 
-            while (pending.Count > 0)
+            while (pending.Count > 0 || pendingBelts.Count > 0)
             {
                 var progressed = false;
+                for (var i = 0; i < pendingBelts.Count; i++)
+                {
+                    if (!SolveBelt(pendingBelts[i], placed)) continue;
+                    pendingBelts.RemoveAt(i);
+                    i--;
+                    progressed = true;
+                }
                 for (var i = 0; i < pending.Count; i++)
                 {
                     var relation = pending[i];
@@ -205,6 +270,13 @@ namespace Bolsover.Gears.Model.Assemblies
                     progressed = true;
                 }
 
+                if (!progressed && pending.Count == 0)
+                {
+                    var firstBelt = pendingBelts[0];
+                    throw new InvalidOperationException(
+                        $"Cannot place belt '{firstBelt.Id}': neither of its pulleys is on a shaft that is connected to the first shaft of the assembly.");
+                }
+
                 if (!progressed)
                 {
                     var first = pending[0];
@@ -213,6 +285,62 @@ namespace Bolsover.Gears.Model.Assemblies
                         "is not connected to the first shaft of the assembly through earlier relations.");
                 }
             }
+        }
+
+        /// <summary>
+        /// Places the shaft of the pulley that is not yet placed from the other one, at the centre distance of the belt along its line of
+        /// centres with the mid-planes in line, and turns it at the ratio of the grooves, in the same direction. Returns false when neither
+        /// shaft is placed yet.
+        /// </summary>
+        private bool SolveBelt(TimingBelt belt, ISet<Shaft> placed)
+        {
+            var driverMount = FindMount(belt.Driver, out var driverShaft);
+            var drivenMount = FindMount(belt.Driven, out var drivenShaft);
+            if (driverMount == null || drivenMount == null)
+            {
+                throw new InvalidOperationException($"The belt '{belt.Id}' refers to a pulley that is no longer mounted.");
+            }
+
+            var driverPlaced = placed.Contains(driverShaft);
+            var drivenPlaced = placed.Contains(drivenShaft);
+            if (!driverPlaced && !drivenPlaced) return false;
+
+            belt.Validate();
+            var theta = belt.CentreLineAngleDeg * Math.PI / 180.0;
+            var axialShift = driverMount.AxialOffset - drivenMount.AxialOffset;
+
+            if (driverPlaced)
+            {
+                var frame = driverShaft.Placement;
+                var direction = frame.XAxis * Math.Cos(theta) + frame.YAxis * Math.Sin(theta);
+                var origin = GearPrecision.Round(frame.Origin + direction * belt.CentreDistance + frame.ZAxis * axialShift);
+
+                if (drivenPlaced)
+                {
+                    var error = (drivenShaft.Placement.Origin - origin).Length;
+                    if (error > 10 * GearPrecision.Tolerance)
+                    {
+                        throw new InvalidOperationException(
+                            $"Shaft '{drivenShaft.Id}' is over-constrained: belt '{belt.Id}' requires its origin at {origin}, but it is already placed at {drivenShaft.Placement.Origin}.");
+                    }
+
+                    return true;
+                }
+
+                drivenShaft.Placement = new Placement3D(origin, frame.ZAxis, frame.XAxis);
+                placed.Add(drivenShaft);
+                drivenShaft.RotationRad = driverMount.PhaseRad / belt.GearRatio - drivenMount.PhaseOffsetRad;
+                return true;
+            }
+
+            // Only the driven shaft is placed: place the driver from it, with the same orientation.
+            var drivenFrame = drivenShaft.Placement;
+            var back = drivenFrame.XAxis * Math.Cos(theta) + drivenFrame.YAxis * Math.Sin(theta);
+            var driverOrigin = GearPrecision.Round(drivenFrame.Origin - back * belt.CentreDistance - drivenFrame.ZAxis * axialShift);
+            driverShaft.Placement = new Placement3D(driverOrigin, drivenFrame.ZAxis, drivenFrame.XAxis);
+            placed.Add(driverShaft);
+            driverShaft.RotationRad = drivenMount.PhaseRad * belt.GearRatio - driverMount.PhaseOffsetRad;
+            return true;
         }
 
         private static void SolveRelation(

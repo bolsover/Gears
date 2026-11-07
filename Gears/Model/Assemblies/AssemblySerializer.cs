@@ -66,6 +66,19 @@ namespace Bolsover.Gears.Model.Assemblies
                 });
             }
 
+            foreach (var belt in assembly.Belts)
+            {
+                dto.Belts.Add(new BeltDto
+                {
+                    Id = belt.Id,
+                    Name = belt.Name,
+                    Driver = belt.Driver.Id,
+                    Driven = belt.Driven.Id,
+                    CentreDistance = belt.CentreDistance,
+                    CentreLineAngleDeg = belt.CentreLineAngleDeg
+                });
+            }
+
             return JsonSerializer.Serialize(dto, Options);
         }
 
@@ -142,6 +155,26 @@ namespace Bolsover.Gears.Model.Assemblies
 
                 var added = assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg);
                 added.CentreDistanceOverride = relationDto.CentreDistance;
+            }
+
+            foreach (var beltDto in dto.Belts ?? new List<BeltDto>())
+            {
+                if (!gears.TryGetValue(beltDto.Driver ?? string.Empty, out var beltDriver) || !(beltDriver is HtdPulleyComponent driverPulley))
+                {
+                    throw new InvalidDataException($"The belt '{beltDto.Id}' refers to '{beltDto.Driver}', which is not a pulley of the file.");
+                }
+
+                if (!gears.TryGetValue(beltDto.Driven ?? string.Empty, out var beltDriven) || !(beltDriven is HtdPulleyComponent drivenPulley))
+                {
+                    throw new InvalidDataException($"The belt '{beltDto.Id}' refers to '{beltDto.Driven}', which is not a pulley of the file.");
+                }
+
+                var belt = new TimingBelt(beltDto.Id, driverPulley, drivenPulley, beltDto.CentreDistance)
+                {
+                    Name = beltDto.Name ?? beltDto.Id,
+                    CentreLineAngleDeg = beltDto.CentreLineAngleDeg
+                };
+                assembly.AddBelt(belt);
             }
 
             return assembly;
@@ -236,6 +269,25 @@ namespace Bolsover.Gears.Model.Assemblies
                     dto.HelicalDirection = g.HelicalDirection;
                     dto.Backlash = g.Backlash;
                     break;
+                case HtdPulleyComponent g:
+                    dto.Type = "HtdPulley";
+                    dto.Teeth = g.Teeth;
+                    dto.HtdSeries = g.Series.ToString();
+                    if (g.HasFlanges)
+                    {
+                        dto.HasFlanges = true;
+                        dto.FlangeHeight = g.FlangeHeight;
+                        dto.FlangeThickness = g.FlangeThickness;
+                    }
+
+                    if (g.BoreDiameter > 0.0) dto.BoreDiameter = g.BoreDiameter;
+                    if (g.HasHub)
+                    {
+                        dto.HubDiameter = g.HubDiameter;
+                        dto.HubLength = g.HubLength;
+                    }
+
+                    break;
                 default:
                     throw new NotSupportedException($"Gear '{component.Id}' is of type {component.GetType().Name}, which cannot be saved.");
             }
@@ -309,6 +361,19 @@ namespace Bolsover.Gears.Model.Assemblies
                         Backlash = dto.Backlash ?? 0.0
                     };
                     break;
+                case "HtdPulley":
+                    component = new HtdPulleyComponent(dto.Id)
+                    {
+                        Series = Enum.TryParse(dto.HtdSeries, true, out HtdSeries series) ? series : HtdSeries.Htd5M,
+                        Teeth = dto.Teeth ?? 20,
+                        HasFlanges = dto.HasFlanges ?? false,
+                        FlangeHeight = dto.FlangeHeight ?? 2.0,
+                        FlangeThickness = dto.FlangeThickness ?? 1.5,
+                        BoreDiameter = dto.BoreDiameter ?? 0.0,
+                        HubDiameter = dto.HubDiameter ?? 0.0,
+                        HubLength = dto.HubLength ?? 0.0
+                    };
+                    break;
                 default:
                     throw new InvalidDataException($"Gear '{dto.Id}' has the unknown type '{dto.Type}'.");
             }
@@ -325,6 +390,19 @@ namespace Bolsover.Gears.Model.Assemblies
             public int Version { get; set; }
             public List<ShaftDto> Shafts { get; set; } = new List<ShaftDto>();
             public List<RelationDto> Relations { get; set; } = new List<RelationDto>();
+
+            /// <summary>Timing belts; absent in older files.</summary>
+            public List<BeltDto> Belts { get; set; } = new List<BeltDto>();
+        }
+
+        private sealed class BeltDto
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Driver { get; set; }
+            public string Driven { get; set; }
+            public double CentreDistance { get; set; }
+            public double CentreLineAngleDeg { get; set; }
         }
 
         private sealed class ShaftDto
@@ -380,6 +458,12 @@ namespace Bolsover.Gears.Model.Assemblies
             public int? Starts { get; set; }
             public double? DiameterQuotient { get; set; }
             public double? LeadAngleDeg { get; set; }
+
+            /// <summary>HTD pulley: the belt series (Htd3M, Htd5M, Htd8M or Htd14M) and the optional flanges (mm).</summary>
+            public string HtdSeries { get; set; }
+            public bool? HasFlanges { get; set; }
+            public double? FlangeHeight { get; set; }
+            public double? FlangeThickness { get; set; }
         }
 
         private sealed class RelationDto
