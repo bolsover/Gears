@@ -176,6 +176,7 @@
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />
     <Compile Include="TestHerringboneGear.cs" />
+    <Compile Include="TestHelicalPlanetary.cs" />
     <Compile Include="TestHelixMeshAdapter.cs" />
     <Compile Include="TestGearParameterCalculator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

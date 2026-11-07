@@ -771,6 +771,33 @@ namespace Bolsover.Gears.Gui.Presenters
             set => _set.Backlash = value;
         }
 
+        [Category("Teeth")]
+        [DisplayName("Helix angle (deg)")]
+        [Description("Helix angle of the sun, planets and ring. Zero gives spur gears.")]
+        public double HelixAngle
+        {
+            get => _set.HelixAngleDeg;
+            set => _set.HelixAngleDeg = value;
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Sun helix direction (R/L)")]
+        [Description("Hand of the sun gear. The planets get the opposite hand and the ring the hand of the planets.")]
+        public string HelicalDirection
+        {
+            get => _set.HelicalDirection;
+            set => _set.HelicalDirection = string.Equals(value?.Trim(), "L", StringComparison.OrdinalIgnoreCase) ? "L" : "R";
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Herringbone")]
+        [Description("Every gear is a helical gear mirrored about its middle plane. Needs a helix angle above zero.")]
+        public bool IsHerringbone
+        {
+            get => _set.IsHerringbone;
+            set => _set.IsHerringbone = value;
+        }
+
         [Category("Dimensions")]
         [DisplayName("Face width (mm)")]
         public double FaceWidth

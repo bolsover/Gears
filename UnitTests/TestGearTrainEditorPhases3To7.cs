@@ -303,6 +303,40 @@ namespace UnitTests
             Assert.IsNull(presenter.Planetary, "Starting a new train leaves the planetary mode.");
         }
 
+        [Test]
+        public void TestEditor_Planetary_HelicalStageIsShownAsHelicalGears()
+        {
+            var presenter = NewPresenter(out var view);
+            var set = new PlanetaryGearSet("PS") { HelixAngleDeg = 20.0, HelicalDirection = "L", IsHerringbone = true };
+
+            presenter.NewPlanetary(set);
+
+            Assert.IsFalse(view.IsError, view.Message);
+            var gears = presenter.Assembly.Components.OfType<InvoluteGearComponent>().ToList();
+            Assert.AreEqual(5, gears.Count);
+            Assert.IsTrue(gears.All(g => g.IsHerringbone && Math.Abs(g.HelixAngleDeg - 20.0) < Tol));
+        }
+
+        [Test]
+        public void TestEditor_Planetary_PropertyGridEditsTheHelixSettings()
+        {
+            var presenter = NewPresenter(out _);
+            presenter.NewPlanetary();
+            var set = presenter.Planetary;
+
+            var properties = new PlanetaryNodeProperties(presenter, set)
+            {
+                HelixAngle = 15.0,
+                HelicalDirection = "l",
+                IsHerringbone = true
+            };
+
+            Assert.AreEqual(15.0, set.HelixAngleDeg, Tol);
+            Assert.AreEqual("L", set.HelicalDirection);
+            Assert.IsTrue(set.IsHerringbone);
+            Assert.AreEqual("L", properties.HelicalDirection);
+        }
+
         #endregion
 
         #region Save, load and export

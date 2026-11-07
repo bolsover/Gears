@@ -129,6 +129,23 @@ namespace Bolsover.Gears.Model.Assemblies
         public double FaceWidth { get; set; } = 15.0;
         public double Backlash { get; set; }
 
+        /// <summary>Helix angle of every gear of the stage (degrees); 0 gives spur gears.</summary>
+        public double HelixAngleDeg { get; set; }
+
+        /// <summary>
+        /// Hand of the sun gear ("R" or "L"). The planets have the opposite hand, and the ring has the hand of the planets, as an internal
+        /// gear meshes with a gear of its own hand.
+        /// </summary>
+        public string HelicalDirection { get; set; } = "R";
+
+        /// <summary>
+        /// True for a herringbone stage: every gear is a helical gear mirrored about its middle plane. Ignored when the helix angle is zero.
+        /// </summary>
+        public bool IsHerringbone { get; set; }
+
+        /// <summary>True when the gears of the stage have a helix angle.</summary>
+        public bool IsHelical => HelixAngleDeg > 1e-6;
+
         /// <summary>Rim thickness of the ring gear (mm).</summary>
         public double RingRimThickness { get; set; } = 10.0;
 
@@ -144,8 +161,13 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Rotation of the ring gear; computed by <see cref="BuildAssembly"/> from the tooth mesh.</summary>
         public double RingAngleRad { get; private set; }
 
-        /// <summary>Distance from the sun axis to the planet axes (mm).</summary>
-        public double CentreDistance => GearPrecision.Round(Module * (SunTeeth + PlanetTeeth) / 2.0);
+        /// <summary>
+        /// Distance from the sun axis to the planet axes (mm). The module is the normal module, so a helical stage has the transverse pitch
+        /// diameters <c>m * z / cos(helix angle)</c> and a correspondingly larger centre distance.
+        /// </summary>
+        public double CentreDistance => GearPrecision.Round(Module * (SunTeeth + PlanetTeeth) / (2.0 * CosHelix));
+
+        private double CosHelix => IsHelical ? Math.Cos(HelixAngleDeg * Math.PI / 180.0) : 1.0;
 
         /// <summary>The components of the last assembly built by <see cref="BuildAssembly"/>; null before that.</summary>
         public InvoluteGearComponent Sun { get; private set; }
@@ -166,6 +188,16 @@ namespace Bolsover.Gears.Model.Assemblies
                 throw new InvalidOperationException($"Planetary set '{Id}': the pressure angle must be between 0 and 90 degrees.");
             }
 
+            if (HelixAngleDeg < 0 || HelixAngleDeg >= 90)
+            {
+                throw new InvalidOperationException($"Planetary set '{Id}': the helix angle must be between 0 and 90 degrees.");
+            }
+
+            if (HelicalDirection != "R" && HelicalDirection != "L")
+            {
+                throw new InvalidOperationException($"Planetary set '{Id}': the helix direction must be R or L.");
+            }
+
             if ((SunTeeth + RingTeeth) % PlanetCount != 0)
             {
                 throw new InvalidOperationException(
@@ -176,7 +208,7 @@ namespace Bolsover.Gears.Model.Assemblies
             if (PlanetCount > 1)
             {
                 var spacing = 2.0 * CentreDistance * Math.Sin(Math.PI / PlanetCount);
-                var tipDiameter = Module * (PlanetTeeth + 2);
+                var tipDiameter = Module * PlanetTeeth / CosHelix + 2.0 * Module;
                 if (spacing <= tipDiameter)
                 {
                     throw new InvalidOperationException(
@@ -255,7 +287,9 @@ namespace Bolsover.Gears.Model.Assemblies
             Validate();
 
             var clearance = 0.25 * Module;
-            InvoluteGearComponent Create(string name, int teeth, bool internalGear)
+            var sunHand = HelicalDirection;
+            var planetHand = sunHand == "R" ? "L" : "R";
+            InvoluteGearComponent Create(string name, int teeth, bool internalGear, string hand)
             {
                 return new InvoluteGearComponent($"{Id}.{name}")
                 {
@@ -266,22 +300,25 @@ namespace Bolsover.Gears.Model.Assemblies
                     Clearance = clearance,
                     Backlash = Backlash,
                     IsInternal = internalGear,
-                    RimThickness = RingRimThickness
+                    RimThickness = RingRimThickness,
+                    HelixAngleDeg = HelixAngleDeg,
+                    HelicalDirection = hand,
+                    IsHerringbone = IsHelical && IsHerringbone
                 };
             }
 
-            var sun = Create("Sun", SunTeeth, false);
-            var ring = Create("Ring", RingTeeth, true);
+            var sun = Create("Sun", SunTeeth, false, sunHand);
+            var ring = Create("Ring", RingTeeth, true, planetHand);
             var planets = new List<InvoluteGearComponent>();
             for (var i = 0; i < PlanetCount; i++)
             {
-                planets.Add(Create($"Planet{i + 1}", PlanetTeeth, false));
+                planets.Add(Create($"Planet{i + 1}", PlanetTeeth, false, planetHand));
             }
 
             var solver = new ParallelAxisMeshSolver();
             var assembly = new GearAssembly();
 
-            var planetPitchDiameter = Module * PlanetTeeth;
+            var planetPitchDiameter = Module * PlanetTeeth / CosHelix;
             var sunShaft = new Shaft($"{Id}.SunShaft")
             {
                 Diameter = Math.Max(2.0, 0.25 * Module * SunTeeth),
