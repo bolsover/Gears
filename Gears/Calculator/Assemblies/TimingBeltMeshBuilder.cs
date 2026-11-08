@@ -8,7 +8,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
     /// <summary>
     /// Builds the shape of a <see cref="TimingBelt"/>: a closed strip that runs round the two pulleys. The path is the open belt (external
     /// tangent lines and an arc round each pulley) in the plane of the pulleys' mid-planes. The strip lies between the outside diameter of
-    /// the pulleys and the back of the belt, and is as wide as the belt. The geometry is made in the frame of the driver's shaft, with the
+    /// the pulleys and the back of the belt, and is as wide as the belt; the HTD teeth (see <see cref="BeltToothPath"/>) stand on its
+    /// pulley side and reach to the root diameter. The geometry is made in the frame of the driver's shaft, with the
     /// driver on the axis and the driven pulley at the centre distance along the line of centres, and then moved with the frame.
     /// </summary>
     public static class TimingBeltMeshBuilder
@@ -17,8 +18,9 @@ namespace Bolsover.Gears.Calculator.Assemblies
         private const double ArcStep = Math.PI / 36.0;
 
         /// <summary>
-        /// The belt loop at an offset from the pitch line, anticlockwise, in the plane with the driver at the origin. The offset is positive
-        /// away from the pulleys. <paramref name="offset"/> of -PLD is the outside diameter of the pulleys. Every loop has the same number of points.
+        /// The plain (toothless) belt loop at an offset from the pitch line, anticlockwise, in the plane with the driver at the origin. The
+        /// offset is positive away from the pulleys. <paramref name="offset"/> of -PLD is the outside diameter of the pulleys. Every loop has
+        /// the same number of points.
         /// </summary>
         public static List<GearPoint> BuildLoop(TimingBelt belt, double offset)
         {
@@ -59,13 +61,14 @@ namespace Bolsover.Gears.Calculator.Assemblies
         }
 
         /// <summary>
-        /// Builds the world-space mesh and outlines of the belt. <paramref name="driverFrame"/> is the frame of the driver pulley's mid-plane
-        /// (shaft placement and axial offset).
+        /// Builds the world-space mesh and outlines of the belt, with its teeth. <paramref name="driverFrame"/> is the frame of the driver
+        /// pulley's mid-plane (shaft placement and axial offset).
         /// </summary>
         public static void Build(TimingBelt belt, Transform3D driverFrame, out GearMesh3DBuilder.Mesh3D mesh, out List<List<GearPoint>> polylines)
         {
-            var inner = BuildLoop(belt, -belt.Profile.PitchLineDifferential);
-            var outer = BuildLoop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness);
+            var loop = BeltToothPath.Build(belt);
+            var inner = new List<GearPoint>(loop.InnerRing);
+            var outer = new List<GearPoint>(loop.OuterRing);
             var half = belt.Width / 2.0;
             var local = new GearMesh3DBuilder.Mesh3D();
             var count = inner.Count;

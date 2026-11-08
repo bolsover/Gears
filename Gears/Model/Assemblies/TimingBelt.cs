@@ -7,8 +7,9 @@ namespace Bolsover.Gears.Model.Assemblies
     /// pulley's shaft: <see cref="CentreDistance"/> from the driver's shaft along the line of centres at <see cref="CentreLineAngleDeg"/>,
     /// with the mid-planes of the two pulleys in line. Both pulleys turn the same way, the driven one at the ratio of the grooves.
     /// <para>
-    /// The belt path is the pitch line: the open belt (external tangents) round the two pitch circles. The belt is drawn as a plain strip
-    /// from the outside diameter of the pulleys outwards by the back thickness (belt thickness minus tooth height); its teeth are not modelled.
+    /// The belt path is the pitch line: the open belt (external tangents) round the two pitch circles. The belt is drawn as a strip
+    /// from the outside diameter of the pulleys outwards by the back thickness (belt thickness minus tooth height), with the HTD teeth
+    /// on its pulley side: <see cref="BeltTeeth"/> teeth spaced evenly along the pitch line, each the negative of a pulley groove.
     /// </para>
     /// </summary>
     public sealed class TimingBelt

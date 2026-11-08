@@ -252,12 +252,39 @@ namespace UnitTests
 
             Assert.IsTrue(plan.IsClosed());
             Assert.AreEqual(4, plan.OuterLoop.Count, "Two arcs and two straight runs.");
-            Assert.AreEqual(4, plan.InnerLoop.Count);
-            Assert.AreEqual(8, plan.Figures.Count);
+            Assert.AreEqual(6 * belt.BeltTeeth, plan.InnerLoop.Count, "Per tooth: three splines, two flanks and the land to the next tooth.");
+            Assert.AreEqual(4 + 6 * belt.BeltTeeth, plan.Figures.Count);
             Assert.AreEqual(belt.Width * 0.1, plan.Width, 1e-9, "The width is extruded in centimetres.");
             Assert.AreEqual($"HtdBelt_5M_T{belt.BeltTeeth}_W{belt.Width:0.##}", plan.PartName);
             Assert.AreEqual(plan.PartName, BeltSketchBuilder.PartName(belt));
-            Assert.IsTrue(plan.Figures.All(f => f.Kind != ToothSketchFigureKind.Spline), "The belt has no teeth, so no splines.");
+            Assert.AreEqual(3 * belt.BeltTeeth, plan.InnerLoop.Count(f => f.Kind == ToothSketchFigureKind.Spline), "Every tooth has two edges and a bottom.");
+            Assert.IsTrue(plan.OuterLoop.All(f => f.Kind != ToothSketchFigureKind.Spline), "The back of the belt is plain.");
+        }
+
+        [Test]
+        public void TestBeltSketch_IsClosedForEveryAngleAndSeries()
+        {
+            foreach (var series in new[] { HtdSeries.Htd3M, HtdSeries.Htd5M, HtdSeries.Htd8M, HtdSeries.Htd14M })
+            {
+                foreach (var angle in new[] { 0.0, 25.0, 135.0, -70.0 })
+                {
+                    var assembly = new GearAssembly();
+                    var shaftA = new Shaft("S1");
+                    var a = new HtdPulleyComponent("A") { Series = series, Teeth = 30 };
+                    shaftA.Mount(a, 0.0);
+                    var shaftB = new Shaft("S2");
+                    var b = new HtdPulleyComponent("B") { Series = series, Teeth = 60 };
+                    shaftB.Mount(b, 0.0);
+                    assembly.AddShaft(shaftA);
+                    assembly.AddShaft(shaftB);
+                    var belt = assembly.AddBelt(new TimingBelt("Belt 1", a, b, 400.0) { CentreLineAngleDeg = angle });
+
+                    var plan = BeltSketchBuilder.Build(belt);
+
+                    Assert.IsTrue(plan.IsClosed(), $"{series} at {angle} degrees: both loops close.");
+                    Assert.AreEqual(6 * belt.BeltTeeth, plan.InnerLoop.Count, $"{series} at {angle} degrees");
+                }
+            }
         }
 
         [Test]
@@ -270,9 +297,24 @@ namespace UnitTests
             var inner = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential);
             var outer = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness);
 
-            Assert.AreEqual(SolidMeshBuilder.SignedArea(inner), LoopArea(plan.InnerLoop), SolidMeshBuilder.SignedArea(inner) * 0.01);
+            var toothArea = belt.BeltTeeth * ToothArea(belt.Profile);
+            var plain = SolidMeshBuilder.SignedArea(inner);
+            Assert.AreEqual(plain - toothArea, LoopArea(plan.InnerLoop), plain * 0.01, "The teeth reach into the loop, so they take away their area.");
             Assert.AreEqual(SolidMeshBuilder.SignedArea(outer), LoopArea(plan.OuterLoop), SolidMeshBuilder.SignedArea(outer) * 0.01);
             Assert.Greater(LoopArea(plan.OuterLoop), LoopArea(plan.InnerLoop));
+        }
+
+        /// <summary>Area of one belt tooth (the groove profile above its curve, up to the land) in square millimetres.</summary>
+        private static double ToothArea(HtdProfile profile)
+        {
+            var half = HtdPulleyComponent.HalfGroove(profile);
+            var area = 0.0;
+            for (var i = 0; i + 1 < half.Count; i++)
+            {
+                area += (half[i + 1].X - half[i].X) * (profile.ToothHeight - (half[i].Y + half[i + 1].Y) / 2.0);
+            }
+
+            return 2.0 * area;
         }
 
         [Test]
@@ -281,14 +323,39 @@ namespace UnitTests
             TwoPulleys(out var a, out var b, out var belt, 120.0, 20, 40);
             var plan = BeltSketchBuilder.Build(belt);
 
-            var arcs = plan.InnerLoop.Where(f => f.Kind == ToothSketchFigureKind.Arc).ToList();
-            Assert.AreEqual(2, arcs.Count);
-            var driver = arcs.First(f => Math.Abs(f.CentreX) < 1e-9);
-            var driven = arcs.First(f => Math.Abs(f.CentreX) >= 1e-9);
-            Assert.AreEqual(12.0, driven.CentreX, 1e-6, "The driven pulley is 120 mm along the line of centres, in centimetres.");
             double Radius(ToothSketchFigure f) => Math.Sqrt(Math.Pow(f.StartX - f.CentreX, 2) + Math.Pow(f.StartY - f.CentreY, 2));
-            Assert.AreEqual(a.OutsideDiameter / 2.0 * 0.1, Radius(driver), 1e-6, "The belt rests on the outside diameter.");
-            Assert.AreEqual(b.OutsideDiameter / 2.0 * 0.1, Radius(driven), 1e-6);
+
+            var arcs = plan.InnerLoop.Where(f => f.Kind == ToothSketchFigureKind.Arc).ToList();
+            Assert.Greater(arcs.Count, 0, "The lands between teeth round a pulley are arcs.");
+            var driverArcs = arcs.Where(f => Math.Abs(f.CentreX) < 1e-9).ToList();
+            var drivenArcs = arcs.Where(f => Math.Abs(f.CentreX) >= 1e-9).ToList();
+            Assert.AreEqual(arcs.Count, driverArcs.Count + drivenArcs.Count);
+            Assert.Greater(driverArcs.Count, 0);
+            Assert.Greater(drivenArcs.Count, 0);
+            foreach (var arc in drivenArcs)
+            {
+                Assert.AreEqual(12.0, arc.CentreX, 1e-6, "The driven pulley is 120 mm along the line of centres, in centimetres.");
+                Assert.AreEqual(b.OutsideDiameter / 2.0 * 0.1, Radius(arc), 1e-6, "The belt lands rest on the outside diameter.");
+            }
+
+            foreach (var arc in driverArcs) Assert.AreEqual(a.OutsideDiameter / 2.0 * 0.1, Radius(arc), 1e-6);
+
+            var outerArcs = plan.OuterLoop.Where(f => f.Kind == ToothSketchFigureKind.Arc).ToList();
+            Assert.AreEqual(2, outerArcs.Count);
+            var back = (a.OutsideDiameter / 2.0 + belt.BackThickness) * 0.1;
+            Assert.AreEqual(back, Radius(outerArcs.First(f => Math.Abs(f.CentreX) < 1e-9)), 1e-6, "The back of the belt is the back thickness outside the pulley.");
+        }
+
+        [Test]
+        public void TestBeltSketch_TeethReachTheRootDiameter()
+        {
+            TwoPulleys(out var a, out var b, out var belt, 120.0, 20, 40);
+            var plan = BeltSketchBuilder.Build(belt);
+
+            var points = FigurePoints(plan.InnerLoop).ToList();
+            var nearest = points.Min(p => Math.Min(Math.Sqrt(p.X * p.X + p.Y * p.Y), Math.Sqrt((p.X - 12.0) * (p.X - 12.0) + p.Y * p.Y)));
+            Assert.AreEqual(a.RootDiameter / 2.0 * 0.1, nearest, 1e-6, "The tooth tips are at the groove bottoms of the smaller pulley.");
+            Assert.AreEqual(b.OutsideDiameter - b.RootDiameter, 2.0 * belt.Profile.ToothHeight, 1e-9);
         }
 
         [Test]
@@ -672,16 +739,21 @@ namespace UnitTests
             Assert.AreSame(belt, item.Belt);
             Assert.AreEqual(2, item.Polylines.Count, "The outer and the inner outline.");
 
-            var inner = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential);
-            var outer = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness);
-            Assert.AreEqual(inner.Count, outer.Count);
-            var areaInner = SolidMeshBuilder.SignedArea(inner);
-            var areaOuter = SolidMeshBuilder.SignedArea(outer);
+            var loop = BeltToothPath.Build(belt);
+            Assert.AreEqual(loop.InnerRing.Count, loop.OuterRing.Count);
+            Assert.AreEqual(belt.BeltTeeth, loop.ToothCount);
+            var areaInner = SolidMeshBuilder.SignedArea(new List<GearPoint>(loop.InnerRing));
+            var areaOuter = SolidMeshBuilder.SignedArea(new List<GearPoint>(loop.OuterRing));
             Assert.Greater(areaInner, 0.0, "The loops run anticlockwise.");
             Assert.Greater(areaOuter, areaInner);
 
             var expected = belt.Width * (areaOuter - areaInner);
             Assert.AreEqual(expected, Volume(item.Mesh), expected * 1e-4, "The belt mesh is closed with its faces pointing outwards.");
+
+            var plainInner = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential);
+            var plainOuter = TimingBeltMeshBuilder.BuildLoop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness);
+            var strip = belt.Width * (SolidMeshBuilder.SignedArea(plainOuter) - SolidMeshBuilder.SignedArea(plainInner));
+            Assert.AreEqual(strip + belt.Width * belt.BeltTeeth * ToothArea(belt.Profile), Volume(item.Mesh), strip * 0.02, "The teeth add their volume to the strip.");
 
             var zs = item.Mesh.Vertices.Select(v => v.Z).ToList();
             Assert.AreEqual(-belt.Width / 2.0, zs.Min(), 1e-6, "The belt lies on the mid-planes of the pulleys.");

@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Bolsover.Gears.Calculator.Assemblies;
 using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Calculator.Alibre
 {
     /// <summary>
-    /// The plan for exporting one timing belt to Alibre as a plain strip without teeth: a closed ring sketch on the XY plane, made of an
-    /// outer and an inner loop, each of two straight runs and an arc round each pulley. It is extruded mid-plane to the belt width, so the
+    /// The plan for exporting one timing belt to Alibre: a closed ring sketch on the XY plane, made of an outer and an inner loop. The
+    /// outer loop (the back of the belt) is two straight runs and an arc round each pulley. The inner loop has the same path at the outside
+    /// diameter of the pulleys with the HTD teeth on it (see <see cref="BeltToothPath"/>): each tooth is three splines and two lines, and
+    /// the lands between the teeth are arcs or lines. It is extruded mid-plane to the belt width, so the
     /// XY plane is the mid-plane of the belt. The driver pulley's axis is the origin and the driven pulley lies at the centre distance
     /// along the line of centres, as in the 3D view. All lengths are in Alibre units (centimetres).
     /// </summary>
@@ -73,9 +76,46 @@ namespace Bolsover.Gears.Calculator.Alibre
             if (belt == null) throw new ArgumentNullException(nameof(belt));
             belt.Validate();
 
-            var inner = Loop(belt, -belt.Profile.PitchLineDifferential, "Inner");
+            var inner = ToothedLoop(BeltToothPath.Build(belt));
             var outer = Loop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness, "Outer");
             return new BeltSketch(PartName(belt), Q(belt.Width), outer, inner);
+        }
+
+        /// <summary>The inner loop with its teeth as sketch figures. Neighbouring figures share points, which are rounded alike so the loop closes.</summary>
+        private static IReadOnlyList<ToothSketchFigure> ToothedLoop(BeltToothedLoop loop)
+        {
+            var figures = new List<ToothSketchFigure>(loop.InnerPieces.Count);
+            foreach (var piece in loop.InnerPieces)
+            {
+                var start = Q(piece.Start);
+                var end = Q(piece.End);
+                switch (piece.Kind)
+                {
+                    case BeltPieceKind.Line:
+                        figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Line, piece.Name, start.X, start.Y, end.X, end.Y));
+                        break;
+                    case BeltPieceKind.Arc:
+                    {
+                        var centre = Q(piece.Centre);
+                        figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Arc, piece.Name, start.X, start.Y, end.X, end.Y, centre.X, centre.Y));
+                        break;
+                    }
+                    default:
+                    {
+                        var points = new List<GearPoint>(piece.Points.Count);
+                        foreach (var point in piece.Points) points.Add(Q(point));
+                        figures.Add(new ToothSketchFigure(ToothSketchFigureKind.Spline, piece.Name, start.X, start.Y, end.X, end.Y, 0.0, 0.0, points));
+                        break;
+                    }
+                }
+            }
+
+            return figures;
+        }
+
+        private static GearPoint Q(GearPoint point)
+        {
+            return new GearPoint(Q(point.X), Q(point.Y));
         }
 
         /// <summary>

@@ -979,8 +979,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         }
 
         /// <summary>
-        /// Creates a timing belt in a new Alibre part as a plain strip without teeth: a sketch of the outer and the inner loop of the belt
-        /// (straight runs and an arc round each pulley) on the XY plane, extruded mid-plane to the belt width. The driver pulley's axis is the
+        /// Creates a timing belt in a new Alibre part: a sketch of the outer loop of the belt (straight runs and an arc round each pulley)
+        /// and the inner loop with the HTD teeth (splines, lines and arcs) on the XY plane, extruded mid-plane to the belt width. The driver pulley's axis is the
         /// Z axis and the driven pulley lies on the line of centres in the XY plane. Throws <see cref="InvalidOperationException"/> when the
         /// belt cannot be drawn or Alibre rejects a step.
         /// </summary>
