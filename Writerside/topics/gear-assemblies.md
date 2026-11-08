@@ -106,7 +106,7 @@ at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
 
 The **Pulley** menu works with HTD pulleys: *New train with HTD pulley* and *Add HTD pulley to shaft* offer the four series; *Toggle flanges* switches the flanges of the selected pulley; *Add belted pulley to selected pulley* adds a pulley of the same series on a new shaft, joined to the selected pulley by a belt at a distance that leaves at least 10 mm between the pulleys; *Remove selected belt* removes the selected belt. Select the belt in the tree or in the 2D or 3D view to set its centre distance and line of centres angle in the property grid. The tree lists the belts under the train.
 
-**Belt and groove registration:** a belt tooth is centred in a pulley groove (the cavity), never on a land. The belt tooth is placed on the groove of the driver that is nearest the middle of the driver's wrap, and the teeth follow at the belt tooth spacing, so the belt teeth slide with the driver phase (3D view, animation and Alibre export). The driven pulley is turned by a fixed offset, found by the solver, so that a belt tooth near the middle of its wrap also sits in a groove; the driven pulley keeps its speed ratio and direction. When the path length is a whole number of pitches the alignment is exact on every tooth; otherwise the spacing differs from the pitch by at most `p / (2 n)` for `n` belt teeth, so the drift is below `p / 4` towards the ends of a wrap. In the Alibre assembly export the HTD pulleys are turned about their shaft by the mount phase, so the exported grooves meet the exported belt teeth (other gear types are exported at phase 0). Known limitation: when both shafts are already placed by other relations the belt is registered on the driver only, and the driven pulley is not turned to match.
+**Belt and groove registration:** a belt tooth is centred in a pulley groove (the cavity), never on a land. The belt tooth is placed on the groove of the driver that is nearest the middle of the driver's wrap, and the teeth follow at the belt tooth spacing, so the belt teeth slide with the driver phase (3D view, animation and Alibre export). The driven pulley is turned by a fixed offset, found by the solver, so that a belt tooth near the middle of its wrap also sits in a groove; the driven pulley keeps its speed ratio and direction. When the path length is a whole number of pitches the alignment is exact on every tooth; otherwise the spacing differs from the pitch by at most `p / (2 n)` for `n` belt teeth, so the drift is below `p / 4` towards the ends of a wrap. In the Alibre assembly export the HTD pulleys are turned about their shaft by the mount phase, like every other part (see *Files and export*), so the exported grooves meet the exported belt teeth. Known limitation: when both shafts are already placed by other relations the belt is registered on the driver only, and the driven pulley is not turned to match.
 
 ### Cycloidal gears
 
@@ -301,6 +301,15 @@ In Alibre a **Gears** menu appears with one command, **Gear Train**. The command
 
 1. Build the `GearsAddOn` project (it is part of `Gears.sln`). The output folder `GearsAddOn\bin\Debug` holds the add-on DLL, the `.adc` file, `GearsUI.exe`, `Gears.dll` and every library they need.
 2. Close Alibre Design. In an administrator PowerShell, run `Install-GearsAddOn.ps1` from the output folder. It copies the files to `C:\ProgramData\Alibre AddOns\GearsAddOn` and writes the value `{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}` = that folder under `HKEY_LOCAL_MACHINE\SOFTWARE\Alibre Design Add-Ons`. This is the registration that Alibre looks for.
+3. Start Alibre Design. The **Gears** menu appears.
+
+While developing, `Install-GearsAddOn.ps1 -InPlace` registers the build output folder itself, so a rebuild followed by an Alibre restart is enough. `Install-GearsAddOn.ps1 -Uninstall` removes the registration and the copied files.
+
+### Limits
+
+* The identifier in `GearsAddOn.adc`, `addon.json`, `GearTrainAddOn.AddOnId` and the install script must be the same; tests check this.
+* The add-on needs the Alibre assemblies `AlibreAddOn.dll` and `AlibreX.dll`; the project takes them from the `AlibreLib` folder, as the other Alibre projects in this solution do.
+re AddOns\GearsAddOn` and writes the value `{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}` = that folder under `HKEY_LOCAL_MACHINE\SOFTWARE\Alibre Design Add-Ons`. This is the registration that Alibre looks for.
 3. Start Alibre Design. The **Gears** menu appears.
 
 While developing, `Install-GearsAddOn.ps1 -InPlace` registers the build output folder itself, so a rebuild followed by an Alibre restart is enough. `Install-GearsAddOn.ps1 -Uninstall` removes the registration and the copied files.

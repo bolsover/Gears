@@ -1094,9 +1094,14 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// Location of an exported part in the assembly: the shaft placement, then the axial offset along the shaft. An exported part is
         /// extruded from the sketch plane up to its face width, while the offset locates the mid-plane, hence the half face width.
         /// A herringbone part is mirrored about the sketch plane, and an HTD pulley is extruded mid-plane about it, so both already lie on
-        /// the mid-plane and have no such shift. An HTD pulley is also turned about the shaft axis by the phase of its mount, as in the 3D
-        /// scene, so its grooves meet the teeth of the belt (see <see cref="Bolsover.Gears.Calculator.Assemblies.BeltRegistration"/>); other
-        /// parts are exported at phase 0.
+        /// the mid-plane and have no such shift.
+        /// Every part is then moved by the local motion of its mount phase, as in the 3D scene: turned about the
+        /// shaft axis by the phase, or slid along its length for a rack. The phase includes the half tooth that the mesh solvers give a driven
+        /// gear, the angle of the line of centres and, for the driver, the rotation of its own shaft, so a meshed train is exported in the pose
+        /// shown in the application. An HTD pulley is turned the same way so that its grooves meet the teeth of the belt (see
+        /// <see cref="Bolsover.Gears.Calculator.Assemblies.BeltRegistration"/>). At phase 0 the placement is only the shaft placement and the
+        /// axial translation. A bevel gear is turned about the shaft axis by the phase before its part frame (see <see cref="GetBevelPartFrame"/>);
+        /// the axial shift is along that axis, so it commutes with the turn and the order is that of the scene.
         /// </summary>
         public static Transform3D GetPartPlacement(Shaft shaft, ShaftMount mount)
         {
@@ -1105,15 +1110,14 @@ namespace Bolsover.Gears.Calculator.Alibre
 
             if (mount.Component is BevelGearComponent bevel)
             {
-                return shaft.Placement.ToTransform().Compose(GetBevelPartFrame(bevel, mount.AxialOffset));
+                return shaft.Placement.ToTransform().Compose(bevel.GetLocalMotion(mount.PhaseRad)).Compose(GetBevelPartFrame(bevel, mount.AxialOffset));
             }
 
             // A herringbone part or a pulley is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
             var centred = IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent || mount.Component is CycloidalGearComponent;
             var start = centred ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
             var placement = shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
-            if (mount.Component is HtdPulleyComponent pulley) placement = placement.Compose(pulley.GetLocalMotion(mount.PhaseRad));
-            return placement;
+            return placement.Compose(mount.Component.GetLocalMotion(mount.PhaseRad));
         }
 
         /// <summary>True for a herringbone gear or rack that is exported with a mirror: a helical one with the herringbone option set.</summary>
