@@ -54,7 +54,10 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>Angle between the two shaft axes in degrees (90 for a standard bevel pair).</summary>
         public double ShaftAngleDeg { get; set; } = 90.0;
 
-        /// <summary>Circular backlash (mm). It is only reported; the solid is cut to the nominal tooth thickness.</summary>
+        /// <summary>
+        /// Circular backlash (mm), measured on the pitch circle of the virtual spur gear as for the other gears: the teeth are made thinner by
+        /// this amount, in the 3D model and in the Alibre export.
+        /// </summary>
         public double Backlash { get; set; }
 
         /// <summary>
@@ -316,6 +319,11 @@ namespace Bolsover.Gears.Model.Assemblies
                 throw new InvalidOperationException($"Bevel gear '{Id}': the shaft angle must be between 0 and 180 degrees.");
             }
 
+            if (!(Backlash >= 0.0))
+            {
+                throw new InvalidOperationException($"Bevel gear '{Id}': the backlash cannot be negative.");
+            }
+
             if (!(RackTipRadiusFactor >= 0.0 && RackTipRadiusFactor < 1.0))
             {
                 throw new InvalidOperationException($"Bevel gear '{Id}': the rack tip radius must be from 0 to below 1 module.");
@@ -365,7 +373,7 @@ namespace Bolsover.Gears.Model.Assemblies
             // The solid is the blank revolved about its axis with the Tredgold tooth valleys cut and patterned (see BevelBlankProfile and
             // BevelToothSketch). The blank frame has its axis along X and the cone apex towards negative X.
             var blank = CreateBlankProfile();
-            var sketch = new BevelToothSketch(blank, PressureAngleDeg, rackTipRadiusFactor: RackTipRadiusFactor);
+            var sketch = new BevelToothSketch(blank, PressureAngleDeg, rackTipRadiusFactor: RackTipRadiusFactor, backlash: Backlash);
 
             // The bore and the hub are limited so that they stay inside the root of the teeth.
             var bore = Math.Min(EffectiveBoreDiameter / 2.0, 0.9 * blank.PointH.Y);

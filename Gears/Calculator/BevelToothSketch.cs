@@ -67,6 +67,8 @@ namespace Bolsover.Gears.Calculator
         private readonly double _halfPitchAngle;
         private readonly double _involutePressureAngle;
         private readonly double _shiftAngle;
+        private readonly double _backlashHalfAngle;
+        private readonly double _backlash;
         private readonly double _rackTipRadius;
         private double _centreU;
         private double _centreV;
@@ -83,9 +85,13 @@ namespace Bolsover.Gears.Calculator
         /// <param name="pressureAngleDeg">Pressure angle of the involute flanks, degrees.</param>
         /// <param name="flankSteps">Number of segments of each flank between the start of the involute and the tooth tip.</param>
         /// <param name="rackTipRadiusFactor">Corner radius of the generating rack tip as a multiple of the module; zero is a sharp corner.</param>
-        public BevelToothSketch(BevelBlankProfile profile, double pressureAngleDeg = 20.0, int flankSteps = 12, double rackTipRadiusFactor = 0.0)
+        /// <param name="backlash">Circular backlash (mm) on the pitch circle of the developed back cone, as for a spur gear: the tooth is thinner and
+        /// the valley wider by this amount, so the generating rack is thicker by it. Zero gives the nominal tooth thickness.</param>
+        public BevelToothSketch(BevelBlankProfile profile, double pressureAngleDeg = 20.0, int flankSteps = 12, double rackTipRadiusFactor = 0.0,
+            double backlash = 0.0)
         {
             if (profile == null) throw new ArgumentNullException(nameof(profile));
+            if (!(backlash >= 0.0) || double.IsInfinity(backlash)) throw new ArgumentException("The backlash cannot be negative.", nameof(backlash));
             if (!(rackTipRadiusFactor >= 0.0 && rackTipRadiusFactor < 1.0)) throw new ArgumentException("The rack tip radius factor must be from 0 to below 1 module.", nameof(rackTipRadiusFactor));
             if (!(pressureAngleDeg > 0.0 && pressureAngleDeg < 45.0)) throw new ArgumentException("The pressure angle must be between 0 and 45 degrees.", nameof(pressureAngleDeg));
             if (flankSteps < 2) throw new ArgumentException("A flank needs at least 2 segments.", nameof(flankSteps));
@@ -104,6 +110,8 @@ namespace Bolsover.Gears.Calculator
             _halfPitchAngle = Math.PI / VirtualTeeth;
             PitchAngle = 2.0 * _halfPitchAngle;
             _shiftAngle = ProfileShift * Math.Tan(pressureAngleDeg * Math.PI / 180.0) / ConeRadius;
+            _backlash = backlash;
+            _backlashHalfAngle = backlash / (2.0 * ConeRadius);
             ComputeFilletExtent();
 
             var pointedRadius = FindPointedRadius();
@@ -121,6 +129,9 @@ namespace Bolsover.Gears.Calculator
 
         /// <summary>Profile shift of the virtual spur gear in mm (Gleason long and short addendum); zero for standard proportions.</summary>
         public double ProfileShift { get; }
+
+        /// <summary>Circular backlash (mm) taken off the tooth thickness on the pitch circle of the developed back cone; zero for none.</summary>
+        public double Backlash => _backlash;
 
         /// <summary>Corner radius of the generating rack tip, mm; zero for the sharp corner.</summary>
         public double RackTipRadius => _rackTipRadius;
@@ -185,7 +196,8 @@ namespace Bolsover.Gears.Calculator
         private double PressureAngleAt(double radius) => Math.Acos(Math.Min(1.0, BaseRadius / radius));
 
         /// <summary>Half the angular width of the valley at the given radius, radians. The valley widens towards the tips.</summary>
-        public double ValleyHalfAngle(double radius) => _halfPitchAngle / 2.0 - _shiftAngle - _involutePressureAngle + Involute(PressureAngleAt(radius));
+        public double ValleyHalfAngle(double radius) =>
+            _halfPitchAngle / 2.0 - _shiftAngle + _backlashHalfAngle - _involutePressureAngle + Involute(PressureAngleAt(radius));
 
         /// <summary>Half the angular width of a tooth at the given radius, radians.</summary>
         public double ToothHalfAngle(double radius) => _halfPitchAngle - ValleyHalfAngle(radius);
@@ -231,7 +243,8 @@ namespace Bolsover.Gears.Calculator
 
             // Half the rack tooth thickness at its tip, which is a dedendum and a profile shift below the rack reference line; the
             // sharp corner is at +flat and the flat of the rack tip lies between -flat and +flat.
-            var flat = ConeRadius * _halfPitchAngle / 2.0 - (ProfileShift + depth) * Math.Tan(alpha);
+            // The rack tooth is as thick as the valley of the gear, which backlash widens by the backlash.
+            var flat = ConeRadius * _halfPitchAngle / 2.0 + _backlash / 2.0 - (ProfileShift + depth) * Math.Tan(alpha);
             if (!(flat > 1e-9)) throw new InvalidOperationException("The rack tip has no flat: the dedendum is too deep for the pressure angle.");
 
             // A rounded corner of radius r is tangent to the flat and to the flank; its centre is r above the tip.

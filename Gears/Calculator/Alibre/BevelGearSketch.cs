@@ -131,7 +131,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             try
             {
                 blank = gear.CreateBlankProfile();
-                sketch = new BevelToothSketch(blank, gear.PressureAngleDeg, rackTipRadiusFactor: gear.RackTipRadiusFactor);
+                sketch = new BevelToothSketch(blank, gear.PressureAngleDeg, rackTipRadiusFactor: gear.RackTipRadiusFactor, backlash: gear.Backlash);
             }
             catch (ArgumentException ex)
             {

@@ -134,6 +134,9 @@ Select an involute gear in the editor to change these in the property grid. Mesh
 
 * **Clearance** and **Backlash** (per gear) and **Profile shift** `x` (per gear) change the tooth profile. Backlash thins the tooth; the working
   backlash of a pair is the circular backlash measured on the working pitch circles.
+* A **bevel gear** also has a **Backlash** property. It is the circular backlash on the pitch circle of the virtual spur gear (the developed back
+  cone), as for the involute gears: the teeth are thinner by that amount, so the valley that is cut is wider. The 3D view and the Alibre export both
+  use it, and a negative value is rejected.
 * **Centre distance (mm)** of a driven gear sets the distance to its driver's shaft. Entering a value fixes it (*Fixed centre distance* turns on);
   entering 0, or turning the flag off, goes back to the distance that follows from the profile shifts.
   With a fixed distance `a_w` the working pressure angle follows from `a_w cos(alpha_wt) = a cos(alpha_t)`, and the working pitch diameters,

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Calculator.Alibre;
+using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 using NUnit.Framework;
 
@@ -441,6 +443,115 @@ namespace UnitTests
 
             Assert.Greater(SignedVolume(mesh), 0.0);
             AssertMeshIsClosed(mesh);
+        }
+
+        [TestCase(0.1)]
+        [TestCase(0.5)]
+        [TestCase(1.2)]
+        public void TestBacklash_ThinsTheToothByTheBacklashOnThePitchCircle(double backlash)
+        {
+            var profile = Sample();
+            var nominal = new BevelToothSketch(profile);
+            var sketch = new BevelToothSketch(profile, backlash: backlash);
+
+            var nominalThickness = 2.0 * nominal.ConeRadius * nominal.ToothHalfAngle(nominal.ConeRadius);
+            var thickness = 2.0 * sketch.ConeRadius * sketch.ToothHalfAngle(sketch.ConeRadius);
+            Console.WriteLine($"[DEBUG_LOG] backlash {backlash}: tooth thickness on the pitch circle {nominalThickness:0.000000} -> {thickness:0.000000} mm");
+
+            Assert.AreEqual(Math.PI * Module / 2.0, nominalThickness, 1e-9, "The nominal tooth is half the circular pitch.");
+            Assert.AreEqual(nominalThickness - backlash, thickness, 1e-9, "The tooth is thinner by the circular backlash.");
+            Assert.AreEqual(backlash, sketch.Backlash, 1e-12);
+            Assert.Greater(sketch.ValleyHalfAngle(sketch.TipRadius), nominal.ValleyHalfAngle(nominal.TipRadius), "The valley is wider at the tips.");
+            Assert.Greater(sketch.RootHalfAngle, nominal.RootHalfAngle, "The generating rack is thicker, so the root flat is wider.");
+            Assert.AreEqual(backlash / 2.0 / sketch.ConeRadius, sketch.RootHalfAngle - nominal.RootHalfAngle, 1e-12);
+        }
+
+        [Test]
+        public void TestBacklash_ZeroGivesTheNominalSketch()
+        {
+            var profile = Sample();
+            var nominal = new BevelToothSketch(profile);
+            var zero = new BevelToothSketch(profile, backlash: 0.0);
+
+            Assert.AreEqual(nominal.Loop.Count, zero.Loop.Count);
+            for (var i = 0; i < nominal.Loop.Count; i++)
+            {
+                Assert.AreEqual(nominal.Loop[i].Radius, zero.Loop[i].Radius, 1e-12);
+                Assert.AreEqual(nominal.Loop[i].Angle, zero.Loop[i].Angle, 1e-12);
+            }
+        }
+
+        [Test]
+        public void TestBacklash_FlankKeepsTheInvoluteShape()
+        {
+            var sketch = new BevelToothSketch(Sample(), 20.0, 60, backlash: 0.8);
+
+            var flank = sketch.RightFlank;
+            for (var i = 0; i + 1 < flank.Count; i++)
+            {
+                double dx = flank[i + 1].X - flank[i].X, dy = flank[i + 1].Y - flank[i].Y;
+                var length = Math.Sqrt(dx * dx + dy * dy);
+                double mx = 0.5 * (flank[i].X + flank[i + 1].X), my = 0.5 * (flank[i].Y + flank[i + 1].Y);
+                Assert.AreEqual(sketch.BaseRadius, Math.Abs(mx * dx + my * dy) / length, sketch.BaseRadius * 2e-3, "Flank segment " + i);
+            }
+        }
+
+        [Test]
+        public void TestBacklash_NegativeIsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => new BevelToothSketch(Sample(), backlash: -0.1));
+        }
+
+        private static BevelGearComponent Gear(double backlash)
+        {
+            return new BevelGearComponent("B1")
+            {
+                Teeth = 20, MateTeeth = 40, Module = 3.0, PressureAngleDeg = 20.0, FaceWidth = 12.0, HasHub = false, Backlash = backlash
+            };
+        }
+
+        [Test]
+        public void TestBacklash_RemovesMaterialFromTheSolidOfTheGear()
+        {
+            var nominal = Gear(0.0).BuildGeometry();
+            var loose = Gear(0.4).BuildGeometry();
+            var looser = Gear(0.8).BuildGeometry();
+
+            var v0 = Math.Abs(SignedVolume(nominal.Mesh));
+            var v1 = Math.Abs(SignedVolume(loose.Mesh));
+            var v2 = Math.Abs(SignedVolume(looser.Mesh));
+            Console.WriteLine($"[DEBUG_LOG] bevel solid volume: backlash 0 = {v0:0.000}, 0.4 = {v1:0.000}, 0.8 = {v2:0.000} mm3");
+
+            Assert.Less(v1, v0, "A gear with backlash has thinner teeth, so less volume.");
+            Assert.Less(v2, v1, "More backlash takes more material off.");
+        }
+
+        [Test]
+        public void TestBacklash_ChangesTheAlibreToothValleySketch()
+        {
+            double WidestValley(double backlash)
+            {
+                var worst = 0.0;
+                foreach (var figure in BevelGearSketch.Build(Gear(backlash)).ToothFigures)
+                {
+                    var points = figure.Points ?? new List<GearPoint> { new GearPoint(figure.StartX, figure.StartY), new GearPoint(figure.EndX, figure.EndY) };
+                    foreach (var point in points) worst = Math.Max(worst, Math.Abs(point.Y));
+                }
+
+                return worst;
+            }
+
+            var nominal = WidestValley(0.0);
+            var loose = WidestValley(0.6);
+            Console.WriteLine($"[DEBUG_LOG] exported valley half width: {nominal:0.000000} -> {loose:0.000000} (sketch units)");
+
+            Assert.Greater(loose, nominal, "The exported valley is wider with backlash.");
+        }
+
+        [Test]
+        public void TestBacklash_NegativeIsRejectedByTheGear()
+        {
+            Assert.Throws<InvalidOperationException>(() => Gear(-0.1).Validate());
         }
 
         [Test]
