@@ -398,6 +398,135 @@ namespace Bolsover.Gears.Gui.Presenters
         }
 
         /// <summary>
+        /// Starts a new train with a cycloidal wheel on one shaft and a cycloidal pinion on a second shaft that meshes with it. Cycloidal gears are
+        /// always designed as a pair, so both are drawn together; further gears can be added with <see cref="AddCycloidalMate"/> and
+        /// <see cref="AddCycloidalGearToShaft"/>. <paramref name="wheelTeeth"/> or <paramref name="pinionTeeth"/> of zero or less choose 30 and 8.
+        /// </summary>
+        public CycloidalGearComponent NewCycloidalPair(int wheelTeeth = 0, int pinionTeeth = 0)
+        {
+            ResetState();
+
+            var wheel = new CycloidalGearComponent("Wheel " + (++_gearCounter))
+            {
+                Role = CycloidalGearRole.Wheel,
+                Teeth = wheelTeeth > 0 ? wheelTeeth : CycloidalGearComponent.DefaultWheelTeeth
+            };
+            var shaft = CreateShaft();
+            shaft.Mount(wheel, 0.0);
+            Assembly.AddShaft(shaft);
+
+            Selected = wheel;
+            AddCycloidalMate(wheel, pinionTeeth, 0.0);
+            return wheel;
+        }
+
+        /// <summary>
+        /// Adds a cycloidal gear on a new shaft that meshes with <paramref name="driver"/>: a pinion for a wheel and a wheel for a pinion.
+        /// The new gear takes the module and face width of the driver and sits in the same plane. A gear that is both driven and a driver is
+        /// an idler; several gears driven by one driver form a branching train.
+        /// </summary>
+        /// <param name="driver">The cycloidal gear to mesh with; it must be mounted in the assembly.</param>
+        /// <param name="teeth">Number of teeth of the new gear; zero or less chooses 8 for a pinion, and 30 (at least three times the pinion) for a wheel.</param>
+        /// <param name="centreLineAngleDeg">Direction of the new shaft from the driver shaft; null spaces branches 60 degrees apart.</param>
+        public CycloidalGearComponent AddCycloidalMate(GearComponent driver, int teeth = 0, double? centreLineAngleDeg = null)
+        {
+            EnsureNotPlanetary();
+            var driverGear = driver as CycloidalGearComponent
+                             ?? throw new ArgumentException("Only a cycloidal gear can be meshed with a cycloidal gear.", nameof(driver));
+            var driverMount = Assembly.FindMount(driverGear, out var driverShaft)
+                              ?? throw new ArgumentException("The driver gear is not mounted in the assembly.", nameof(driver));
+
+            var mate = CreateCycloidalGear(driverGear.IsPinion ? CycloidalGearRole.Wheel : CycloidalGearRole.Pinion, teeth, driverGear);
+            mate.MateTeeth = driverGear.Teeth;
+
+            var shaft = CreateShaft();
+            shaft.Mount(mate, driverMount.AxialOffset);
+
+            var branches = Assembly.Relations.Count(r => driverShaft.Mounts.Any(m => ReferenceEquals(m.Component, r.Driver)));
+            var angle = centreLineAngleDeg ?? branches * 60.0;
+
+            Assembly.AddShaft(shaft);
+            try
+            {
+                Assembly.AddRelation(driverGear, mate, MeshType.Cycloidal, angle);
+            }
+            catch
+            {
+                Assembly.RemoveShaft(shaft);
+                throw;
+            }
+
+            Selected = mate;
+            Refresh();
+            return mate;
+        }
+
+        /// <summary>
+        /// Adds another cycloidal gear to a shaft next to the existing gears (a compound gear), with a small axial gap. Unless
+        /// <paramref name="role"/> is given the new gear is the opposite kind to the last cycloidal gear on the shaft (a wheel and a pinion on
+        /// one shaft are the usual compound pair), and a wheel when there is none. The gear takes the module and face width of that gear.
+        /// </summary>
+        public CycloidalGearComponent AddCycloidalGearToShaft(Shaft shaft, CycloidalGearRole? role = null, int teeth = 0)
+        {
+            EnsureNotPlanetary();
+            if (shaft == null) throw new ArgumentNullException(nameof(shaft));
+            if (!Assembly.Shafts.Contains(shaft)) throw new ArgumentException("The shaft is not part of the assembly.", nameof(shaft));
+
+            var template = shaft.Mounts.Select(m => m.Component).OfType<CycloidalGearComponent>().LastOrDefault();
+            var kind = role ?? (template != null && !template.IsPinion ? CycloidalGearRole.Pinion : CycloidalGearRole.Wheel);
+            var gear = CreateCycloidalGear(kind, teeth, template);
+
+            var offset = 0.0;
+            if (shaft.Mounts.Count > 0)
+            {
+                var end = double.MinValue;
+                foreach (var mount in shaft.Mounts)
+                {
+                    mount.GetAxialExtent(out _, out var e);
+                    if (e > end) end = e;
+                }
+
+                offset = end + AxialGap + gear.FaceWidth / 2.0;
+            }
+
+            shaft.Mount(gear, GearPrecision.Round(offset));
+            Selected = gear;
+            Refresh();
+            return gear;
+        }
+
+        private CycloidalGearComponent CreateCycloidalGear(CycloidalGearRole role, int teeth, CycloidalGearComponent template)
+        {
+            int defaultTeeth;
+            if (role == CycloidalGearRole.Pinion)
+            {
+                defaultTeeth = template != null && template.Teeth <= CycloidalGearComponent.DefaultPinionTeeth
+                    ? CycloidalGearComponent.AbsoluteMinimumTeeth
+                    : CycloidalGearComponent.DefaultPinionTeeth;
+            }
+            else
+            {
+                defaultTeeth = Math.Max(CycloidalGearComponent.DefaultWheelTeeth, template != null ? template.Teeth * 3 : 0);
+            }
+
+            var gear = new CycloidalGearComponent((role == CycloidalGearRole.Pinion ? "Pinion " : "Wheel ") + (++_gearCounter))
+            {
+                Role = role,
+                Teeth = teeth > 0 ? teeth : defaultTeeth
+            };
+            if (template != null)
+            {
+                gear.Module = template.Module;
+                gear.PressureAngleDeg = template.PressureAngleDeg;
+                gear.FaceWidth = template.FaceWidth;
+                gear.CustomSlopEnabled = template.CustomSlopEnabled;
+                gear.CustomSlop = template.CustomSlop;
+            }
+
+            return gear;
+        }
+
+        /// <summary>
         /// Adds a gear that meshes with <paramref name="driver"/> on a new shaft, for any mesh type: an involute gear on parallel
         /// axes, a rack for a pinion, a bevel gear for a bevel gear (same shaft angle) or a worm wheel for a worm.
         /// The mate takes module, pressure angle and face width from the driver.
@@ -411,6 +540,7 @@ namespace Bolsover.Gears.Gui.Presenters
             EnsureNotPlanetary();
             if (driver == null) throw new ArgumentNullException(nameof(driver));
             if (meshType == MeshType.Parallel) return AddMeshedGear(driver, teeth, centreLineAngleDeg);
+            if (meshType == MeshType.Cycloidal) return AddCycloidalMate(driver, teeth, centreLineAngleDeg);
 
             var driverMount = Assembly.FindMount(driver, out var driverShaft)
                               ?? throw new ArgumentException("The driver gear is not mounted in the assembly.", nameof(driver));
@@ -900,7 +1030,7 @@ namespace Bolsover.Gears.Gui.Presenters
             if (Planetary != null) return new PlanetaryNodeProperties(this, Planetary);
 
             if (selected is RackComponent || selected is BevelGearComponent || selected is WormComponent || selected is WormWheelComponent
-                || selected is HtdPulleyComponent)
+                || selected is HtdPulleyComponent || selected is CycloidalGearComponent)
             {
                 var component = (GearComponent)selected;
                 var componentMount = Assembly.FindMount(component, out _);
@@ -908,6 +1038,7 @@ namespace Bolsover.Gears.Gui.Presenters
                 var relation = Assembly.FindDrivingRelation(component);
                 if (component is RackComponent rack) return new RackNodeProperties(this, rack, componentMount, relation);
                 if (component is HtdPulleyComponent pulley) return new PulleyNodeProperties(this, pulley, componentMount, relation);
+                if (component is CycloidalGearComponent cycloidal) return new CycloidalNodeProperties(this, cycloidal, componentMount, relation);
                 if (component is BevelGearComponent bevel) return new BevelNodeProperties(this, bevel, componentMount, relation);
                 if (component is WormComponent worm) return new WormNodeProperties(this, worm, componentMount, relation);
                 return new WormWheelNodeProperties(this, (WormWheelComponent)component, componentMount, relation);

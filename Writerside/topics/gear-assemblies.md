@@ -14,6 +14,7 @@ All computed lengths and coordinates are given to **7 decimal places**; angles k
 | Worm and wheel | `WormComponent`, `WormWheelComponent` | `Worm` | Crossed shafts at 90 degrees. |
 | Planetary | `PlanetaryGearSet` | none | Sun, planets, ring and carrier plate; builds an ordinary assembly. |
 | HTD pulley | `HtdPulleyComponent` | none (joined by a `TimingBelt`) | Timing belt pulley of the 3M, 5M, 8M or 14M series; a belt places the second pulley's shaft. |
+| Cycloidal gear | `CycloidalGearComponent` | `Cycloidal` | A wheel and a pinion on parallel shafts at the sum of their pitch radii; always designed as a pair. |
 
 A component's *phase* is its rotation about its axis in radians. For a rack the phase is the linear displacement in mm.
 
@@ -105,6 +106,15 @@ at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
 
 The **Pulley** menu works with HTD pulleys: *New train with HTD pulley* and *Add HTD pulley to shaft* offer the four series; *Toggle flanges* switches the flanges of the selected pulley; *Add belted pulley to selected pulley* adds a pulley of the same series on a new shaft, joined to the selected pulley by a belt at a distance that leaves at least 10 mm between the pulleys; *Remove selected belt* removes the selected belt. Select the belt in the tree or in the 2D or 3D view to set its centre distance and line of centres angle in the property grid. The tree lists the belts under the train.
 
+### Cycloidal gears
+
+Cycloidal gears (as used in clocks) are always designed as a **pair**: a *wheel* and a *pinion*. `CycloidalGearComponent` holds one of them (`Role`), and two gears mesh with `MeshType.Cycloidal`, which needs one wheel and one pinion of the same module. The tooth sizes follow the tables for clock wheels and leaves in the Alibre cycloidal gear add-on, so the profile of a gear depends on the number of teeth of the gear it works with (`MateTeeth`, which the mesh solver sets from the mating gear).
+
+* Centre distance is the sum of the pitch radii, `a = m (z1 + z2) / 2`. The driven gear turns the other way at `-z1 / z2` of the driver's speed.
+* **Wheel:** pitch diameter `d = m z`; the tooth is half a pitch wide at the pitch circle, with radial flanks, a rounded tip of two arcs of radius `1.4 m k` and an addendum of `0.95 m k`, where the factor `k` is solved from the tooth counts of the wheel and the pinion. The dedendum is `pi m / 2`.
+* **Pinion:** the tooth is 1.05 module wide at the pitch circle for up to ten leaves and 1.25 module wide for more. The tip depends on the leaves: seven or fewer a high ogival tip (addendum 0.855 m, arc radius 1.05 m), eight or nine a medium ogival tip (0.67 m, 0.7 m), ten a round tip of 0.525 m, more than ten a round tip of 0.625 m. The dedendum clears the wheel tip, `m (0.95 k + 0.4)`, or the wheel addendum plus the custom clearance when *Custom clearance* is checked.
+* The **Cycloidal** menu starts a pair (*New cycloidal pair*, which draws both gears in the 2D and 3D views), adds a meshed gear to the selected gear (*Add meshed cycloidal gear*, a pinion for a wheel and a wheel for a pinion; use it repeatedly to extend or branch the train), adds a compound gear to a shaft (*Add cycloidal gear to shaft*) and exports to Alibre. The properties of a gear are the role, the teeth, the module, the face width, the centre hole and the position.
+
 ### Choosing and sorting the properties
 
 The property grid lists the properties of the selected shaft, gear or planetary stage in categories. The bar above it controls what is listed:
@@ -148,6 +158,7 @@ Select an involute gear in the editor to change these in the property grid. Mesh
 * A planetary stage is edited through its properties; other gears cannot be added to it.
 * Belts join two pulleys with an open belt on the pitch circles; belt teeth, tension, idlers and crossed or twisted belts are not modelled.
 * The bore and hub of a pulley are part of the 3D model only; they are not part of the Alibre export.
+* The centre hole of a cycloidal gear is part of the Alibre export only; the 3D and 2D views show the solid gear. The profiles follow the clock tables and are an approximation of the true conjugate cycloidal profiles. A gear that meshes with two others takes the profile for the gear it drives last.
 
 
 ## Gear and mesh parameter tables
@@ -208,6 +219,8 @@ The export follows the usual manual steps, using the Alibre automation API (`Ali
 **HTD pulley:** HTD pulleys are exported too (single part and assembly export). The sketch holds one groove cell, a wedge one pitch wide that is centred on the groove (two radial lines to the axis, two arcs of the outside diameter, and the groove: a spline for the bottom arc, two lines for the flanks and a spline for each rounded edge). It is extruded **mid-plane** (`AD_MID_PLANE`: half the width on each side of the `XY-Plane`) and patterned about the `Z-Axis` with one instance per groove, so the cells tile into the pulley. For a pulley with flanges, flange 1 is a rectangle on the positive side, sketched on the `ZX-Plane` (which holds the Z axis) and revolved about the `Z-Axis` with `AddRevolvedBoss`; flange 2 is a **mirror copy** of flange 1 across the `XY-Plane` (`AddMirrorFeaturePattern`), so the two flanges are always symmetrical about the mid-plane. The part is named `HtdPulley_<series>_Z<grooves>_B<width>`. The part lies from `z = -width / 2` to `z = width / 2`, so its sketch plane is the mid-plane and the assembly export places it at the axial offset without any shift. The bore and hub are not exported, and a belt has no Alibre part. **The pulley export has not been run in Alibre**; it follows the pattern of the other exports, and the flange revolve (and, for the sketch plane that holds the axis, `AlibreGearExporter.AxialPlaneSketchYIsNegativeZ`) are the steps most likely to need adjusting.
 
 **Timing belt:** a belt is exported as a plain strip **without teeth**, as a new part (select the belt and use *Export gear to Alibre*, or check *Include timing belts in assembly export* before *Export Assembly to Alibre*). The sketch on the `XY-Plane` holds two closed loops, the back of the belt and its pulley side. Each loop is two straight runs and an arc round each pulley, at the outside diameter of the pulleys and at the back thickness above it. It is extruded **mid-plane** by the belt width (`AD_MID_PLANE`). The driver pulley axis is the `Z-Axis` and the driven pulley lies on the line of centres in the `XY-Plane`. In an assembly the belt is placed like its driver pulley, so it lies on the mid-planes of both pulleys. The part is named `HtdBelt_<series>_T<belt teeth>_W<width>`. This export has not been run in Alibre yet.
+
+**Cycloidal gear:** a cycloidal gear is exported as a single part with the whole gear in one sketch, as the Alibre add-on does: for every tooth two tip arcs, two radial flank lines and a root arc, a reference circle for the pitch diameter and, when the *centre hole* is above zero, a circle for the hole. The sketch is on the `XY-Plane` and is extruded mid-plane to the face width, so the plane is the mid-plane of the gear. *Export gear to Alibre* (or *Export selected gear to Alibre* in the Cycloidal menu) exports the selected gear; to export both gears of a pair, use *Export Assembly to Alibre* (or *Export train to Alibre assembly*), which adds each gear as a part at its shaft position. The wheel and the pinion each get the tooth profile for their pair.
 
 ### Internal gears
 

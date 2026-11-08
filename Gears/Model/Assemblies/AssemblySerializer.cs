@@ -288,6 +288,19 @@ namespace Bolsover.Gears.Model.Assemblies
                     }
 
                     break;
+                case CycloidalGearComponent g:
+                    dto.Type = "Cycloidal";
+                    dto.Teeth = g.Teeth;
+                    dto.MateTeeth = g.MateTeeth;
+                    dto.CycloidalRole = g.Role.ToString();
+                    if (g.CustomSlopEnabled)
+                    {
+                        dto.CustomSlopEnabled = true;
+                        dto.CustomSlop = g.CustomSlop;
+                    }
+
+                    if (g.CentreHole > 0.0) dto.CentreHole = g.CentreHole;
+                    break;
                 default:
                     throw new NotSupportedException($"Gear '{component.Id}' is of type {component.GetType().Name}, which cannot be saved.");
             }
@@ -372,6 +385,17 @@ namespace Bolsover.Gears.Model.Assemblies
                         BoreDiameter = dto.BoreDiameter ?? 0.0,
                         HubDiameter = dto.HubDiameter ?? 0.0,
                         HubLength = dto.HubLength ?? 0.0
+                    };
+                    break;
+                case "Cycloidal":
+                    component = new CycloidalGearComponent(dto.Id)
+                    {
+                        Teeth = dto.Teeth ?? CycloidalGearComponent.DefaultWheelTeeth,
+                        MateTeeth = dto.MateTeeth ?? 0,
+                        Role = Enum.TryParse(dto.CycloidalRole, true, out CycloidalGearRole role) ? role : CycloidalGearRole.Wheel,
+                        CustomSlopEnabled = dto.CustomSlopEnabled ?? false,
+                        CustomSlop = dto.CustomSlop ?? 0.0,
+                        CentreHole = dto.CentreHole ?? 0.0
                     };
                     break;
                 default:
@@ -464,6 +488,12 @@ namespace Bolsover.Gears.Model.Assemblies
             public bool? HasFlanges { get; set; }
             public double? FlangeHeight { get; set; }
             public double? FlangeThickness { get; set; }
+
+            /// <summary>Cycloidal gear: Wheel or Pinion, the optional clearance (mm) and the centre hole (mm); the teeth of the mate are in <see cref="MateTeeth"/>.</summary>
+            public string CycloidalRole { get; set; }
+            public bool? CustomSlopEnabled { get; set; }
+            public double? CustomSlop { get; set; }
+            public double? CentreHole { get; set; }
         }
 
         private sealed class RelationDto

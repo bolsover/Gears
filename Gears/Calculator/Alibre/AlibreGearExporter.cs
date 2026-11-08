@@ -1085,7 +1085,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         public static bool IsExportable(GearComponent component)
         {
             return component is InvoluteGearComponent || component is RackComponent || component is WormComponent || component is WormWheelComponent
-                || component is BevelGearComponent || component is HtdPulleyComponent;
+                || component is BevelGearComponent || component is HtdPulleyComponent || component is CycloidalGearComponent;
         }
 
         /// <summary>
@@ -1105,7 +1105,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             }
 
             // A herringbone part or a pulley is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
-            var centred = IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent;
+            var centred = IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent || mount.Component is CycloidalGearComponent;
             var start = centred ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
             return shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
         }
@@ -1181,6 +1181,8 @@ namespace Bolsover.Gears.Calculator.Alibre
                     return Export(bevel);
                 case HtdPulleyComponent pulley:
                     return Export(pulley);
+                case CycloidalGearComponent cycloidal:
+                    return Export(cycloidal);
                 default:
                     throw new InvalidOperationException($"Gear '{component.Id}' cannot be exported to Alibre yet.");
             }
@@ -1266,6 +1268,54 @@ namespace Bolsover.Gears.Calculator.Alibre
             catch (Exception ex) when (!(ex is InvalidOperationException))
             {
                 throw new InvalidOperationException($"Alibre export of pulley '{pulley.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Creates a cycloidal gear in a new Alibre part: a closed sketch of the whole gear outline (tip arcs, radial flanks and root arcs of
+        /// every tooth, a reference circle for the pitch diameter and, when set, a circle for the centre hole) on the XY plane, extruded
+        /// mid-plane (half the face width to each side of the plane). The body runs from z = -width / 2 to z = width / 2, so the sketch
+        /// plane is the mid-plane. The gear is made for the wheel or pinion role and the mating tooth count that the gear has.
+        /// </summary>
+        public IADPartSession Export(CycloidalGearComponent gear)
+        {
+            var plan = CycloidalSketchBuilder.Build(gear);
+            if (!plan.IsClosed()) throw new InvalidOperationException($"The outline sketch of cycloidal gear '{gear.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(plan.PartName);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, SketchName);
+
+                stage = "drawing the gear outline";
+                var closed = DrawFigures(sketch, plan.Figures, plan.ReferenceCircles, 1.0, plan.CentreHoleRadius);
+
+                stage = "extruding the gear";
+                IADPartFeature body;
+                try
+                {
+                    // Mid-plane: half the width on each side of the sketch plane, so the gear is centred on z = 0.
+                    body = session.Features.AddExtrudedBoss(sketch, plan.Width, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, ToothFeatureName, "", "");
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the gear outline sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(body, "The extruded gear");
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of cycloidal gear '{gear.Id}' failed while {stage}: {ex.Message}", ex);
             }
         }
 
@@ -1373,7 +1423,7 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <paramref name="ySign"/> mirrors the sketch y coordinates (-1) for a plane whose sketch y axis points the other way.
         /// </summary>
         private static bool DrawFigures(IADSketch sketch, IEnumerable<ToothSketchFigure> profile, IEnumerable<ToothSketchReferenceCircle> referenceCircles,
-            double ySign = 1.0)
+            double ySign = 1.0, double centreHoleRadius = 0.0)
         {
             sketch.BeginChange();
             try
@@ -1410,6 +1460,9 @@ namespace Bolsover.Gears.Calculator.Alibre
                         figures.AddCircle(0.0, 0.0, circle.Radius).IsReference = true;
                     }
                 }
+
+                // A hole through the centre: a closed circle inside the outline, which Alibre extrudes as a hole.
+                if (centreHoleRadius > 0.0) figures.AddCircle(0.0, 0.0, centreHoleRadius);
             }
             finally
             {
