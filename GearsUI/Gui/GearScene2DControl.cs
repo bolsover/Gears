@@ -144,7 +144,7 @@ namespace Bolsover.Gears.Gui
 
                     // A pitch circle is only true to scale when the gear axis is perpendicular to the drawing plane.
                     var axis = item.LocalToWorld.TransformDirection(new Vector3D(0.0, 0.0, 1.0));
-                    if ((item.Component is InvoluteGearComponent || item.Component is HtdPulleyComponent)
+                    if ((item.Component is InvoluteGearComponent || item.Component is HtdPulleyComponent || item.Component is CycloidalGearComponent)
                         && Math.Abs(axis.Z) > 0.999 && item.Component.PitchDiameter > 0)
                     {
                         part.PitchRadius = item.Component.PitchDiameter / 2.0;

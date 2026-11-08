@@ -82,6 +82,31 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 return new GearParameterTable($"{pulley.Name} ({pulley.TypeName})", pulleyRows);
             }
 
+            if (gear is CycloidalGearComponent cycloidal)
+            {
+                var cycloidalRows = new List<GearParameterRow>
+                {
+                    new GearParameterRow("Module", "m", "m", cycloidal.Module, "mm"),
+                    new GearParameterRow("Number of Teeth", "z", "z", cycloidal.Teeth, "-"),
+                    new GearParameterRow("Teeth of Mating Gear", "z_m", "z_m", cycloidal.EffectiveMateTeeth, "-"),
+                    new GearParameterRow("Pair Ratio (Wheel : Pinion)", "i", "z_w / z_p", cycloidal.PairRatio, "-"),
+                    new GearParameterRow("Pitch Diameter", "d", "m z", cycloidal.PitchDiameter, "mm"),
+                    new GearParameterRow("Circular Pitch", "p", "\\pi m", cycloidal.CircularPitch, "mm"),
+                    new GearParameterRow("Addendum", "h_a", "h_a", cycloidal.Addendum, "mm"),
+                    new GearParameterRow("Dedendum", "h_f", "h_f", cycloidal.Dedendum, "mm"),
+                    new GearParameterRow("Addendum Arc Radius", "r_a", "r_a", cycloidal.AddendumRadius, "mm"),
+                    new GearParameterRow("Outside Diameter", "d_a", "d + 2 h_a", cycloidal.OutsideDiameter, "mm"),
+                    new GearParameterRow("Root Diameter", "d_f", "d - 2 h_f", cycloidal.RootDiameter, "mm"),
+                    new GearParameterRow("Face Width (Thickness)", "b", "b", cycloidal.FaceWidth, "mm")
+                };
+                if (cycloidal.CentreHole > 0.0)
+                {
+                    cycloidalRows.Add(new GearParameterRow("Centre Hole", "d_h", "d_h", cycloidal.CentreHole, "mm"));
+                }
+
+                return new GearParameterTable($"{cycloidal.Name} ({cycloidal.TypeName})", cycloidalRows);
+            }
+
             var rows = new List<GearParameterRow>
             {
                 new GearParameterRow("Module", "m", "m", gear.Module, "mm"),

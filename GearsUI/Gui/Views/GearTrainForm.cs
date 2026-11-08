@@ -90,6 +90,16 @@ namespace Bolsover.Gears.Gui.Views
             CheckOnClick = true,
             ToolTipText = "Export Assembly to Alibre also adds a part for every timing belt: a plain strip without teeth, as wide as the belt, placed on the mid-planes of its pulleys."
         };
+        private readonly ToolStripMenuItem _btnExportCycloidal = new ToolStripMenuItem("Export selected gear to &Alibre…")
+        {
+            Enabled = false,
+            ToolTipText = "Create the selected cycloidal gear as a new Alibre part: the whole gear outline (tip arcs, radial flanks and root arcs of every tooth, and the centre hole) sketched on the XY plane and extruded mid-plane to the face width. Available when the editor runs inside Alibre Design."
+        };
+        private readonly ToolStripMenuItem _btnExportCycloidalPair = new ToolStripMenuItem("Export &train to Alibre assembly")
+        {
+            Enabled = false,
+            ToolTipText = "Create a new Alibre assembly from the gear train: every gear, so both the wheel and the pinion of a cycloidal pair, is added as a new part placed at its shaft position. Available when the editor runs inside Alibre Design."
+        };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
@@ -149,6 +159,8 @@ namespace Bolsover.Gears.Gui.Views
                 _btnExportAlibre.Enabled = value != null;
                 _btnExportAlibreAssembly.Enabled = value != null;
                 _btnExportAlibreShaft.Enabled = value != null;
+                _btnExportCycloidal.Enabled = value != null;
+                _btnExportCycloidalPair.Enabled = value != null;
             }
         }
 
@@ -228,6 +240,7 @@ namespace Bolsover.Gears.Gui.Views
             ddStart.DropDownItems.Add("Bevel gear (Gleason)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Gleason)));
             ddStart.DropDownItems.Add("Worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm)));
             ddStart.DropDownItems.Add("Planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()));
+            ddStart.DropDownItems.Add("Cycloidal wheel and pinion", null, (s, e) => RunCommand(() => _presenter.NewCycloidalPair()));
 
             var ddMate = new ToolStripMenuItem("Add m&ate");
             ddMate.DropDownItems.Add("Rack for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack)));
@@ -290,6 +303,28 @@ namespace Bolsover.Gears.Gui.Views
                 new ToolStripMenuItem("HTD profile &data…", null, (s, e) => ShowHtdData())
             });
 
+            var menuCycloidal = new ToolStripMenuItem("&Cycloidal");
+            menuCycloidal.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                new ToolStripMenuItem("&New cycloidal pair (wheel and pinion)", null, (s, e) => RunCommand(() => _presenter.NewCycloidalPair()))
+                {
+                    ToolTipText = "Start a new train with a cycloidal wheel and the pinion that meshes with it. Cycloidal gears are always designed as a pair, so both are drawn together in the 2D and 3D views."
+                },
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("Add &meshed cycloidal gear to selected gear", null, (s, e) => RunCommand(AddCycloidalMateToSelectedGear))
+                {
+                    ToolTipText = "Add a gear that meshes with the selected cycloidal gear on a new shaft: a pinion for a wheel, a wheel for a pinion. Use it repeatedly to add further gears to the train."
+                },
+                new ToolStripMenuItem("Add cycloidal gear to &shaft", null, (s, e) => RunCommand(AddCycloidalGearToSelectedShaft))
+                {
+                    ToolTipText = "Add a compound cycloidal gear next to the gears of the selected shaft (or the shaft of the selected gear): the opposite kind to the last cycloidal gear on the shaft."
+                },
+                new ToolStripMenuItem("&Remove selected", null, (s, e) => _presenter.RemoveSelected()),
+                new ToolStripSeparator(),
+                _btnExportCycloidal,
+                _btnExportCycloidalPair
+            });
+
             var menuView = new ToolStripMenuItem("&View");
             menuView.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -307,6 +342,8 @@ namespace Bolsover.Gears.Gui.Views
             _btnExportAlibre.Click += (s, e) => RunCommand(ExportSelectedGearToAlibre);
             _btnExportAlibreAssembly.Click += (s, e) => RunCommand(ExportAssemblyToAlibre);
             _btnExportAlibreShaft.Click += (s, e) => RunCommand(ExportSelectedShaftToAlibre);
+            _btnExportCycloidal.Click += (s, e) => RunCommand(ExportSelectedCycloidalGearToAlibre);
+            _btnExportCycloidalPair.Click += (s, e) => RunCommand(ExportAssemblyToAlibre);
             btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
             btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
             btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
@@ -327,7 +364,7 @@ namespace Bolsover.Gears.Gui.Views
             menuHelp.DropDownItems.Add("&Help", null, (s, e) => ShowDocument("Help", "README.html"));
             menuHelp.DropDownItems.Add("&License", null, (s, e) => ShowDocument("License", "LICENSE.html"));
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuPulley, menuView, menuSimulation, menuHelp });
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuPulley, menuCycloidal, menuView, menuSimulation, menuHelp });
             MainMenuStrip = menu;
 
             var statusBar = new StatusStrip();
@@ -744,6 +781,13 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} pulley, {2} grooves, {3:0.###} mm pitch diameter) to a new Alibre part.", pulley.Id, pulley.Profile.Name, pulley.Teeth, pulley.PitchDiameter), false);
                     break;
                 }
+                case CycloidalGearComponent cycloidal:
+                {
+                    ShowMessage($"Exporting {cycloidal.Id} to Alibre…", false);
+                    _alibreExporter.Export(cycloidal);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (cycloidal {1}, {2} teeth, module {3:0.###}) to a new Alibre part.", cycloidal.Id, cycloidal.IsPinion ? "pinion" : "wheel", cycloidal.Teeth, cycloidal.Module), false);
+                    break;
+                }
                 case BevelGearComponent bevel:
                 {
                     ShowMessage($"Exporting {bevel.Id} to Alibre…", false);
@@ -762,7 +806,7 @@ namespace Bolsover.Gears.Gui.Views
                     ExportShaftToAlibre(shaft);
                     break;
                 default:
-                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.", true);
+                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.", true);
                     break;
             }
         }
@@ -791,6 +835,43 @@ namespace Bolsover.Gears.Gui.Views
             }
 
             _presenter.AddGearToShaft(shaft);
+        }
+
+        /// <summary>Exports the selected cycloidal gear as a new Alibre part; of a pair, select the wheel or the pinion.</summary>
+        private void ExportSelectedCycloidalGearToAlibre()
+        {
+            if (!(_selected is CycloidalGearComponent))
+            {
+                ShowMessage("Select a cycloidal wheel or pinion in the tree or in the views first.", true);
+                return;
+            }
+
+            ExportSelectedGearToAlibre();
+        }
+
+        private void AddCycloidalMateToSelectedGear()
+        {
+            if (!(_selected is CycloidalGearComponent driver))
+            {
+                ShowMessage("Select the cycloidal gear that the new gear should mesh with.", true);
+                return;
+            }
+
+            _presenter.AddCycloidalMate(driver);
+        }
+
+        private void AddCycloidalGearToSelectedShaft()
+        {
+            Shaft shaft = _selected as Shaft;
+            if (shaft == null && _selected is GearComponent gear) _presenter.Assembly.FindMount(gear, out shaft);
+            if (shaft == null) shaft = _presenter.InputShaft;
+            if (shaft == null)
+            {
+                ShowMessage("Select a shaft first, or start a new cycloidal pair.", true);
+                return;
+            }
+
+            _presenter.AddCycloidalGearToShaft(shaft);
         }
 
         private void AddPulleyToSelectedShaft(HtdSeries series)

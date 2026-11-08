@@ -17,7 +17,10 @@ namespace Bolsover.Gears.Model.Assemblies
         Bevel,
 
         /// <summary>A worm driving a worm wheel on crossed shafts.</summary>
-        Worm
+        Worm,
+
+        /// <summary>A cycloidal wheel and pinion on parallel shafts, at the sum of their pitch radii.</summary>
+        Cycloidal
     }
 
     /// <summary>
