@@ -23,7 +23,16 @@ namespace Bolsover.Gears.Gui.Presenters
     {
         Spur,
         Bevel,
-        Worm
+        Worm,
+
+        /// <summary>A spiral bevel gear (35 degree mean spiral angle, right hand).</summary>
+        SpiralBevel,
+
+        /// <summary>A zerol bevel gear (curved teeth, zero mean spiral angle, right hand).</summary>
+        ZerolBevel,
+
+        /// <summary>The pinion of a hypoid pair, with the offset of a hypoid mate already set.</summary>
+        Hypoid
     }
 
     /// <summary>One node of the assembly tree: assembly, then shafts, then the gears mounted on each shaft.</summary>
@@ -56,6 +65,11 @@ namespace Bolsover.Gears.Gui.Presenters
     public class GearTrainPresenter
     {
         private const double AxialGap = 2.0;
+        private const int DefaultHypoidPinionTeeth = 12;
+        private const int DefaultHypoidGearTeeth = 37;
+
+        /// <summary>Default offset of a hypoid pair: a quarter of the mean pitch radius of the gear (mm).</summary>
+        private static double DefaultHypoidOffset(double module, int gearTeeth) => 0.25 * module * gearTeeth / 2.0;
 
         private readonly IGearTrainView _view;
         private readonly HashSet<GearComponent> _hidden = new HashSet<GearComponent>();
@@ -115,6 +129,26 @@ namespace Bolsover.Gears.Gui.Presenters
                 case GearFamily.Worm:
                     first = new WormComponent("Worm " + (++_gearCounter));
                     break;
+                case GearFamily.SpiralBevel:
+                    first = new SpiralBevelGearComponent("Spiral " + (++_gearCounter)) { Teeth = 20, FaceWidth = 10.0 };
+                    break;
+                case GearFamily.ZerolBevel:
+                    first = new ZerolBevelGearComponent("Zerol " + (++_gearCounter)) { Teeth = 20, FaceWidth = 10.0 };
+                    break;
+                case GearFamily.Hypoid:
+                {
+                    var pinion = new HypoidGearComponent("Pinion " + (++_gearCounter))
+                    {
+                        Teeth = DefaultHypoidPinionTeeth,
+                        MateTeeth = DefaultHypoidGearTeeth,
+                        IsPinion = true,
+                        FaceWidth = 10.0
+                    };
+                    pinion.OffsetMm = DefaultHypoidOffset(pinion.Module, pinion.MateTeeth);
+                    pinion.Hand = SpiralHand.Left;
+                    first = pinion;
+                    break;
+                }
                 default:
                     first = CreateGear(null, 20);
                     break;
@@ -549,6 +583,7 @@ namespace Bolsover.Gears.Gui.Presenters
 
             GearComponent mate;
             var shaftAngle = 0.0;
+            var relationOffset = 0.0;
             switch (meshType)
             {
                 case MeshType.CrossedHelical:
@@ -590,16 +625,67 @@ namespace Bolsover.Gears.Gui.Presenters
                 {
                     var bevel = driver as BevelGearComponent
                                 ?? throw new ArgumentException("Only a bevel gear can mesh with a bevel gear.", nameof(driver));
-                    mate = new BevelGearComponent("Bevel " + (++_gearCounter))
+                    if (bevel is HypoidGearComponent)
                     {
-                        Teeth = teeth > 0 ? teeth : Math.Max(5, bevel.Teeth * 2),
-                        Module = bevel.Module,
-                        PressureAngleDeg = bevel.PressureAngleDeg,
-                        FaceWidth = bevel.FaceWidth,
-                        ShaftAngleDeg = bevel.ShaftAngleDeg,
-                        BevelType = bevel.BevelType,
-                        RackTipRadiusFactor = bevel.RackTipRadiusFactor
+                        throw new ArgumentException("A hypoid gear meshes on a hypoid mesh, with a shaft offset.", nameof(driver));
+                    }
+
+                    // The mate of a spiral or zerol gear is of the same kind with the opposite hand and the same spiral angle and cutter radius.
+                    BevelGearComponent bevelMate;
+                    if (bevel is SpiralBevelGearComponent spiral)
+                    {
+                        SpiralBevelGearComponent spiralMate = spiral is ZerolBevelGearComponent
+                            ? new ZerolBevelGearComponent("Zerol " + (++_gearCounter))
+                            : new SpiralBevelGearComponent("Spiral " + (++_gearCounter));
+                        spiralMate.MeanSpiralAngleDeg = spiral.MeanSpiralAngleDeg;
+                        spiralMate.CutterRadius = spiral.CutterRadius;
+                        spiralMate.Hand = spiral.Hand == SpiralHand.Right ? SpiralHand.Left : SpiralHand.Right;
+                        bevelMate = spiralMate;
+                    }
+                    else
+                    {
+                        bevelMate = new BevelGearComponent("Bevel " + (++_gearCounter));
+                    }
+
+                    bevelMate.Teeth = teeth > 0 ? teeth : Math.Max(5, bevel.Teeth * 2);
+                    bevelMate.Module = bevel.Module;
+                    bevelMate.PressureAngleDeg = bevel.PressureAngleDeg;
+                    bevelMate.FaceWidth = bevel.FaceWidth;
+                    bevelMate.ShaftAngleDeg = bevel.ShaftAngleDeg;
+                    bevelMate.BevelType = bevel.BevelType;
+                    bevelMate.RackTipRadiusFactor = bevel.RackTipRadiusFactor;
+                    mate = bevelMate;
+                    break;
+                }
+                case MeshType.Hypoid:
+                {
+                    var hypoid = driver as HypoidGearComponent
+                                 ?? throw new ArgumentException("Only a hypoid gear can mesh with a hypoid gear.", nameof(driver));
+
+                    // The mate of the pinion is the gear and the other way round; both share the gear's mean module and the pinion's spiral angle.
+                    var mateIsPinion = !hypoid.IsPinion;
+                    var mateTeeth = teeth > 0
+                        ? teeth
+                        : mateIsPinion ? Math.Max(5, (int)Math.Round(hypoid.Teeth / 3.1)) : (int)Math.Round(hypoid.Teeth * 3.1);
+                    var gearTeeth = hypoid.IsPinion ? mateTeeth : hypoid.Teeth;
+                    relationOffset = Math.Abs(hypoid.OffsetMm) > 1e-9 ? hypoid.OffsetMm : DefaultHypoidOffset(hypoid.Module, gearTeeth);
+
+                    var hypoidMate = new HypoidGearComponent((mateIsPinion ? "Pinion " : "Gear ") + (++_gearCounter))
+                    {
+                        IsPinion = mateIsPinion,
+                        Teeth = mateTeeth,
+                        MateTeeth = hypoid.Teeth,
+                        Module = hypoid.Module,
+                        PressureAngleDeg = hypoid.PressureAngleDeg,
+                        FaceWidth = hypoid.FaceWidth,
+                        ShaftAngleDeg = hypoid.ShaftAngleDeg,
+                        MeanSpiralAngleDeg = hypoid.MeanSpiralAngleDeg,
+                        CutterRadius = hypoid.CutterRadius,
+                        RackTipRadiusFactor = hypoid.RackTipRadiusFactor
                     };
+                    hypoid.MateTeeth = mateTeeth;
+                    ApplyHypoidOffset(hypoid, hypoidMate, relationOffset);
+                    mate = hypoidMate;
                     break;
                 }
                 case MeshType.Worm:
@@ -627,7 +713,7 @@ namespace Bolsover.Gears.Gui.Presenters
             Assembly.AddShaft(shaft);
             try
             {
-                Assembly.AddRelation(driver, mate, meshType, angle, shaftAngle);
+                Assembly.AddRelation(driver, mate, meshType, angle, shaftAngle, relationOffset);
             }
             catch
             {
@@ -638,6 +724,81 @@ namespace Bolsover.Gears.Gui.Presenters
             Selected = mate;
             Refresh();
             return mate;
+        }
+
+        /// <summary>The gear that meshes with a bevel gear (spiral, zerol or hypoid included) on a bevel or hypoid mesh; null when there is none.</summary>
+        public GearComponent FindBevelPartner(GearComponent gear)
+        {
+            foreach (var relation in Assembly.Relations)
+            {
+                if (relation.MeshType != MeshType.Bevel && relation.MeshType != MeshType.Hypoid) continue;
+                if (ReferenceEquals(relation.Driver, gear)) return relation.Driven;
+                if (ReferenceEquals(relation.Driven, gear)) return relation.Driver;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Sets the hand of a spiral or zerol gear and the opposite hand on the gear it meshes with. The hands of a hypoid pair follow from the
+        /// side of the offset and cannot be set.
+        /// </summary>
+        public void SetSpiralHand(SpiralBevelGearComponent gear, SpiralHand hand)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+            if (gear is HypoidGearComponent)
+            {
+                throw new InvalidOperationException("The hand of a hypoid gear follows from the side of the offset; change the offset instead.");
+            }
+
+            gear.Hand = hand;
+            if (FindBevelPartner(gear) is SpiralBevelGearComponent partner)
+            {
+                partner.Hand = hand == SpiralHand.Right ? SpiralHand.Left : SpiralHand.Right;
+            }
+        }
+
+        /// <summary>
+        /// Sets the mean spiral angle (degrees; the pinion's for a hypoid pair) and the cutter radius (mm, zero is automatic) of a gear and of the gear
+        /// it meshes with, which must agree. A null value is left as it is.
+        /// </summary>
+        public void SetSpiralParameters(SpiralBevelGearComponent gear, double? meanSpiralAngleDeg, double? cutterRadius)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+            var partner = FindBevelPartner(gear) as SpiralBevelGearComponent;
+            foreach (var g in new[] { gear, partner })
+            {
+                if (g == null) continue;
+                if (meanSpiralAngleDeg.HasValue) g.MeanSpiralAngleDeg = meanSpiralAngleDeg.Value;
+                if (cutterRadius.HasValue) g.CutterRadius = Math.Max(0.0, cutterRadius.Value);
+            }
+        }
+
+        /// <summary>
+        /// Sets the offset of a hypoid pair (mm, positive or negative for the two sides) on the relation and on both gears, and gives the gears the
+        /// hands that the side of the offset needs (the gear right hand and the pinion left hand for a positive offset).
+        /// </summary>
+        public void SetHypoidOffset(HypoidGearComponent gear, double offsetMm)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+            var partner = FindBevelPartner(gear) as HypoidGearComponent;
+            ApplyHypoidOffset(gear, partner, offsetMm);
+            foreach (var relation in Assembly.Relations)
+            {
+                if (relation.MeshType != MeshType.Hypoid) continue;
+                if (ReferenceEquals(relation.Driver, gear) || ReferenceEquals(relation.Driven, gear)) relation.OffsetMm = offsetMm;
+            }
+        }
+
+        private static void ApplyHypoidOffset(HypoidGearComponent first, HypoidGearComponent second, double offsetMm)
+        {
+            foreach (var g in new[] { first, second })
+            {
+                if (g == null) continue;
+                g.OffsetMm = offsetMm;
+                var gearHand = offsetMm >= 0.0 ? SpiralHand.Right : SpiralHand.Left;
+                g.Hand = g.IsPinion ? (gearHand == SpiralHand.Right ? SpiralHand.Left : SpiralHand.Right) : gearHand;
+            }
         }
 
         /// <summary>
@@ -1061,6 +1222,8 @@ namespace Bolsover.Gears.Gui.Presenters
                 if (component is RackComponent rack) return new RackNodeProperties(this, rack, componentMount, relation);
                 if (component is HtdPulleyComponent pulley) return new PulleyNodeProperties(this, pulley, componentMount, relation);
                 if (component is CycloidalGearComponent cycloidal) return new CycloidalNodeProperties(this, cycloidal, componentMount, relation);
+                if (component is HypoidGearComponent hypoid) return new HypoidNodeProperties(this, hypoid, componentMount, relation);
+                if (component is SpiralBevelGearComponent spiral) return new SpiralBevelNodeProperties(this, spiral, componentMount, relation);
                 if (component is BevelGearComponent bevel) return new BevelNodeProperties(this, bevel, componentMount, relation);
                 if (component is WormComponent worm) return new WormNodeProperties(this, worm, componentMount, relation);
                 return new WormWheelNodeProperties(this, (WormWheelComponent)component, componentMount, relation);

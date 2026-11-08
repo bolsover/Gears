@@ -784,7 +784,7 @@ namespace Bolsover.Gears.Gui.Presenters
     }
 
     /// <summary>Editable view of a bevel gear in the property grid.</summary>
-    public sealed class BevelNodeProperties : ComponentNodePropertiesBase
+    public class BevelNodeProperties : ComponentNodePropertiesBase
     {
         private readonly BevelGearComponent _gear;
         private readonly GearTrainPresenter _owner;
@@ -976,6 +976,125 @@ namespace Bolsover.Gears.Gui.Presenters
         [DisplayName("Recommended max face width (mm)")]
         [Description("One third of the cone distance, but not more than ten modules.")]
         public double RecommendedMaxFaceWidth => _gear.RecommendedMaxFaceWidth;
+    }
+
+    /// <summary>
+    /// Editable view of a spiral or zerol bevel gear in the property grid: the bevel gear properties and the tooth trace (spiral angle, hand,
+    /// cutter radius). The values are set on both gears of a pair, and the mate gets the opposite hand.
+    /// </summary>
+    public class SpiralBevelNodeProperties : BevelNodeProperties
+    {
+        private readonly SpiralBevelGearComponent _spiral;
+        private readonly GearTrainPresenter _presenter;
+
+        public SpiralBevelNodeProperties(GearTrainPresenter presenter, SpiralBevelGearComponent gear, ShaftMount mount, GearMeshRelation relation)
+            : base(presenter, gear, mount, relation)
+        {
+            _spiral = gear;
+            _presenter = presenter;
+        }
+
+        [Category("Spiral teeth")]
+        [DisplayName("Mean spiral angle (deg)")]
+        [Description("Spiral angle of the tooth line at the middle of the face, from 0 to 60 degrees (typically 35). It is zero for a zerol gear. For a hypoid pair it is the angle of the pinion. Both gears of a pair have the same angle.")]
+        public double MeanSpiralAngle
+        {
+            get => _spiral.MeanSpiralAngleDeg;
+            set => _presenter.SetSpiralParameters(_spiral, value, null);
+        }
+
+        [Category("Spiral teeth")]
+        [DisplayName("Hand")]
+        [Description("Right: the tooth line advances counter-clockwise from the heel to the toe, looking along the axis towards the apex. The mate gets the opposite hand. The hands of a hypoid pair follow from the side of the offset.")]
+        public SpiralHand Hand
+        {
+            get => _spiral.Hand;
+            set => _presenter.SetSpiralHand(_spiral, value);
+        }
+
+        [Category("Spiral teeth")]
+        [DisplayName("Cutter radius (mm, 0 = automatic)")]
+        [Description("Radius of the face-mill cutter that cuts the tooth line as a circular arc. 0 uses the mean cone distance. It must be large enough to reach the whole face.")]
+        public double CutterRadius
+        {
+            get => _spiral.CutterRadius;
+            set => _presenter.SetSpiralParameters(_spiral, null, value);
+        }
+
+        [Category("Spiral teeth")]
+        [DisplayName("Spiral angle at mid face (deg)")]
+        [Description("The spiral angle of this gear at the middle of the face; it differs from the mean spiral angle for the gear of a hypoid pair.")]
+        public double SpiralAngleAtMidFace => _spiral.EffectiveSpiralAngleDeg;
+
+        [Category("Spiral teeth")]
+        [DisplayName("Transverse pressure angle (deg)")]
+        [Description("tan(transverse) = tan(normal pressure angle) / cos(spiral angle): the angle of the tooth profile in the plane perpendicular to the axis.")]
+        public double TransversePressureAngle => _spiral.TransversePressureAngleDeg;
+    }
+
+    /// <summary>
+    /// Editable view of a hypoid gear in the property grid: the spiral properties, the offset of the shafts and the values of the pair at the
+    /// mean point.
+    /// </summary>
+    public sealed class HypoidNodeProperties : SpiralBevelNodeProperties
+    {
+        private readonly HypoidGearComponent _hypoid;
+        private readonly GearTrainPresenter _presenter;
+
+        public HypoidNodeProperties(GearTrainPresenter presenter, HypoidGearComponent gear, ShaftMount mount, GearMeshRelation relation)
+            : base(presenter, gear, mount, relation)
+        {
+            _hypoid = gear;
+            _presenter = presenter;
+        }
+
+        [Category("Hypoid")]
+        [DisplayName("Offset (mm)")]
+        [Description("Offset of the pinion shaft from the gear shaft along their common perpendicular; it must not be zero and must be smaller than the mean pitch radius of the gear. The sign gives the side: for a positive offset the gear is right hand and the pinion left hand. Changing it sets the hands of both gears.")]
+        public double Offset
+        {
+            get => _hypoid.OffsetMm;
+            set => _presenter.SetHypoidOffset(_hypoid, value);
+        }
+
+        [Category("Hypoid")]
+        [DisplayName("Pinion")]
+        [Description("True for the small gear of the pair.")]
+        public bool IsPinion => _hypoid.IsPinion;
+
+        [Category("Hypoid")]
+        [DisplayName("Offset angle (deg)")]
+        public double OffsetAngle => _hypoid.Pair?.OffsetAngleDeg ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Pinion pitch radius at mean point (mm)")]
+        [Description("Larger than the tooth count suggests: r1 / r2 = z1 cos(beta2) / (z2 cos(beta1)).")]
+        public double PinionPitchRadius => _hypoid.Pair?.PinionPitchRadius ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Gear pitch radius at mean point (mm)")]
+        public double GearPitchRadius => _hypoid.Pair?.GearPitchRadius ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Pinion spiral angle (deg)")]
+        public double PinionSpiralAngle => _hypoid.Pair?.PinionSpiralAngleDeg ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Gear spiral angle (deg)")]
+        public double GearSpiralAngle => _hypoid.Pair?.GearSpiralAngleDeg ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Pinion pitch cone angle (deg)")]
+        public double PinionConeAngle => _hypoid.Pair?.PinionConeAngleDeg ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Gear pitch cone angle (deg)")]
+        public double GearConeAngle => _hypoid.Pair?.GearConeAngleDeg ?? 0.0;
+
+        [Category("Hypoid")]
+        [DisplayName("Mean cone distance (mm)")]
+        [Description("Distance from the apex of this gear to the middle of the face. The apexes of the two gears do not coincide.")]
+        public double MeanConeDistance => _hypoid.MeanConeDistance;
     }
 
     /// <summary>Editable view of a worm in the property grid.</summary>

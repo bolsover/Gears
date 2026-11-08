@@ -11,6 +11,8 @@ All computed lengths and coordinates are given to **7 decimal places**; angles k
 | Spur, helical, internal | `InvoluteGearComponent` | `Parallel` | Parallel shafts. A pair uses `GearParameterCalculator.CalculatePair`. |
 | Rack and pinion | `RackComponent` | `Rack` | A spur or helical pinion drives a straight or helical rack mounted on a carrier shaft. |
 | Bevel | `BevelGearComponent` | `Bevel` | Straight bevel gears, Tredgold approximation, any shaft angle. |
+| Spiral and zerol bevel | `SpiralBevelGearComponent`, `ZerolBevelGearComponent` | `Bevel` | Curved teeth on intersecting shafts; see [spiral, zerol and hypoid bevel gears](spiral-zerol-hypoid-bevel-gears.md). |
+| Hypoid | `HypoidGearComponent` | `Hypoid` | Spiral teeth on offset shafts; the offset is stored on the relation. |
 | Worm and wheel | `WormComponent`, `WormWheelComponent` | `Worm` | Crossed shafts at 90 degrees. |
 | Crossed helical | `InvoluteGearComponent` | `CrossedHelical` | Two helical gears on shafts that are not parallel; the helix angles may differ. |
 | Planetary | `PlanetaryGearSet` | none | Sun, planets, ring and carrier plate; builds an ordinary assembly. |
@@ -114,7 +116,7 @@ A `TimingBelt` joins two pulleys of the same series on different, parallel shaft
 
 ## Gear train editor
 
-The editor (`GearTrainForm`, the main window of the program) starts a train with a spur gear, a bevel gear, a worm or a planetary stage.
+The editor (`GearTrainForm`, the main window of the program) starts a train with a spur gear, a bevel gear (straight, spiral, zerol or hypoid), a worm or a planetary stage.
 *Add meshed gear* adds a parallel gear; *Add mate* adds a rack, bevel gear or worm wheel to the selected gear.
 The *File* menu saves and loads a train as JSON and exports the scene as STL or OBJ. *Animate* turns the input shaft
 at the chosen speed; the report shows speeds in rpm (mm/min for a rack).

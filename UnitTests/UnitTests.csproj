@@ -164,6 +164,12 @@
     <Compile Include="TestImperialUnits.cs" />
     <Compile Include="TestGearScene2D.cs" />
     <Compile Include="TestBevelGearTypes.cs" />
+    <Compile Include="TestSpiralToothTrace.cs" />
+    <Compile Include="TestSpiralBlankMesh.cs" />
+    <Compile Include="TestSpiralBevelGears.cs" />
+    <Compile Include="TestHypoidGeometry.cs" />
+    <Compile Include="TestHypoidMesh.cs" />
+    <Compile Include="TestSpiralBevelEditor.cs" />
     <Compile Include="TestBevelBlankProfile.cs" />
     <Compile Include="TestBevelToothSketch.cs" />
     <Compile Include="TestGearTrainPhases3To7.cs" />

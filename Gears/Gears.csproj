@@ -154,6 +154,8 @@
         <Compile Include="Calculator\GearMesh3DBuilder.cs" />
         <Compile Include="Calculator\GearParameterCalculator.cs" />
         <Compile Include="Calculator\HelicalPairGeometry.cs" />
+        <Compile Include="Calculator\HypoidGeometry.cs" />
+        <Compile Include="Calculator\SpiralToothTrace.cs" />
         <Compile Include="Calculator\LaTeXUtils.cs" />
         <Compile Include="Calculator\NCalcLatexRenderer.cs" />
         <Compile Include="Calculator\Assemblies\GearAssemblySceneBuilder.cs" />
@@ -176,6 +178,8 @@
         <Compile Include="Calculator\Assemblies\ParallelAxisMeshSolver.cs" />
         <Compile Include="Calculator\Assemblies\ICrossedAxisSolver.cs" />
         <Compile Include="Calculator\Assemblies\CrossedHelicalMeshSolver.cs" />
+        <Compile Include="Calculator\Assemblies\IOffsetAxisSolver.cs" />
+        <Compile Include="Calculator\Assemblies\HypoidMeshSolver.cs" />
         <Compile Include="Model\Assemblies\AssemblyScene.cs" />
         <Compile Include="Model\Assemblies\GearAssembly.cs" />
         <Compile Include="Model\Assemblies\GearComponent.cs" />
@@ -205,6 +209,9 @@
         <Compile Include="Model\Assemblies\HtdProfile.cs" />
         <Compile Include="Model\Assemblies\HtdPulleyComponent.cs" />
         <Compile Include="Model\Assemblies\BevelGearComponent.cs" />
+        <Compile Include="Model\Assemblies\SpiralBevelGearComponent.cs" />
+        <Compile Include="Model\Assemblies\ZerolBevelGearComponent.cs" />
+        <Compile Include="Model\Assemblies\HypoidGearComponent.cs" />
         <Compile Include="Model\Assemblies\WormComponent.cs" />
         <Compile Include="Model\Assemblies\WormWheelComponent.cs" />
         <Compile Include="Model\Assemblies\PlanetaryGearSet.cs" />

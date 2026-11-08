@@ -63,7 +63,8 @@ namespace Bolsover.Gears.Model.Assemblies
                     MeshType = relation.MeshType.ToString(),
                     CentreLineAngleDeg = relation.CentreLineAngleDeg,
                     CentreDistance = relation.CentreDistanceOverride,
-                    ShaftAngleDeg = relation.ShaftAngleDeg
+                    ShaftAngleDeg = relation.ShaftAngleDeg,
+                    OffsetMm = relation.OffsetMm
                 });
             }
 
@@ -154,7 +155,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     throw new InvalidDataException($"Unknown mesh type '{relationDto.MeshType}'.");
                 }
 
-                var added = assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg, relationDto.ShaftAngleDeg);
+                var added = assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg, relationDto.ShaftAngleDeg, relationDto.OffsetMm);
                 added.CentreDistanceOverride = relationDto.CentreDistance;
             }
 
@@ -244,6 +245,24 @@ namespace Bolsover.Gears.Model.Assemblies
                         if (g.IsHerringbone) dto.IsHerringbone = true;
                     }
                     break;
+                case HypoidGearComponent g:
+                    dto.Type = "Hypoid";
+                    WriteBevel(dto, g);
+                    WriteSpiral(dto, g);
+                    dto.OffsetMm = g.OffsetMm;
+                    dto.IsPinion = g.IsPinion;
+                    break;
+                case ZerolBevelGearComponent g:
+                    dto.Type = "ZerolBevel";
+                    WriteBevel(dto, g);
+                    dto.CutterRadius = g.CutterRadius;
+                    dto.Hand = g.Hand == SpiralHand.Right ? "R" : "L";
+                    break;
+                case SpiralBevelGearComponent g:
+                    dto.Type = "SpiralBevel";
+                    WriteBevel(dto, g);
+                    WriteSpiral(dto, g);
+                    break;
                 case BevelGearComponent g:
                     dto.Type = "Bevel";
                     dto.Teeth = g.Teeth;
@@ -309,6 +328,48 @@ namespace Bolsover.Gears.Model.Assemblies
             return dto;
         }
 
+        private static void WriteBevel(GearDto dto, BevelGearComponent g)
+        {
+            dto.Teeth = g.Teeth;
+            dto.MateTeeth = g.MateTeeth;
+            dto.ShaftAngleDeg = g.ShaftAngleDeg;
+            dto.Backlash = g.Backlash;
+            dto.BevelType = g.BevelType.ToString();
+            dto.RackTipRadiusFactor = g.RackTipRadiusFactor;
+            dto.BoreDiameter = g.BoreDiameter;
+            dto.HasHub = g.HasHub;
+            dto.HubDiameter = g.HubDiameter;
+            dto.HubLength = g.HubLength;
+        }
+
+        private static void WriteSpiral(GearDto dto, SpiralBevelGearComponent g)
+        {
+            dto.MeanSpiralAngleDeg = g.MeanSpiralAngleDeg;
+            dto.CutterRadius = g.CutterRadius;
+            dto.Hand = g.Hand == SpiralHand.Right ? "R" : "L";
+        }
+
+        private static void ReadBevel(GearDto dto, BevelGearComponent g)
+        {
+            g.Teeth = dto.Teeth ?? 20;
+            g.MateTeeth = dto.MateTeeth ?? 0;
+            g.ShaftAngleDeg = dto.ShaftAngleDeg ?? 90.0;
+            g.Backlash = dto.Backlash ?? 0.0;
+            g.BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard;
+            g.RackTipRadiusFactor = dto.RackTipRadiusFactor ?? 0.0;
+            g.BoreDiameter = dto.BoreDiameter ?? 0.0;
+            g.HasHub = dto.HasHub ?? true;
+            g.HubDiameter = dto.HubDiameter ?? 0.0;
+            g.HubLength = dto.HubLength ?? 0.0;
+        }
+
+        private static void ReadSpiral(GearDto dto, SpiralBevelGearComponent g, double defaultSpiralAngleDeg)
+        {
+            g.MeanSpiralAngleDeg = dto.MeanSpiralAngleDeg ?? defaultSpiralAngleDeg;
+            g.CutterRadius = dto.CutterRadius ?? 0.0;
+            g.Hand = string.Equals(dto.Hand, "L", StringComparison.OrdinalIgnoreCase) ? SpiralHand.Left : SpiralHand.Right;
+        }
+
         private static GearComponent FromDto(GearDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Id)) throw new InvalidDataException("A gear in the file has no identifier.");
@@ -358,6 +419,32 @@ namespace Bolsover.Gears.Model.Assemblies
                         HubLength = dto.HubLength ?? 0.0
                     };
                     break;
+                case "SpiralBevel":
+                {
+                    var spiral = new SpiralBevelGearComponent(dto.Id);
+                    ReadBevel(dto, spiral);
+                    ReadSpiral(dto, spiral, 35.0);
+                    component = spiral;
+                    break;
+                }
+                case "ZerolBevel":
+                {
+                    var zerol = new ZerolBevelGearComponent(dto.Id);
+                    ReadBevel(dto, zerol);
+                    ReadSpiral(dto, zerol, 0.0);
+                    component = zerol;
+                    break;
+                }
+                case "Hypoid":
+                {
+                    var hypoid = new HypoidGearComponent(dto.Id);
+                    ReadBevel(dto, hypoid);
+                    ReadSpiral(dto, hypoid, 45.0);
+                    hypoid.OffsetMm = dto.OffsetMm ?? 0.0;
+                    hypoid.IsPinion = dto.IsPinion ?? false;
+                    component = hypoid;
+                    break;
+                }
                 case "Worm":
                     component = new WormComponent(dto.Id)
                     {
@@ -495,6 +582,15 @@ namespace Bolsover.Gears.Model.Assemblies
             public bool? CustomSlopEnabled { get; set; }
             public double? CustomSlop { get; set; }
             public double? CentreHole { get; set; }
+
+            /// <summary>Spiral, zerol and hypoid bevel gears: the mean spiral angle (degrees; the pinion's for a hypoid pair), the cutter radius (mm, zero is automatic) and the hand ("R" or "L").</summary>
+            public double? MeanSpiralAngleDeg { get; set; }
+            public double? CutterRadius { get; set; }
+            public string Hand { get; set; }
+
+            /// <summary>Hypoid gears: the offset of the pinion axis (mm) and whether this is the pinion.</summary>
+            public double? OffsetMm { get; set; }
+            public bool? IsPinion { get; set; }
         }
 
         private sealed class RelationDto
@@ -509,6 +605,9 @@ namespace Bolsover.Gears.Model.Assemblies
 
             /// <summary>Angle between the two shafts (degrees) of a crossed helical mesh; absent (0) in older files and for the other mesh types.</summary>
             public double ShaftAngleDeg { get; set; }
+
+            /// <summary>Offset between the shafts (mm) of a hypoid mesh; absent (0) in older files and for the other mesh types.</summary>
+            public double OffsetMm { get; set; }
         }
     }
 }

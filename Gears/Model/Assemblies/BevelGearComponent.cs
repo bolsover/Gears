@@ -90,11 +90,17 @@ namespace Bolsover.Gears.Model.Assemblies
         /// </summary>
         public double HubLength { get; set; }
 
+        /// <summary>
+        /// The module that the tooth depth is based on (mm). It is the module for a straight bevel gear; a hypoid pinion has the tooth depth
+        /// of the gear although its transverse module is larger.
+        /// </summary>
+        protected virtual double DepthModule => Module;
+
         /// <summary>Bottom clearance (mm): 0.25 m (Standard) or 0.188 m + 0.051 mm (Gleason).</summary>
-        public double Clearance => BevelType == BevelGearType.Gleason ? 0.188 * Module + GleasonDepthConstant : 0.25 * Module;
+        public double Clearance => BevelType == BevelGearType.Gleason ? 0.188 * DepthModule + GleasonDepthConstant : 0.25 * DepthModule;
 
         /// <summary>Whole tooth depth at the large end (mm): 2 m + clearance.</summary>
-        public double WholeDepth => 2.0 * Module + Clearance;
+        public double WholeDepth => 2.0 * DepthModule + Clearance;
 
         /// <summary>
         /// Ratio of the virtual tooth numbers of this gear and its mate, <c>(z / cos delta) / (zMate / cos deltaMate)</c>.
@@ -121,10 +127,10 @@ namespace Bolsover.Gears.Model.Assemblies
         {
             get
             {
-                if (BevelType != BevelGearType.Gleason) return Module;
+                if (BevelType != BevelGearType.Gleason) return DepthModule;
                 var q = VirtualToothRatio;
-                if (q >= 1.0) return Module * (0.54 + 0.46 / q);
-                return Module * (2.0 - 0.54 - 0.46 * q);
+                if (q >= 1.0) return DepthModule * (0.54 + 0.46 / q);
+                return DepthModule * (2.0 - 0.54 - 0.46 * q);
             }
         }
 
@@ -132,7 +138,7 @@ namespace Bolsover.Gears.Model.Assemblies
         public double Dedendum => WholeDepth - Addendum;
 
         /// <summary>Profile shift of the virtual spur gear in mm: the addendum less the module (zero for Standard).</summary>
-        public double ProfileShiftMm => Addendum - Module;
+        public double ProfileShiftMm => Addendum - DepthModule;
 
         public override int ToothCount => Teeth;
 
@@ -141,10 +147,11 @@ namespace Bolsover.Gears.Model.Assemblies
 
         public override string TypeName => "Bevel gear";
 
-        private int EffectiveMateTeeth => MateTeeth > 0 ? MateTeeth : Teeth;
+        /// <summary>Tooth count of the mating gear, or of this gear when no mate count is set.</summary>
+        protected int EffectiveMateTeeth => MateTeeth > 0 ? MateTeeth : Teeth;
 
         /// <summary>Pitch cone half angle in radians: tan(delta) = sin(sigma) / (z_mate / z + cos(sigma)).</summary>
-        public double PitchConeAngleRad
+        public virtual double PitchConeAngleRad
         {
             get
             {
@@ -156,7 +163,7 @@ namespace Bolsover.Gears.Model.Assemblies
         public double PitchConeAngleDeg => PitchConeAngleRad * 180.0 / Math.PI;
 
         /// <summary>Distance from the cone apex to the pitch circle at the large end (mm).</summary>
-        public double ConeDistance => PitchDiameter / 2.0 / Math.Sin(PitchConeAngleRad);
+        public virtual double ConeDistance => PitchDiameter / 2.0 / Math.Sin(PitchConeAngleRad);
 
         /// <summary>Position of the cone apex along the gear axis, from the face mid-plane (mm).</summary>
         public double ApexAxialPosition => Math.Cos(PitchConeAngleRad) * (ConeDistance - FaceWidth / 2.0);
@@ -299,12 +306,18 @@ namespace Bolsover.Gears.Model.Assemblies
         public double BlankAxialOffset => -FaceWidth * Math.Cos(PitchConeAngleRad) / 2.0;
 
         /// <summary>The closed profile sketch of the gear blank, with the proportions of this gear and its mate.</summary>
-        public BevelBlankProfile CreateBlankProfile()
+        public virtual BevelBlankProfile CreateBlankProfile()
         {
             return new BevelBlankProfile(Teeth, EffectiveMateTeeth, Module, FaceWidth, ShaftAngleDeg, bevelType: BevelType);
         }
 
-        public void Validate()
+        /// <summary>The tooth trace along the face: a cone element for a straight bevel gear. It is in the local frame (counter-clockwise about +Z for the right hand).</summary>
+        protected virtual SpiralToothTrace CreateTrace(BevelBlankProfile blank) => SpiralToothTrace.Straight;
+
+        /// <summary>Pressure angle (degrees) of the tooth profile in the plane perpendicular to the axis: the pressure angle for a straight bevel gear.</summary>
+        protected virtual double TransverseProfilePressureAngleDeg => PressureAngleDeg;
+
+        public virtual void Validate()
         {
             if (Teeth < 5) throw new InvalidOperationException($"Bevel gear '{Id}': the number of teeth must be at least 5.");
             if (Module <= 0) throw new InvalidOperationException($"Bevel gear '{Id}': the module must be positive.");
@@ -373,7 +386,12 @@ namespace Bolsover.Gears.Model.Assemblies
             // The solid is the blank revolved about its axis with the Tredgold tooth valleys cut and patterned (see BevelBlankProfile and
             // BevelToothSketch). The blank frame has its axis along X and the cone apex towards negative X.
             var blank = CreateBlankProfile();
-            var sketch = new BevelToothSketch(blank, PressureAngleDeg, rackTipRadiusFactor: RackTipRadiusFactor, backlash: Backlash);
+            var sketch = new BevelToothSketch(blank, TransverseProfilePressureAngleDeg, rackTipRadiusFactor: RackTipRadiusFactor, backlash: Backlash);
+
+            // The blank frame turns the opposite way round the axis to the local frame (y = -z below), so the trace is handed the other way.
+            var trace = CreateTrace(blank);
+            var blankTrace = trace.WithHand(!trace.RightHand);
+            var heelTwist = trace.TwistAt(blank.ConeDistance, blank.PitchConeAngleRad);
 
             // The bore and the hub are limited so that they stay inside the root of the teeth.
             var bore = Math.Min(EffectiveBoreDiameter / 2.0, 0.9 * blank.PointH.Y);
@@ -381,7 +399,7 @@ namespace Bolsover.Gears.Model.Assemblies
             var hubLength = EffectiveHubLength;
             if (hubRadius > 0.95 * blank.PointD.Y) hubRadius = 0.95 * blank.PointD.Y;
             var hasHub = hubRadius > bore && hubLength > 0.0;
-            var blankMesh = blank.BuildToothedMesh(sketch, 0, bore, hasHub ? hubRadius : 0.0, hasHub ? hubLength : 0.0);
+            var blankMesh = blank.BuildToothedMesh(sketch, 0, bore, hasHub ? hubRadius : 0.0, hasHub ? hubLength : 0.0, blankTrace);
 
             // Into the local frame: the axis is Z with the apex on +Z, a proper rotation (x, y, z) -> (y, -z, -x) plus the axial shift. The
             // turn by half a pitch puts a tooth, not a valley, on the +X axis like the other gears, which the mesh phase assumes.
@@ -406,7 +424,7 @@ namespace Bolsover.Gears.Model.Assemblies
             foreach (var point in sketch.BuildOutline(Teeth))
             {
                 var radius = blank.BackConePoint(point.Radius).Y;
-                var angle = -point.Angle / cosDelta + phase;
+                var angle = -point.Angle / cosDelta + phase + heelTwist;
                 outline.Add(new GearPoint(radius * Math.Cos(angle), radius * Math.Sin(angle)));
             }
 

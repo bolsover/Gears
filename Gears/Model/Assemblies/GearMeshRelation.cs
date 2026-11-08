@@ -23,7 +23,10 @@ namespace Bolsover.Gears.Model.Assemblies
         Cycloidal,
 
         /// <summary>Helical gears on crossed (non-parallel) shafts. The gears may have different helix angles; the shaft angle is stored on the relation.</summary>
-        CrossedHelical
+        CrossedHelical,
+
+        /// <summary>Hypoid gears (spiral teeth on shafts that do not intersect); the offset between the shafts is stored on the relation.</summary>
+        Hypoid
     }
 
     /// <summary>
@@ -64,6 +67,12 @@ namespace Bolsover.Gears.Model.Assemblies
         /// opposite hands). Zero for the other mesh types.
         /// </summary>
         public double ShaftAngleDeg { get; set; }
+
+        /// <summary>
+        /// Offset of the pinion shaft from the gear shaft in mm, along the common perpendicular of the two shafts; positive or negative for the two sides.
+        /// Only a <see cref="Assemblies.MeshType.Hypoid"/> mesh uses it, and it must not be zero. Zero for the other mesh types.
+        /// </summary>
+        public double OffsetMm { get; set; }
 
         /// <summary>The solved centre distance, phase and pair data; null until the assembly has been solved.</summary>
         public MeshResult Result { get; internal set; }

@@ -52,8 +52,12 @@ namespace Bolsover.Gears.Calculator
         /// <param name="dedendumFactor">Dedendum as a multiple of the module (standard 1.25).</param>
         /// <param name="bevelType">Tooth system. For <see cref="BevelGearType.Gleason"/> the addendum and dedendum follow the Gleason
         /// formulas (long pinion addendum, short gear addendum, whole depth 2.188 m + 0.051 mm) and the two factors are ignored.</param>
+        /// <param name="depthModule">Module that the tooth depth is based on (addendum, dedendum, clearance); zero means <paramref name="module"/>.
+        /// A hypoid pinion has a larger transverse module than its mate but the same tooth depth.</param>
+        /// <param name="pitchConeAngleOverrideRad">Pitch cone angle in radians that replaces the one the tooth counts and the shaft angle give (hypoid pairs).</param>
         public BevelBlankProfile(int teeth, int mateTeeth, double module, double faceWidth, double shaftAngleDeg = 90.0,
-            double addendumFactor = 1.0, double dedendumFactor = 1.25, BevelGearType bevelType = BevelGearType.Standard)
+            double addendumFactor = 1.0, double dedendumFactor = 1.25, BevelGearType bevelType = BevelGearType.Standard,
+            double depthModule = 0.0, double? pitchConeAngleOverrideRad = null)
         {
             if (teeth < 1) throw new ArgumentException("The gear needs at least one tooth.", nameof(teeth));
             if (mateTeeth < 1) throw new ArgumentException("The mating gear needs at least one tooth.", nameof(mateTeeth));
@@ -71,27 +75,32 @@ namespace Bolsover.Gears.Calculator
             PitchDiameter = module * teeth;
 
             var sigma = shaftAngleDeg * Math.PI / 180.0;
-            PitchConeAngleRad = Math.Atan2(Math.Sin(sigma), (double)mateTeeth / teeth + Math.Cos(sigma));
+            PitchConeAngleRad = pitchConeAngleOverrideRad ?? Math.Atan2(Math.Sin(sigma), (double)mateTeeth / teeth + Math.Cos(sigma));
+            if (pitchConeAngleOverrideRad.HasValue && !(PitchConeAngleRad > 0.0 && PitchConeAngleRad < Math.PI / 2.0 + 1e-9))
+            {
+                throw new ArgumentException("The pitch cone angle must be between 0 and 90 degrees.", nameof(pitchConeAngleOverrideRad));
+            }
             BackConeAngleRad = Math.PI / 2.0 - PitchConeAngleRad;
+            var depthBase = depthModule > 0.0 ? depthModule : module;
 
             if (bevelType == BevelGearType.Gleason)
             {
                 var mateCone = sigma - PitchConeAngleRad;
                 if (!(Math.Cos(mateCone) > 1e-9)) throw new ArgumentException("The Gleason proportions need a mating pitch cone angle below 90 degrees.", nameof(shaftAngleDeg));
                 VirtualToothRatio = (teeth / Math.Cos(PitchConeAngleRad)) / (mateTeeth / Math.Cos(mateCone));
-                Clearance = GleasonClearanceFactor * module + BevelGearComponent.GleasonDepthConstant;
-                WholeDepth = 2.0 * module + Clearance;
-                Addendum = GleasonAddendum(module, VirtualToothRatio);
+                Clearance = GleasonClearanceFactor * depthBase + BevelGearComponent.GleasonDepthConstant;
+                WholeDepth = 2.0 * depthBase + Clearance;
+                Addendum = GleasonAddendum(depthBase, VirtualToothRatio);
                 Dedendum = WholeDepth - Addendum;
-                ProfileShift = Addendum - module;
+                ProfileShift = Addendum - depthBase;
             }
             else
             {
                 VirtualToothRatio = 1.0;
-                Addendum = addendumFactor * module;
-                Dedendum = dedendumFactor * module;
+                Addendum = addendumFactor * depthBase;
+                Dedendum = dedendumFactor * depthBase;
                 WholeDepth = Addendum + Dedendum;
-                Clearance = WholeDepth - 2.0 * module;
+                Clearance = WholeDepth - 2.0 * depthBase;
                 ProfileShift = 0.0;
             }
 
@@ -206,6 +215,38 @@ namespace Bolsover.Gears.Calculator
         /// <summary>The point at the toe that corresponds to a point at the heel: a scaling about the apex (pointB).</summary>
         public BevelBlankPoint ToToe(BevelBlankPoint heel) => PointB + (heel - PointB) * ToeScale;
 
+        /// <summary>The point of a section that corresponds to a point at the heel: a scaling about the apex (pointB) by <paramref name="scale"/> (1 at the heel, <see cref="ToeScale"/> at the toe).</summary>
+        public BevelBlankPoint ToSection(BevelBlankPoint heel, double scale) => PointB + (heel - PointB) * scale;
+
+        /// <summary>Pitch cone distance at the middle of the face: the cone distance at which a spiral tooth trace has its mean spiral angle.</summary>
+        public double MeanConeDistance => ConeDistance * (1.0 + ToeScale) / 2.0;
+
+        /// <summary>Default number of sections between heel and toe for curved teeth.</summary>
+        public const int DefaultSections = 8;
+
+        /// <summary>Largest number of sections between heel and toe.</summary>
+        public const int MaxSections = 24;
+
+        /// <summary>Twist (rad) about the axis of the section at the given scale about the apex (1 at the heel, <see cref="ToeScale"/> at the toe).</summary>
+        public double TwistAtScale(SpiralToothTrace trace, double scale)
+        {
+            if (trace == null) throw new ArgumentNullException(nameof(trace));
+            return trace.TwistAt(ConeDistance * scale, PitchConeAngleRad);
+        }
+
+        /// <summary>
+        /// Number of sections between heel and toe for a trace: one for a straight trace (heel and toe only), otherwise at least
+        /// <see cref="DefaultSections"/>, more when the twist between two sections would exceed a quarter of the tooth pitch.
+        /// </summary>
+        public int SectionCountFor(SpiralToothTrace trace)
+        {
+            if (trace == null || trace.IsStraight) return 1;
+            var span = Math.Abs(TwistAtScale(trace, 1.0) - TwistAtScale(trace, ToeScale));
+            var quarterPitch = 2.0 * Math.PI / Teeth / 4.0;
+            var needed = (int)Math.Ceiling(span / quarterPitch);
+            return Math.Min(MaxSections, Math.Max(DefaultSections, needed));
+        }
+
         /// <summary>Revolves a sketch point about the X axis into 3D (Y radial at angle 0, rotating towards Z).</summary>
         public static GearPoint3D Revolve(BevelBlankPoint p, double angleRad) => new GearPoint3D(p.X, p.Y * Math.Cos(angleRad), p.Y * Math.Sin(angleRad));
 
@@ -222,7 +263,12 @@ namespace Bolsover.Gears.Calculator
         /// <param name="boreRadius">Radius of a bore through the blank along the axis; zero for none. It must be smaller than the root radius at the toe.</param>
         /// <param name="hubRadius">Radius of a hub standing out of the back face; zero or a value not above the bore radius for none.</param>
         /// <param name="hubLength">Length of the hub behind the back face, along the axis.</param>
-        public GearMesh3DBuilder.Mesh3D BuildToothedMesh(BevelToothSketch sketch, int valleys = 0, double boreRadius = 0.0, double hubRadius = 0.0, double hubLength = 0.0)
+        /// <param name="trace">The tooth trace. Null or <see cref="SpiralToothTrace.Straight"/> gives straight teeth built from the heel and toe rings
+        /// only; a spiral trace sweeps the valley profile through several sections, each scaled about pointB and turned about the axis by the
+        /// twist of the trace at its cone distance.</param>
+        /// <param name="sections">Number of sections between heel and toe for a spiral trace; zero or less chooses it with <see cref="SectionCountFor"/>.</param>
+        public GearMesh3DBuilder.Mesh3D BuildToothedMesh(BevelToothSketch sketch, int valleys = 0, double boreRadius = 0.0, double hubRadius = 0.0, double hubLength = 0.0,
+            SpiralToothTrace trace = null, int sections = 0)
         {
             if (sketch == null) throw new ArgumentNullException(nameof(sketch));
             if (!ReferenceEquals(sketch.Profile, this)) throw new ArgumentException("The sketch belongs to a different blank.", nameof(sketch));
@@ -242,10 +288,38 @@ namespace Bolsover.Gears.Calculator
                 angles[i] = outline[i].Angle / cosDelta;
             }
 
-            GearPoint3D[] Ring(BevelBlankPoint p)
+            trace = trace ?? SpiralToothTrace.Straight;
+            var sectionCount = trace.IsStraight ? 1 : (sections > 0 ? sections : SectionCountFor(trace));
+            if (sectionCount > MaxSections) throw new ArgumentException($"At most {MaxSections} sections are supported.", nameof(sections));
+            var scales = new double[sectionCount + 1];
+            var twists = new double[sectionCount + 1];
+            for (var k = 0; k <= sectionCount; k++)
+            {
+                scales[k] = 1.0 + (ToeScale - 1.0) * k / sectionCount;
+                twists[k] = trace.IsStraight ? 0.0 : TwistAtScale(trace, scales[k]);
+            }
+
+            if (!trace.IsStraight)
+            {
+                // Between two sections a tooth must not turn by more than half a pitch, or the ruled flanks fold over.
+                var halfPitch = 2.0 * Math.PI / Teeth / 2.0;
+                for (var k = 0; k < sectionCount; k++)
+                {
+                    if (Math.Abs(twists[k + 1] - twists[k]) >= halfPitch)
+                    {
+                        throw new InvalidOperationException(
+                            "The spiral twist between two sections is more than half a tooth pitch, so the tooth flanks would fold over: use a smaller spiral angle or a narrower face.");
+                    }
+                }
+            }
+
+            var heelTwist = twists[0];
+            var toeTwist = twists[sectionCount];
+
+            GearPoint3D[] Ring(BevelBlankPoint p, double twist)
             {
                 var ring = new GearPoint3D[count];
-                for (var i = 0; i < count; i++) ring[i] = Revolve(p, angles[i]);
+                for (var i = 0; i < count; i++) ring[i] = Revolve(p, angles[i] + twist);
                 return ring;
             }
 
@@ -256,31 +330,35 @@ namespace Bolsover.Gears.Calculator
             if (hasHub)
             {
                 first = new BevelBlankPoint(PointD.X + hubLength, boreRadius);
-                rings.Add(Ring(first));
-                rings.Add(Ring(new BevelBlankPoint(PointD.X + hubLength, hubRadius)));
-                rings.Add(Ring(new BevelBlankPoint(PointD.X, hubRadius)));
+                rings.Add(Ring(first, heelTwist));
+                rings.Add(Ring(new BevelBlankPoint(PointD.X + hubLength, hubRadius), heelTwist));
+                rings.Add(Ring(new BevelBlankPoint(PointD.X, hubRadius), heelTwist));
             }
             else
             {
                 first = new BevelBlankPoint(PointD.X, boreRadius);
-                rings.Add(Ring(first));
+                rings.Add(Ring(first, heelTwist));
             }
 
-            rings.Add(Ring(PointD));
-            var heel = new GearPoint3D[count];
-            var toe = new GearPoint3D[count];
-            for (var i = 0; i < count; i++)
+            rings.Add(Ring(PointD, heelTwist));
+
+            // The heel ring, the sections in between and the toe ring: the valley profile scaled about the apex and turned by the twist.
+            for (var k = 0; k <= sectionCount; k++)
             {
-                var onBackCone = BackConePoint(outline[i].Radius);
-                heel[i] = Revolve(onBackCone, angles[i]);
-                toe[i] = Revolve(ToToe(onBackCone), angles[i]);
+                var section = new GearPoint3D[count];
+                for (var i = 0; i < count; i++)
+                {
+                    var onBackCone = BackConePoint(outline[i].Radius);
+                    var p = k == 0 ? onBackCone : k == sectionCount ? ToToe(onBackCone) : ToSection(onBackCone, scales[k]);
+                    section[i] = Revolve(p, angles[i] + twists[k]);
+                }
+
+                rings.Add(section);
             }
 
-            rings.Add(heel);
-            rings.Add(toe);
-            rings.Add(Ring(PointH));
+            rings.Add(Ring(PointH, toeTwist));
             var last = new BevelBlankPoint(PointH.X, boreRadius);
-            rings.Add(Ring(last));
+            rings.Add(Ring(last, toeTwist));
 
             var mesh = new GearMesh3DBuilder.Mesh3D();
             for (var r = 0; r + 1 < rings.Count; r++) AddBand(mesh, rings[r], rings[r + 1]);

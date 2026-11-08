@@ -238,13 +238,19 @@ namespace Bolsover.Gears.Gui.Views
             ddStart.DropDownItems.Add("Spur gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Spur)));
             ddStart.DropDownItems.Add("Bevel gear (standard)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Standard)));
             ddStart.DropDownItems.Add("Bevel gear (Gleason)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Gleason)));
+            ddStart.DropDownItems.Add("Spiral bevel gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.SpiralBevel)));
+            ddStart.DropDownItems.Add("Zerol bevel gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.ZerolBevel)));
+            ddStart.DropDownItems.Add("Hypoid pinion", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Hypoid)));
             ddStart.DropDownItems.Add("Worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm)));
             ddStart.DropDownItems.Add("Planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()));
             ddStart.DropDownItems.Add("Cycloidal wheel and pinion", null, (s, e) => RunCommand(() => _presenter.NewCycloidalPair()));
 
             var ddMate = new ToolStripMenuItem("Add m&ate");
             ddMate.DropDownItems.Add("Rack for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack)));
-            ddMate.DropDownItems.Add("Bevel gear for the selected bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)));
+            var bevelItem = ddMate.DropDownItems.Add("Bevel gear for the selected bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)));
+            bevelItem.ToolTipText = "Add the mate of the selected straight, spiral or zerol bevel gear. The mate of a spiral or zerol gear has the opposite hand and the same spiral angle and cutter radius.";
+            var hypoidItem = ddMate.DropDownItems.Add("Hypoid gear or pinion for the selected hypoid gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Hypoid)));
+            hypoidItem.ToolTipText = "Add the gear for a hypoid pinion, or the pinion for a hypoid gear, on a shaft offset from the selected one. Change the offset in the properties; its sign sets the hands.";
             ddMate.DropDownItems.Add("Worm wheel for the selected worm", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Worm)));
             var crossedItem = ddMate.DropDownItems.Add("Helical gear on crossed shafts for the selected gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.CrossedHelical)));
             crossedItem.ToolTipText = "Add a helical gear whose shaft is not parallel to the shaft of the selected helical gear. It gets the same hand and the helix angle that puts the shafts at 90 degrees; change the helix angles and the shaft angle in the properties.";
@@ -790,6 +796,9 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (cycloidal {1}, {2} teeth, module {3:0.###}) to a new Alibre part.", cycloidal.Id, cycloidal.IsPinion ? "pinion" : "wheel", cycloidal.Teeth, cycloidal.Module), false);
                     break;
                 }
+                case SpiralBevelGearComponent curved:
+                    ShowMessage($"The {curved.TypeName.ToLowerInvariant()} {curved.Id} cannot be exported to Alibre: its curved teeth need more than the heel and toe loft of the straight bevel export. Use the STL or OBJ export instead.", true);
+                    break;
                 case BevelGearComponent bevel:
                 {
                     ShowMessage($"Exporting {bevel.Id} to Alibre…", false);

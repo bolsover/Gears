@@ -336,6 +336,13 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// </summary>
         public IADPartSession Export(BevelGearComponent gear)
         {
+            if (gear is SpiralBevelGearComponent)
+            {
+                throw new NotSupportedException(
+                    $"The {gear.TypeName.ToLowerInvariant()} '{gear.Id}' cannot be exported to Alibre: its curved teeth cannot be made by the heel and toe loft " +
+                    "that the Alibre export uses for straight bevel gears. Use the STL or OBJ export of the 3D model instead.");
+            }
+
             var plan = BevelGearSketch.Build(gear);
 
             var stage = "creating the part";

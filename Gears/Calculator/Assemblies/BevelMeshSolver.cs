@@ -35,6 +35,41 @@ namespace Bolsover.Gears.Calculator.Assemblies
                     $"Bevel gears '{g1.Id}' and '{g2.Id}' cannot mesh: pressure angles differ ({g1.PressureAngleDeg} and {g2.PressureAngleDeg}).");
             }
 
+            if (g1 is HypoidGearComponent || g2 is HypoidGearComponent)
+            {
+                throw new InvalidOperationException(
+                    $"Gears '{g1.Id}' and '{g2.Id}' cannot mesh on a bevel mesh: hypoid gears need a hypoid mesh with a shaft offset.");
+            }
+
+            if (g1.GetType() != g2.GetType())
+            {
+                throw new InvalidOperationException(
+                    $"Bevel gears '{g1.Id}' and '{g2.Id}' cannot mesh: they are a {g1.TypeName.ToLowerInvariant()} and a {g2.TypeName.ToLowerInvariant()}; " +
+                    $"the mate of a {g1.TypeName.ToLowerInvariant()} is a {g1.TypeName.ToLowerInvariant()}.");
+            }
+
+            if (g1 is SpiralBevelGearComponent s1 && g2 is SpiralBevelGearComponent s2)
+            {
+                if (!GearPrecision.AreEqual(s1.MeanSpiralAngleDeg, s2.MeanSpiralAngleDeg))
+                {
+                    throw new InvalidOperationException(
+                        $"Bevel gears '{g1.Id}' and '{g2.Id}' cannot mesh: mean spiral angles differ ({s1.MeanSpiralAngleDeg} and {s2.MeanSpiralAngleDeg}); expected {s1.MeanSpiralAngleDeg}.");
+                }
+
+                if (!GearPrecision.AreEqual(s1.CutterRadius, s2.CutterRadius))
+                {
+                    throw new InvalidOperationException(
+                        $"Bevel gears '{g1.Id}' and '{g2.Id}' cannot mesh: cutter radii differ ({s1.CutterRadius} and {s2.CutterRadius}); expected {s1.CutterRadius}.");
+                }
+
+                if (s1.Hand == s2.Hand)
+                {
+                    var expected = s1.Hand == SpiralHand.Right ? SpiralHand.Left : SpiralHand.Right;
+                    throw new InvalidOperationException(
+                        $"Bevel gears '{g1.Id}' and '{g2.Id}' cannot mesh: both have {s1.Hand} hand teeth; the mate of a {s1.Hand} hand gear must be {expected} hand.");
+                }
+            }
+
             // The cone angles depend on the pair, so both gears are configured from it.
             g1.MateTeeth = g2.Teeth;
             g2.MateTeeth = g1.Teeth;
