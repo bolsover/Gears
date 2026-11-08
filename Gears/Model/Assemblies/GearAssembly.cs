@@ -291,6 +291,16 @@ namespace Bolsover.Gears.Model.Assemblies
         /// Places the shaft of the pulley that is not yet placed from the other one, at the centre distance of the belt along its line of
         /// centres with the mid-planes in line, and turns it at the ratio of the grooves, in the same direction. Returns false when neither
         /// shaft is placed yet.
+        /// <para>
+        /// The rotation of the new shaft also registers the belt on the grooves: a belt tooth is centred on a groove of each pulley, see
+        /// <see cref="BeltRegistration"/>. The driven phase is the driver phase over the gear ratio, kept unwrapped, plus a bounded offset C of
+        /// at most half a groove step of the driven pulley. The offset does not depend on the driver phase, so the driven pulley follows the
+        /// driver exactly at the ratio, and when only the driven shaft is placed the driver phase follows from it in one step.
+        /// </para>
+        /// <para>
+        /// Known limitation: when both shafts are already placed by other relations the belt is only checked against the placement; neither
+        /// pulley is turned, so the driven pulley is not registered on the belt in that case.
+        /// </para>
         /// </summary>
         private bool SolveBelt(TimingBelt belt, ISet<Shaft> placed)
         {
@@ -329,7 +339,9 @@ namespace Bolsover.Gears.Model.Assemblies
 
                 drivenShaft.Placement = new Placement3D(origin, frame.ZAxis, frame.XAxis);
                 placed.Add(drivenShaft);
-                drivenShaft.RotationRad = driverMount.PhaseRad / belt.GearRatio - drivenMount.PhaseOffsetRad;
+                var driverPhase = driverMount.PhaseRad;
+                var offset = BeltRegistration.Compute(belt, driverPhase).DrivenOffsetRad;
+                drivenShaft.RotationRad = driverPhase / belt.GearRatio + offset - drivenMount.PhaseOffsetRad;
                 return true;
             }
 
@@ -339,7 +351,9 @@ namespace Bolsover.Gears.Model.Assemblies
             var driverOrigin = GearPrecision.Round(drivenFrame.Origin - back * belt.CentreDistance - drivenFrame.ZAxis * axialShift);
             driverShaft.Placement = new Placement3D(driverOrigin, drivenFrame.ZAxis, drivenFrame.XAxis);
             placed.Add(driverShaft);
-            driverShaft.RotationRad = drivenMount.PhaseRad * belt.GearRatio - driverMount.PhaseOffsetRad;
+            var drivenPhase = drivenMount.PhaseRad;
+            var drivenOffset = BeltRegistration.Compute(belt, drivenPhase * belt.GearRatio).DrivenOffsetRad;
+            driverShaft.RotationRad = (drivenPhase - drivenOffset) * belt.GearRatio - driverMount.PhaseOffsetRad;
             return true;
         }
 

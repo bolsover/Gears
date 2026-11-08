@@ -97,8 +97,12 @@ namespace Bolsover.Gears.Calculator.Assemblies
             public int BottomCount;
         }
 
-        /// <summary>Builds the toothed inner edge. Throws <see cref="InvalidOperationException"/> when the belt cannot be drawn.</summary>
-        public static BeltToothedLoop Build(TimingBelt belt)
+        /// <summary>
+        /// Builds the toothed inner edge. Throws <see cref="InvalidOperationException"/> when the belt cannot be drawn.
+        /// <paramref name="driverPhaseRad"/> is the rotation of the driver pulley (shaft rotation plus mount phase offset): the teeth are
+        /// registered on its grooves, see <see cref="BeltRegistration"/>.
+        /// </summary>
+        public static BeltToothedLoop Build(TimingBelt belt, double driverPhaseRad = 0.0)
         {
             if (belt == null) throw new ArgumentNullException(nameof(belt));
             belt.Validate();
@@ -141,6 +145,7 @@ namespace Bolsover.Gears.Calculator.Assemblies
             var count = belt.BeltTeeth;
             if (count < 2) throw new InvalidOperationException($"Belt '{belt.Id}' is too short to have teeth.");
             var spacing = total / count;
+            var firstTooth = BeltRegistration.Compute(belt, driverPhaseRad).FirstToothPosition;
 
             GearPoint Rotate(double x, double y) => new GearPoint(x * cosTheta - y * sinTheta, x * sinTheta + y * cosTheta);
 
@@ -174,7 +179,7 @@ namespace Bolsover.Gears.Calculator.Assemblies
             var segmentStart = 0.0;
             for (var k = 0; k < count; k++)
             {
-                var s = (k + 0.5) * spacing;
+                var s = firstTooth + k * spacing;
                 while (segmentIndex < segments.Length - 1 && s >= segmentStart + segments[segmentIndex].Length)
                 {
                     segmentStart += segments[segmentIndex].Length;

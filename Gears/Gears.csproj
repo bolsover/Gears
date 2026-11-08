@@ -193,6 +193,7 @@
         <Compile Include="Calculator\Alibre\BeltSketch.cs" />
         <Compile Include="Model\Assemblies\TimingBelt.cs" />
         <Compile Include="Calculator\Assemblies\BeltToothPath.cs" />
+        <Compile Include="Calculator\Assemblies\BeltRegistration.cs" />
         <Compile Include="Model\Assemblies\CycloidalGearComponent.cs" />
         <Compile Include="Calculator\Assemblies\CycloidalProfile.cs" />
         <Compile Include="Calculator\Assemblies\CycloidalMeshSolver.cs" />

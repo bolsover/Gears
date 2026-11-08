@@ -675,18 +675,40 @@ namespace UnitTests
         [Test]
         public void TestBelt_Solve_TurnsTheDrivenPulleyTheSameWayAtTheRatioOfTheGrooves()
         {
-            var assembly = TwoPulleys(out _, out _, out _, 120.0, 20, 40);
+            // The registration offset does not depend on the driver phase: the driven rotation follows the driver exactly at the ratio.
+            var assembly = TwoPulleys(out _, out _, out var belt, 120.0, 20, 40);
+            var ratio = belt.GearRatio;
+            Assert.AreEqual(2.0, ratio, 1e-12);
+            assembly.Solve();
+            var drivenAtRest = assembly.Shafts[1].RotationRad;
+
+            assembly.Shafts[0].RotationRad = 1.2;
+            assembly.Solve();
+
+            Assert.AreEqual(drivenAtRest + 0.6, assembly.Shafts[1].RotationRad, 1e-9,
+                "Half the speed, same direction: the difference of the rotations follows the ratio.");
+
+            var animator = new GearTrainAnimator(assembly) { SpeedRpm = 60.0 };
+            var before = assembly.Shafts[0].RotationRad;
+            var drivenBefore = assembly.Shafts[1].RotationRad;
+            animator.Advance(0.25);
+            assembly.Solve();
+            var delta = assembly.Shafts[0].RotationRad - before;
+            Assert.AreEqual(Math.PI / 2.0, delta, 1e-9, "A quarter turn per quarter second at 60 rpm.");
+            Assert.AreEqual(delta / ratio, assembly.Shafts[1].RotationRad - drivenBefore, 1e-9, "The driven pulley follows at the ratio.");
+        }
+
+        [Test]
+        public void TestBelt_Solve_WholePitchPath_TurnsTheDrivenPulleyExactlyAtTheRatio()
+        {
+            var assembly = TwoPulleys(out _, out _, out _, 120.0, 20, 20);
+            assembly.Solve();
+            var rest = assembly.Shafts[1].RotationRad;
             assembly.Shafts[0].RotationRad = 1.2;
 
             assembly.Solve();
 
-            Assert.AreEqual(0.6, assembly.Shafts[1].RotationRad, 1e-9, "Half the speed, same direction.");
-
-            var animator = new GearTrainAnimator(assembly) { SpeedRpm = 60.0 };
-            animator.Advance(0.25);
-            assembly.Solve();
-            var input = assembly.Shafts[0].RotationRad;
-            Assert.AreEqual(input / 2.0, assembly.Shafts[1].RotationRad, 1e-9);
+            Assert.AreEqual(rest + 1.2, assembly.Shafts[1].RotationRad, 1e-9, "Equal pulleys on a whole number of pitches: the offset never moves.");
         }
 
         [Test]
@@ -712,7 +734,22 @@ namespace UnitTests
             Assert.AreEqual(0.0, origin.X, 1e-6);
             Assert.AreEqual(-100.0, origin.Y, 1e-6, "The driver lies 100 mm 'behind' the anchor on the line of centres at 90 degrees.");
             Assert.AreEqual(-2.0, origin.Z, 1e-6, "The driver's mid-plane is 2 mm up its shaft, so its shaft starts 2 mm below the anchor's.");
-            Assert.AreEqual(0.4, shaftA.RotationRad, 1e-9, "The 20 groove anchor is driven by the 40 groove pulley, which turns half as far in the same direction.");
+            var belt = assembly.Belts[0];
+            var stepB = 2.0 * Math.PI / belt.Driven.Teeth;
+            Assert.AreEqual(0.8, first.RotationRad, 1e-12, "The placed shaft is not moved.");
+
+            // The 20 groove anchor is driven by the 40 groove pulley, which turns half as far in the same direction, plus the registration
+            // offset of at most half a groove step of the anchor.
+            var registration = BeltRegistration.Compute(belt, shaftA.RotationRad);
+            Assert.LessOrEqual(Math.Abs(registration.DrivenOffsetRad), stepB / 2.0 + 1e-12);
+            Assert.AreEqual((0.8 - registration.DrivenOffsetRad) * belt.GearRatio, shaftA.RotationRad, 1e-9,
+                "The driver follows the placed anchor at the ratio, less the registration offset.");
+            Assert.AreEqual(0.4, shaftA.RotationRad, stepB / 2.0 * belt.GearRatio + 1e-9);
+
+            // The anchor has a groove under the belt tooth nearest to the middle of its wrap, exactly.
+            var error = (first.RotationRad - registration.DrivenPhaseRad) % stepB;
+            error = Math.Abs(error - stepB * Math.Floor(error / stepB + 0.5));
+            Assert.LessOrEqual(error, 1e-9);
         }
 
         [Test]

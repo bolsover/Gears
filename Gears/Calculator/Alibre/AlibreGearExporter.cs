@@ -739,7 +739,8 @@ namespace Bolsover.Gears.Calculator.Alibre
                     index++;
 
                     stage = "building belt '" + current + "'";
-                    var session = Export(beltPart.Key);
+                    var beltDriverMount = train.FindMount(beltPart.Key.Driver, out _);
+                    var session = Export(beltPart.Key, beltDriverMount == null ? 0.0 : beltDriverMount.PhaseRad);
                     log.Add("built belt '" + current + "'");
                     saved.Add(session);
                     SavePart(session, current, folder, index, log);
@@ -982,11 +983,12 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// Creates a timing belt in a new Alibre part: a sketch of the outer loop of the belt (straight runs and an arc round each pulley)
         /// and the inner loop with the HTD teeth (splines, lines and arcs) on the XY plane, extruded mid-plane to the belt width. The driver pulley's axis is the
         /// Z axis and the driven pulley lies on the line of centres in the XY plane. Throws <see cref="InvalidOperationException"/> when the
-        /// belt cannot be drawn or Alibre rejects a step.
+        /// belt cannot be drawn or Alibre rejects a step. <paramref name="driverPhaseRad"/> is the phase of the driver pulley's mount (the
+        /// teeth are placed in its grooves); a caller without a mount phase gets phase 0.
         /// </summary>
-        public IADPartSession Export(TimingBelt belt)
+        public IADPartSession Export(TimingBelt belt, double driverPhaseRad = 0.0)
         {
-            var plan = BeltSketchBuilder.Build(belt);
+            var plan = BeltSketchBuilder.Build(belt, driverPhaseRad);
             if (!plan.IsClosed()) throw new InvalidOperationException($"The belt sketch of '{belt.Id}' is not closed, so it cannot be exported.");
 
             var stage = "creating the part";
@@ -1092,7 +1094,9 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// Location of an exported part in the assembly: the shaft placement, then the axial offset along the shaft. An exported part is
         /// extruded from the sketch plane up to its face width, while the offset locates the mid-plane, hence the half face width.
         /// A herringbone part is mirrored about the sketch plane, and an HTD pulley is extruded mid-plane about it, so both already lie on
-        /// the mid-plane and have no such shift.
+        /// the mid-plane and have no such shift. An HTD pulley is also turned about the shaft axis by the phase of its mount, as in the 3D
+        /// scene, so its grooves meet the teeth of the belt (see <see cref="Bolsover.Gears.Calculator.Assemblies.BeltRegistration"/>); other
+        /// parts are exported at phase 0.
         /// </summary>
         public static Transform3D GetPartPlacement(Shaft shaft, ShaftMount mount)
         {
@@ -1107,7 +1111,9 @@ namespace Bolsover.Gears.Calculator.Alibre
             // A herringbone part or a pulley is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
             var centred = IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent || mount.Component is CycloidalGearComponent;
             var start = centred ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
-            return shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
+            var placement = shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
+            if (mount.Component is HtdPulleyComponent pulley) placement = placement.Compose(pulley.GetLocalMotion(mount.PhaseRad));
+            return placement;
         }
 
         /// <summary>True for a herringbone gear or rack that is exported with a mirror: a helical one with the herringbone option set.</summary>

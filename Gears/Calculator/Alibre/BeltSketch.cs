@@ -69,14 +69,15 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         /// <summary>
         /// The plan of a belt. Throws <see cref="InvalidOperationException"/> when the belt cannot be drawn (see
-        /// <see cref="TimingBelt.Validate"/>).
+        /// <see cref="TimingBelt.Validate"/>). <paramref name="driverPhaseRad"/> is the phase of the driver pulley's mount: the teeth are
+        /// placed in the grooves of the driver at that phase (see <see cref="BeltRegistration"/>), so the belt is not rotationally symmetric.
         /// </summary>
-        public static BeltSketch Build(TimingBelt belt)
+        public static BeltSketch Build(TimingBelt belt, double driverPhaseRad = 0.0)
         {
             if (belt == null) throw new ArgumentNullException(nameof(belt));
             belt.Validate();
 
-            var inner = ToothedLoop(BeltToothPath.Build(belt));
+            var inner = ToothedLoop(BeltToothPath.Build(belt, driverPhaseRad));
             var outer = Loop(belt, -belt.Profile.PitchLineDifferential + belt.BackThickness, "Outer");
             return new BeltSketch(PartName(belt), Q(belt.Width), outer, inner);
         }

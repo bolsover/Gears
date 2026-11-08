@@ -54,7 +54,7 @@ namespace Bolsover.Gears.Calculator.Assemblies
 
                 var driverFrame = driverShaft.Placement.ToTransform()
                     .Compose(Transform3D.Translate(new Vector3D(0, 0, driverMount.AxialOffset)));
-                TimingBeltMeshBuilder.Build(belt, driverFrame, out var beltMesh, out var beltPolylines);
+                TimingBeltMeshBuilder.Build(belt, driverFrame, out var beltMesh, out var beltPolylines, driverMount.PhaseRad);
                 scene.Add(new SceneBeltItem(belt, beltPolylines, beltMesh));
             }
 

@@ -62,11 +62,13 @@ namespace Bolsover.Gears.Calculator.Assemblies
 
         /// <summary>
         /// Builds the world-space mesh and outlines of the belt, with its teeth. <paramref name="driverFrame"/> is the frame of the driver
-        /// pulley's mid-plane (shaft placement and axial offset).
+        /// pulley's mid-plane (shaft placement and axial offset). <paramref name="driverPhaseRad"/> is the driver mount's phase: the teeth
+        /// are placed in the grooves of the driver pulley at that phase (see <see cref="BeltRegistration"/>).
         /// </summary>
-        public static void Build(TimingBelt belt, Transform3D driverFrame, out GearMesh3DBuilder.Mesh3D mesh, out List<List<GearPoint>> polylines)
+        public static void Build(TimingBelt belt, Transform3D driverFrame, out GearMesh3DBuilder.Mesh3D mesh, out List<List<GearPoint>> polylines,
+            double driverPhaseRad = 0.0)
         {
-            var loop = BeltToothPath.Build(belt);
+            var loop = BeltToothPath.Build(belt, driverPhaseRad);
             var inner = new List<GearPoint>(loop.InnerRing);
             var outer = new List<GearPoint>(loop.OuterRing);
             var half = belt.Width / 2.0;
