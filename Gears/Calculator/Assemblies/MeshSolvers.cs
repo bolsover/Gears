@@ -15,7 +15,8 @@ namespace Bolsover.Gears.Calculator.Assemblies
             { MeshType.Rack, new RackMeshSolver() },
             { MeshType.Bevel, new BevelMeshSolver() },
             { MeshType.Worm, new WormMeshSolver() },
-            { MeshType.Cycloidal, new CycloidalMeshSolver() }
+            { MeshType.Cycloidal, new CycloidalMeshSolver() },
+            { MeshType.CrossedHelical, new CrossedHelicalMeshSolver() }
         };
 
         public static IMeshSolver Get(MeshType meshType)

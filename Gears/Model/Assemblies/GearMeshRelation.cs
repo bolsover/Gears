@@ -20,7 +20,10 @@ namespace Bolsover.Gears.Model.Assemblies
         Worm,
 
         /// <summary>A cycloidal wheel and pinion on parallel shafts, at the sum of their pitch radii.</summary>
-        Cycloidal
+        Cycloidal,
+
+        /// <summary>Helical gears on crossed (non-parallel) shafts. The gears may have different helix angles; the shaft angle is stored on the relation.</summary>
+        CrossedHelical
     }
 
     /// <summary>
@@ -54,6 +57,13 @@ namespace Bolsover.Gears.Model.Assemblies
         /// and removes it from an internal pair).
         /// </summary>
         public double? CentreDistanceOverride { get; set; }
+
+        /// <summary>
+        /// Angle between the driver shaft and the driven shaft in degrees. Only a <see cref="Assemblies.MeshType.CrossedHelical"/> mesh uses it, and
+        /// it must match the helix angles and hands of the two gears (the sum of the helix angles for the same hand, their difference for
+        /// opposite hands). Zero for the other mesh types.
+        /// </summary>
+        public double ShaftAngleDeg { get; set; }
 
         /// <summary>The solved centre distance, phase and pair data; null until the assembly has been solved.</summary>
         public MeshResult Result { get; internal set; }

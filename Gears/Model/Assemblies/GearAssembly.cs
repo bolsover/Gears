@@ -76,7 +76,8 @@ namespace Bolsover.Gears.Model.Assemblies
         /// Declares that <paramref name="driven"/> meshes with <paramref name="driver"/>.
         /// Both gears must already be mounted on different shafts, and a gear can be driven by one gear only.
         /// </summary>
-        public GearMeshRelation AddRelation(GearComponent driver, GearComponent driven, MeshType meshType = MeshType.Parallel, double centreLineAngleDeg = 0.0)
+        public GearMeshRelation AddRelation(GearComponent driver, GearComponent driven, MeshType meshType = MeshType.Parallel, double centreLineAngleDeg = 0.0,
+            double shaftAngleDeg = 0.0)
         {
             if (driver == null) throw new ArgumentNullException(nameof(driver));
             if (driven == null) throw new ArgumentNullException(nameof(driven));
@@ -102,7 +103,7 @@ namespace Bolsover.Gears.Model.Assemblies
                 throw new InvalidOperationException($"Gear '{driven.Id}' is already driven by another gear.");
             }
 
-            var relation = new GearMeshRelation(driver, driven, meshType) { CentreLineAngleDeg = centreLineAngleDeg };
+            var relation = new GearMeshRelation(driver, driven, meshType) { CentreLineAngleDeg = centreLineAngleDeg, ShaftAngleDeg = shaftAngleDeg };
             _relations.Add(relation);
             return relation;
         }
@@ -381,6 +382,10 @@ namespace Bolsover.Gears.Model.Assemblies
                 throw new InvalidOperationException(
                     $"The centre distance between '{relation.Driver.Id}' and '{relation.Driven.Id}' cannot be set: " +
                     $"{relation.MeshType} meshes do not support a fixed centre distance.");
+            }
+            else if (solver is ICrossedAxisSolver crossed)
+            {
+                solved = crossed.Solve(relation.Driver, relation.Driven, driverMount.PhaseRad - theta, relation.ShaftAngleDeg);
             }
             else
             {

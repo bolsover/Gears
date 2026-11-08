@@ -62,7 +62,8 @@ namespace Bolsover.Gears.Model.Assemblies
                     Driven = relation.Driven.Id,
                     MeshType = relation.MeshType.ToString(),
                     CentreLineAngleDeg = relation.CentreLineAngleDeg,
-                    CentreDistance = relation.CentreDistanceOverride
+                    CentreDistance = relation.CentreDistanceOverride,
+                    ShaftAngleDeg = relation.ShaftAngleDeg
                 });
             }
 
@@ -153,7 +154,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     throw new InvalidDataException($"Unknown mesh type '{relationDto.MeshType}'.");
                 }
 
-                var added = assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg);
+                var added = assembly.AddRelation(driver, driven, meshType, relationDto.CentreLineAngleDeg, relationDto.ShaftAngleDeg);
                 added.CentreDistanceOverride = relationDto.CentreDistance;
             }
 
@@ -505,6 +506,9 @@ namespace Bolsover.Gears.Model.Assemblies
 
             /// <summary>Fixed working centre distance (mm); absent when the distance follows from the profile shifts.</summary>
             public double? CentreDistance { get; set; }
+
+            /// <summary>Angle between the two shafts (degrees) of a crossed helical mesh; absent (0) in older files and for the other mesh types.</summary>
+            public double ShaftAngleDeg { get; set; }
         }
     }
 }

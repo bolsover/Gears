@@ -175,6 +175,35 @@ namespace Bolsover.Gears.Gui.Presenters
         public string DrivenBy => _relation?.Driver.Name;
 
         [Category("Mesh")]
+        [DisplayName("Shaft angle (deg)")]
+        [Description("Angle between this gear's shaft and its driver's shaft. Only a crossed helical mesh uses it, and it must match the helix angles " +
+                     "and hands of the two gears (see the expected shaft angle); 0 for any other mesh.")]
+        public double ShaftAngle
+        {
+            get => _relation?.ShaftAngleDeg ?? 0.0;
+            set
+            {
+                if (_relation != null && _relation.MeshType == MeshType.CrossedHelical) _relation.ShaftAngleDeg = value;
+            }
+        }
+
+        [Category("Mesh")]
+        [DisplayName("Expected shaft angle (deg)")]
+        [Description("The shaft angle that the helix angles and hands of this gear and its driver need on a crossed helical mesh: the sum of the " +
+                     "helix angles for the same hand, their difference for opposite hands. 0 when the mesh is not a crossed helical mesh.")]
+        public double ExpectedShaftAngle
+        {
+            get
+            {
+                if (_relation == null || _relation.MeshType != MeshType.CrossedHelical) return 0.0;
+                var driver = _relation.Driver as InvoluteGearComponent;
+                if (driver == null) return 0.0;
+                return Bolsover.Gears.Calculator.HelicalPairGeometry.ExpectedShaftAngleDeg(
+                    driver.HelixAngleDeg, driver.HelicalDirection, _gear.HelixAngleDeg, _gear.HelicalDirection);
+            }
+        }
+
+        [Category("Mesh")]
         [DisplayName("Centre distance (mm)")]
         [Description("Working distance between this gear's shaft and its driver's shaft. Entering a value fixes it; 0 goes back to the " +
                      "distance that follows from the profile shifts. A larger distance raises the working pressure angle; it adds backlash to an " +

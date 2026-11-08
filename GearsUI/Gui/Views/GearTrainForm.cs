@@ -246,6 +246,8 @@ namespace Bolsover.Gears.Gui.Views
             ddMate.DropDownItems.Add("Rack for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack)));
             ddMate.DropDownItems.Add("Bevel gear for the selected bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)));
             ddMate.DropDownItems.Add("Worm wheel for the selected worm", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Worm)));
+            var crossedItem = ddMate.DropDownItems.Add("Helical gear on crossed shafts for the selected gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.CrossedHelical)));
+            crossedItem.ToolTipText = "Add a helical gear whose shaft is not parallel to the shaft of the selected helical gear. It gets the same hand and the helix angle that puts the shafts at 90 degrees; change the helix angles and the shaft angle in the properties.";
 
             var ddFile = new ToolStripMenuItem("&File");
             ddFile.DropDownItems.Add(btnNew);

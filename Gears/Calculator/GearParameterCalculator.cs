@@ -88,6 +88,12 @@ namespace Bolsover.Gears.Calculator
         public string Gear1HelicalDirection => Gear1?.HelicalDirection ?? "R";
         public string Gear2HelicalDirection => Gear2?.HelicalDirection ?? "L";
 
+        /// <summary>Angle between the two shaft axes in degrees; 0 for a parallel pair.</summary>
+        public double ShaftAngleDeg { get; set; }
+
+        /// <summary>True for a crossed helical pair, whose teeth touch at a point: the contact ratio is not calculated and stays 0.</summary>
+        public bool IsCrossedAxis { get; set; }
+
         public List<GearParameterRow> ParameterRows { get; } = new List<GearParameterRow>();
     }
 
@@ -290,15 +296,16 @@ namespace Bolsover.Gears.Calculator
 
                 sumZ = zInternal - zExternal;
                 sumX = xInternal - xExternal;
-                aStd = mt * sumZ / 2.0;
             }
             else
             {
                 // External-external mesh
                 sumZ = z1 + z2;
                 sumX = x1 + x2;
-                aStd = mt * sumZ / 2.0;
             }
+
+            // Each gear contributes its own pitch diameter, so gears with different helix angles get the right distance.
+            aStd = HelicalPairGeometry.StandardCentreDistance(z1, beta1, isInternal1, z2, beta2, isInternal2, m);
 
             pairData.StandardCentreDistance = aStd;
             pairData.SumProfileShift = sumX;
@@ -473,6 +480,102 @@ namespace Bolsover.Gears.Calculator
             pairData.ParameterRows.Add(new GearParameterRow("Gear Ratio", "i", "\\frac{z_2}{z_1}", pairData.GearRatio, "-"));
 
             return pairData;
+        }
+
+        /// <summary>
+        /// Calculates the geometry of two external helical gears on crossed shafts. Each gear has its own transverse module and pitch
+        /// diameter, and the centre distance is half the sum of the pitch diameters. The teeth touch at a point, so the contact ratio is
+        /// not calculated and stays 0. The shaft angle is stored as given; checking it against the helix angles is up to the caller
+        /// (see <see cref="HelicalPairGeometry.CheckShaftAngle"/>).
+        /// </summary>
+        public static CalculatedGearPairData CalculateCrossedPair(
+            int z1, double m, double alphaDeg, double faceWidth1, double x1, bool isInternal1,
+            int z2, double faceWidth2, double x2, bool isInternal2,
+            double shaftAngleDeg,
+            double? clearance1 = null, double? clearance2 = null,
+            double? backlash1 = null, double? backlash2 = null,
+            double helixAngle1 = 0.0, double helixAngle2 = 0.0,
+            string helicalDirection1 = "R", string helicalDirection2 = "R")
+        {
+            if (isInternal1 || isInternal2)
+            {
+                throw new InvalidOperationException("Internal gears cannot mesh on crossed shafts.");
+            }
+
+            if (Math.Abs(x1) > 1e-9 || Math.Abs(x2) > 1e-9)
+            {
+                throw new InvalidOperationException(
+                    $"Crossed helical gears must have a profile shift of 0 (got {x1} and {x2}).");
+            }
+
+            if (!(helixAngle1 >= 0.0 && helixAngle1 < 90.0) || !(helixAngle2 >= 0.0 && helixAngle2 < 90.0))
+            {
+                throw new InvalidOperationException(
+                    $"The helix angles of crossed helical gears must be from 0 to below 90 degrees (got {helixAngle1} and {helixAngle2}).");
+            }
+
+            if (z1 <= 0 || z2 <= 0 || !(m > 0.0))
+            {
+                throw new InvalidOperationException("The teeth and the module of crossed helical gears must be positive.");
+            }
+
+            var dir1 = string.IsNullOrWhiteSpace(helicalDirection1) ? "R" : helicalDirection1;
+            var dir2 = string.IsNullOrWhiteSpace(helicalDirection2) ? "R" : helicalDirection2;
+
+            var gear1 = Calculate(z1, m, alphaDeg, faceWidth1, x1, false, 10.0, clearance1, backlash1, helixAngle1, dir1);
+            var gear2 = Calculate(z2, m, alphaDeg, faceWidth2, x2, false, 10.0, clearance2 ?? clearance1, backlash2 ?? backlash1, helixAngle2, dir2);
+
+            var centreDistance = HelicalPairGeometry.StandardCentreDistance(z1, helixAngle1, false, z2, helixAngle2, false, m);
+
+            var pair = new CalculatedGearPairData
+            {
+                Gear1 = gear1,
+                Gear2 = gear2,
+                StandardCentreDistance = centreDistance,
+                WorkingCentreDistance = centreDistance,
+                WorkingPressureAngleRad = gear1.RadialPressureAngleRad,
+                WorkingPressureAngleDeg = gear1.RadialPressureAngleDeg,
+                WorkingInvoluteFunction = gear1.InvoluteFunction,
+                SumProfileShift = 0.0,
+                Gear1WorkingPitchDiameter = gear1.PitchDiameter,
+                Gear2WorkingPitchDiameter = gear2.PitchDiameter,
+                ContactRatio = 0.0,
+                AxialContactRatio = 0.0,
+                GearRatio = (double)z2 / z1,
+                ShaftAngleDeg = shaftAngleDeg,
+                IsCrossedAxis = true
+            };
+
+            pair.NormalBacklash = pair.TotalBacklash * Math.Cos(gear1.PressureAngleRad);
+            pair.WorkingCircularBacklash = pair.TotalBacklash;
+
+            var rows = pair.ParameterRows;
+            rows.Add(new GearParameterRow("Normal Module", "m_n", "m_n", m, "mm"));
+            rows.Add(new GearParameterRow("Normal Pressure Angle", "\\alpha_n", "\\alpha_n", alphaDeg, "°"));
+            rows.Add(new GearParameterRow("Gear 1 Helix Angle", "\\beta_1", "\\beta_1", helixAngle1, "°"));
+            rows.Add(new GearParameterRow("Gear 2 Helix Angle", "\\beta_2", "\\beta_2", helixAngle2, "°"));
+            rows.Add(new GearParameterRow("Gear 1 Direction", "\\text{Hand}_1", "\\text{Hand}_1", gear1.HelicalDirection == "R" ? 1.0 : 0.0, gear1.HelicalDirection));
+            rows.Add(new GearParameterRow("Gear 2 Direction", "\\text{Hand}_2", "\\text{Hand}_2", gear2.HelicalDirection == "R" ? 1.0 : 0.0, gear2.HelicalDirection));
+            rows.Add(new GearParameterRow("Gear 1 Teeth", "z_1", "z_1", z1, "-"));
+            rows.Add(new GearParameterRow("Gear 2 Teeth", "z_2", "z_2", z2, "-"));
+            rows.Add(new GearParameterRow("Gear 1 Radial (Transverse) Module", "m_{t1}", "\\frac{m_n}{\\cos\\beta_1}", gear1.RadialModule, "mm"));
+            rows.Add(new GearParameterRow("Gear 2 Radial (Transverse) Module", "m_{t2}", "\\frac{m_n}{\\cos\\beta_2}", gear2.RadialModule, "mm"));
+            rows.Add(new GearParameterRow("Gear 1 Pitch Diameter", "d_1", "m_{t1} \\cdot z_1", gear1.PitchDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 2 Pitch Diameter", "d_2", "m_{t2} \\cdot z_2", gear2.PitchDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 1 Base Diameter", "d_{b1}", "d_1 \\cdot \\cos\\alpha_{t1}", gear1.BaseDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 2 Base Diameter", "d_{b2}", "d_2 \\cdot \\cos\\alpha_{t2}", gear2.BaseDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 1 Tip Diameter", "d_{a1}", "d_1 + 2 h_{a1}", gear1.TipDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 2 Tip Diameter", "d_{a2}", "d_2 + 2 h_{a2}", gear2.TipDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 1 Root Diameter", "d_{f1}", "d_1 - 2 h_{f1}", gear1.RootDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 2 Root Diameter", "d_{f2}", "d_2 - 2 h_{f2}", gear2.RootDiameter, "mm"));
+            rows.Add(new GearParameterRow("Gear 1 Face Width", "b_1", "b_1", faceWidth1, "mm"));
+            rows.Add(new GearParameterRow("Gear 2 Face Width", "b_2", "b_2", faceWidth2, "mm"));
+            rows.Add(new GearParameterRow("Shaft Angle", "\\Sigma", "\\beta_1 \\pm \\beta_2", shaftAngleDeg, "°"));
+            rows.Add(new GearParameterRow("Centre Distance", "a", "\\frac{d_1 + d_2}{2}", centreDistance, "mm"));
+            rows.Add(new GearParameterRow("Gear Ratio", "i", "\\frac{z_2}{z_1}", pair.GearRatio, "-"));
+            rows.Add(new GearParameterRow("Contact", "\\text{Contact}", "\\text{point contact}", 0.0, "point contact"));
+
+            return pair;
         }
 
         /// <summary>

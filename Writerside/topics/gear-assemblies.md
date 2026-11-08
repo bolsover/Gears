@@ -12,6 +12,7 @@ All computed lengths and coordinates are given to **7 decimal places**; angles k
 | Rack and pinion | `RackComponent` | `Rack` | A spur or helical pinion drives a straight or helical rack mounted on a carrier shaft. |
 | Bevel | `BevelGearComponent` | `Bevel` | Straight bevel gears, Tredgold approximation, any shaft angle. |
 | Worm and wheel | `WormComponent`, `WormWheelComponent` | `Worm` | Crossed shafts at 90 degrees. |
+| Crossed helical | `InvoluteGearComponent` | `CrossedHelical` | Two helical gears on shafts that are not parallel; the helix angles may differ. |
 | Planetary | `PlanetaryGearSet` | none | Sun, planets, ring and carrier plate; builds an ordinary assembly. |
 | HTD pulley | `HtdPulleyComponent` | none (joined by a `TimingBelt`) | Timing belt pulley of the 3M, 5M, 8M or 14M series; a belt places the second pulley's shaft. |
 | Cycloidal gear | `CycloidalGearComponent` | `Cycloidal` | A wheel and a pinion on parallel shafts at the sum of their pitch radii; always designed as a pair. |
@@ -69,6 +70,20 @@ A 2:1 pair therefore has a gear addendum of `0.655 m` and a pinion addendum of `
 * The wheel is a helical involute gear with helix angle `gamma` and normal module `m cos(gamma)`, so its pitch diameter is `m z`.
   It has no throat; an enveloping (globoid) wheel is not modelled.
 * The centre distance is `(d_worm + d_wheel) / 2`. The wheel turns at `starts / z` of the worm speed, with the sign set by the hand.
+
+### Crossed helical gears
+
+Helical gears can mesh on shafts that are not parallel, and then the two gears may have different helix angles. Add the mesh with *Build > Add mate > Helical gear on crossed shafts for the selected gear*, or with `AddRelation(driver, driven, MeshType.CrossedHelical, centreLineAngleDeg, shaftAngleDeg)`.
+
+* The gears share the **normal** module and the normal pressure angle. Each gear has its own transverse module `m_t = m_n / cos(beta)` and pitch diameter `d = z m_t`, and the centre distance is `(d1 + d2) / 2`.
+* The **shaft angle** is entered on the relation and checked against the helix angles and hands: `Sigma = beta1 + beta2` for the same hand and `Sigma = |beta1 - beta2|` for opposite hands (equal angles of opposite hands give 0, the parallel mesh). A different angle is refused with a message that gives the angle the helix angles need, so after changing a helix angle or a hand the properties show the new *Expected shaft angle*. A new mate gets the same hand as its driver and the helix angle that puts the shafts at 90 degrees (45 degrees when the driver is a spur gear).
+* The speed ratio is `z1 / z2`: it comes from the tooth counts, never from the pitch diameters. A 24 tooth gear with a 26.6 degree right-hand helix and a 12 tooth gear with a 63.4 degree right-hand helix on shafts at 90 degrees (normal module 2) have equal pitch diameters, a centre distance of about 53.7 mm, and the 12 tooth gear turns twice as fast, in the opposite sense about its own axis (`GearTrainAnalyzer.SpeedFactor` is -2).
+* The teeth touch at a **point**, so the report gives no contact ratio, and no load capacity is calculated.
+* `CentreLineAngleDeg` works as for the other meshes. A gear on the shaft of the driven gear is placed from it as usual. A fixed centre distance is not available for this mesh.
+* A parallel mesh between helical gears now needs the same helix angle and opposite hands (herringbone gears are exempt from the hand rule); otherwise it is refused with a message that points to this mesh.
+* The shaft angle is saved with the relation. Files saved earlier have none and open with 0.
+* **Not supported:** herringbone, internal and rack gears on crossed shafts, profile shift (it must be 0), and different normal modules or pressure angles.
+* The Alibre export places both gears on their shafts exactly as the 3D scene does. The Alibre tooth sketch accepts helix angles up to 70 degrees.
 
 ### Planetary sets
 

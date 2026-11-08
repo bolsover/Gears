@@ -528,8 +528,10 @@ namespace Bolsover.Gears.Gui.Presenters
 
         /// <summary>
         /// Adds a gear that meshes with <paramref name="driver"/> on a new shaft, for any mesh type: an involute gear on parallel
-        /// axes, a rack for a pinion, a bevel gear for a bevel gear (same shaft angle) or a worm wheel for a worm.
-        /// The mate takes module, pressure angle and face width from the driver.
+        /// axes, a rack for a pinion, a bevel gear for a bevel gear (same shaft angle), a worm wheel for a worm or a helical gear on crossed
+        /// shafts. The mate takes module, pressure angle and face width from the driver. A crossed helical mate has the hand of the driver and the
+        /// helix angle that puts the shafts at 90 degrees (45 degrees when the driver is a spur gear); the shaft angle of the relation follows from
+        /// the two helix angles and hands.
         /// </summary>
         /// <param name="driver">The gear to mesh with; it must be mounted in the assembly and suit the mesh type.</param>
         /// <param name="meshType">The kind of mesh.</param>
@@ -546,8 +548,28 @@ namespace Bolsover.Gears.Gui.Presenters
                               ?? throw new ArgumentException("The driver gear is not mounted in the assembly.", nameof(driver));
 
             GearComponent mate;
+            var shaftAngle = 0.0;
             switch (meshType)
             {
+                case MeshType.CrossedHelical:
+                {
+                    var helical = driver as InvoluteGearComponent
+                                  ?? throw new ArgumentException("Only an involute gear can mesh on crossed shafts.", nameof(driver));
+                    if (helical.IsInternal || helical.IsHerringbone)
+                    {
+                        throw new ArgumentException("Internal and herringbone gears cannot mesh on crossed shafts.", nameof(driver));
+                    }
+
+                    var crossed = CreateGear(helical, teeth > 0 ? teeth : 12);
+                    crossed.IsInternal = false;
+                    crossed.IsHerringbone = false;
+                    crossed.HelicalDirection = helical.HelicalDirection;
+                    crossed.HelixAngleDeg = helical.HelixAngleDeg > 1e-6 && helical.HelixAngleDeg < 90.0 ? 90.0 - helical.HelixAngleDeg : 45.0;
+                    shaftAngle = Bolsover.Gears.Calculator.HelicalPairGeometry.ExpectedShaftAngleDeg(
+                        helical.HelixAngleDeg, helical.HelicalDirection, crossed.HelixAngleDeg, crossed.HelicalDirection);
+                    mate = crossed;
+                    break;
+                }
                 case MeshType.Rack:
                 {
                     var pinion = driver as InvoluteGearComponent
@@ -605,7 +627,7 @@ namespace Bolsover.Gears.Gui.Presenters
             Assembly.AddShaft(shaft);
             try
             {
-                Assembly.AddRelation(driver, mate, meshType, angle);
+                Assembly.AddRelation(driver, mate, meshType, angle, shaftAngle);
             }
             catch
             {

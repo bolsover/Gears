@@ -21,8 +21,11 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>Smallest tooth count that gives a sensible circular pattern.</summary>
         public const int MinimumTeeth = 3;
 
-        /// <summary>Largest helix angle accepted, in degrees. Beyond this the lead of the helix becomes unreasonably long.</summary>
-        public const double MaximumHelixAngleDeg = 60.0;
+        /// <summary>
+        /// Largest helix angle accepted, in degrees. Beyond this the helix becomes unreasonably steep. It leaves room for the gear of a crossed
+        /// helical pair that is the complement of a shallow one, such as 63.4 degrees meshing with 26.6 degrees on shafts at 90 degrees.
+        /// </summary>
+        public const double MaximumHelixAngleDeg = 70.0;
 
         /// <summary>The rim of an internal gear is never thinner than this (mm), as in the 3D preview.</summary>
         public const double MinimumRimThickness = 1.0;

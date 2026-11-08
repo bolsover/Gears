@@ -153,6 +153,7 @@
         <Compile Include="Calculator\CustomCalculations.cs" />
         <Compile Include="Calculator\GearMesh3DBuilder.cs" />
         <Compile Include="Calculator\GearParameterCalculator.cs" />
+        <Compile Include="Calculator\HelicalPairGeometry.cs" />
         <Compile Include="Calculator\LaTeXUtils.cs" />
         <Compile Include="Calculator\NCalcLatexRenderer.cs" />
         <Compile Include="Calculator\Assemblies\GearAssemblySceneBuilder.cs" />
@@ -173,6 +174,8 @@
         <Compile Include="Calculator\Assemblies\ProfileShiftFitter.cs" />
         <Compile Include="Calculator\Assemblies\MeshSolvers.cs" />
         <Compile Include="Calculator\Assemblies\ParallelAxisMeshSolver.cs" />
+        <Compile Include="Calculator\Assemblies\ICrossedAxisSolver.cs" />
+        <Compile Include="Calculator\Assemblies\CrossedHelicalMeshSolver.cs" />
         <Compile Include="Model\Assemblies\AssemblyScene.cs" />
         <Compile Include="Model\Assemblies\GearAssembly.cs" />
         <Compile Include="Model\Assemblies\GearComponent.cs" />

@@ -40,6 +40,28 @@ namespace Bolsover.Gears.Calculator.Assemblies
                     $"Gears '{g1.Id}' and '{g2.Id}' cannot mesh: pressure angles differ ({g1.PressureAngleDeg} and {g2.PressureAngleDeg}).");
             }
 
+            // On parallel shafts helical gears need the same helix angle and opposite hands (a spur gear needs no helix at all). Anything
+            // else only meshes on crossed shafts.
+            if (g1.HelixAngleDeg > 1e-6 || g2.HelixAngleDeg > 1e-6)
+            {
+                var expected = HelicalPairGeometry.ExpectedShaftAngleDeg(g1.HelixAngleDeg, g1.HelicalDirection, g2.HelixAngleDeg, g2.HelicalDirection);
+                var internalPair = g1.IsInternal || g2.IsInternal;
+                var sameAngle = Math.Abs(g1.HelixAngleDeg - g2.HelixAngleDeg) < HelicalPairGeometry.ShaftAngleToleranceDeg;
+                // A herringbone gear has both hands, so its hand does not matter.
+                var handsFit = g1.IsHerringbone || g2.IsHerringbone
+                    || (internalPair
+                        ? HelicalPairGeometry.SameHand(g1.HelicalDirection, g2.HelicalDirection)
+                        : !HelicalPairGeometry.SameHand(g1.HelicalDirection, g2.HelicalDirection));
+                if (!sameAngle || !handsFit)
+                {
+                    throw new InvalidOperationException(
+                        $"Gears '{g1.Id}' and '{g2.Id}' cannot mesh on parallel shafts: helix angles of {g1.HelixAngleDeg:0.####} and " +
+                        $"{g2.HelixAngleDeg:0.####} degrees ({g1.HelicalDirection} and {g2.HelicalDirection} hand) need the same angle and " +
+                        $"{(internalPair ? "the same" : "opposite")} hand. Use a crossed helical mesh instead; for these gears the shaft angle would be " +
+                        $"{expected:0.####} degrees.");
+                }
+            }
+
             var pair = GearParameterCalculator.CalculatePair(
                 g1.Teeth, g1.Module, g1.PressureAngleDeg, g1.FaceWidth, g1.ProfileShift, g1.IsInternal, g1.RimThickness,
                 g2.Teeth, g2.FaceWidth, g2.ProfileShift, g2.IsInternal, g2.RimThickness,
