@@ -181,6 +181,7 @@
     <Compile Include="TestAlibreRackWormExport.cs" />
     <Compile Include="TestAlibreAssemblyExport.cs" />
     <Compile Include="TestAlibreBevelExport.cs" />
+    <Compile Include="TestSpiralToothSpaceSections.cs" />
     <Compile Include="TestConversionUtils.cs" />
     <Compile Include="TestGearMesh3DBuilder.cs" />
     <Compile Include="TestHerringboneGear.cs" />

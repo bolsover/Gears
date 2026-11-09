@@ -831,13 +831,11 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (cycloidal {1}, {2} teeth, module {3:0.###}) to a new Alibre part.", cycloidal.Id, cycloidal.IsPinion ? "pinion" : "wheel", cycloidal.Teeth, cycloidal.Module), false);
                     break;
                 }
-                case SpiralBevelGearComponent curved:
-                    throw new InvalidOperationException($"The {curved.TypeName.ToLowerInvariant()} {curved.Id} cannot be exported to Alibre: its curved teeth need more than the heel and toe loft of the straight bevel export. Use the STL or OBJ export instead.");
                 case BevelGearComponent bevel:
                 {
                     ShowMessage($"Exporting {bevel.Id} to Alibre…", false);
                     _alibreExporter.Export(bevel);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (bevel gear, {1} teeth, module {2:0.###}, {3} system) to a new Alibre part.", bevel.Id, bevel.Teeth, bevel.Module, bevel.BevelType), false);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1}, {2} teeth, module {3:0.###}, {4} system) to a new Alibre part.", bevel.Id, bevel.TypeName.ToLowerInvariant(), bevel.Teeth, bevel.Module, bevel.BevelType), false);
                     break;
                 }
                 case TimingBelt belt:

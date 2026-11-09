@@ -166,6 +166,7 @@
         <Compile Include="Calculator\Assemblies\IAdjustableCentreSolver.cs" />
         <Compile Include="Calculator\Alibre\AlibreGearExporter.cs" />
         <Compile Include="Calculator\Alibre\BevelGearSketch.cs" />
+        <Compile Include="Calculator\Alibre\SpiralToothSpaceSections.cs" />
         <Compile Include="Calculator\Alibre\SingleToothSketch.cs" />
         <Compile Include="Calculator\Alibre\SingleToothSketchBuilder.cs" />
         <Compile Include="Calculator\Alibre\RackToothSketch.cs" />

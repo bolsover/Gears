@@ -227,8 +227,10 @@ namespace UnitTests
         }
 
         [Test]
-        public void TestAlibreExport_DeclinesSpiralZerolAndHypoidGearsWithAClearMessage()
+        public void TestAlibreExport_AcceptsSpiralZerolAndHypoidGears_AndReachesTheFirstAlibreCall()
         {
+            // An exporter without an Alibre root: the plan and the sections are built from the gear before the first Alibre call, which then fails
+            // with the name of its stage (the gears are no longer declined).
             var exporter = (AlibreGearExporter)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(AlibreGearExporter));
 
             var spiral = new SpiralBevelGearComponent("S1") { Teeth = 18, MateTeeth = 36, Module = 4.0, FaceWidth = 12.0 };
@@ -237,11 +239,22 @@ namespace UnitTests
 
             foreach (var gear in new BevelGearComponent[] { spiral, zerol, hypoid })
             {
-                var ex = Assert.Throws<NotSupportedException>(() => exporter.Export(gear), gear.TypeName);
-                StringAssert.Contains("cannot be exported to Alibre", ex.Message);
-                StringAssert.Contains("curved teeth", ex.Message);
+                var ex = Assert.Throws<InvalidOperationException>(() => exporter.Export(gear), gear.TypeName);
+                StringAssert.Contains("failed while creating the part", ex.Message);
                 StringAssert.Contains(gear.Id, ex.Message);
             }
+        }
+
+        [Test]
+        public void TestAlibreExport_RejectsAnInvalidSpiralGearBeforeAnyAlibreCall()
+        {
+            var exporter = (AlibreGearExporter)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(AlibreGearExporter));
+            var spiral = new SpiralBevelGearComponent("S1") { Teeth = 18, MateTeeth = 36, Module = 4.0, FaceWidth = 5000.0 };
+
+            var ex = Assert.Throws<InvalidOperationException>(() => exporter.Export(spiral));
+
+            StringAssert.Contains(spiral.Id, ex.Message);
+            StringAssert.DoesNotContain("failed while", ex.Message);
         }
     }
 }

@@ -314,6 +314,20 @@ namespace Bolsover.Gears.Model.Assemblies
         /// <summary>The tooth trace along the face: a cone element for a straight bevel gear. It is in the local frame (counter-clockwise about +Z for the right hand).</summary>
         protected virtual SpiralToothTrace CreateTrace(BevelBlankProfile blank) => SpiralToothTrace.Straight;
 
+        /// <summary>
+        /// The tooth trace in the blank frame of <see cref="BevelBlankProfile"/> (axis along X, as in the Alibre export): the blank frame turns the opposite
+        /// way round the axis to the local frame, so the hand is the other way. Its twist is the angle by which a section is turned about +X.
+        /// </summary>
+        public SpiralToothTrace CreateBlankFrameTrace(BevelBlankProfile blank)
+        {
+            if (blank == null) throw new ArgumentNullException(nameof(blank));
+            var trace = CreateTrace(blank);
+            return trace.WithHand(!trace.RightHand);
+        }
+
+        /// <summary>Pressure angle (degrees) used for the tooth profile sketch: the transverse pressure angle of a spiral gear, the pressure angle otherwise.</summary>
+        public double ProfilePressureAngleDeg => TransverseProfilePressureAngleDeg;
+
         /// <summary>Pressure angle (degrees) of the tooth profile in the plane perpendicular to the axis: the pressure angle for a straight bevel gear.</summary>
         protected virtual double TransverseProfilePressureAngleDeg => PressureAngleDeg;
 

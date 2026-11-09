@@ -89,6 +89,17 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string BevelApexPointName = "PitchConeApex";
         public const string BevelValleyFeatureName = "ToothValley";
         public const string BevelPatternFeatureName = "ToothValleyPattern";
+        public const string BevelSectionPointName = "ToothSpacePoint";
+        public const string BevelSectionPlaneName = "ToothSpacePlane";
+        public const string BevelSectionSketchName = "ToothSpaceSection";
+
+        /// <summary>
+        /// Number of sections of the loft cut of a spiral, zerol or hypoid bevel gear (2 or more); zero or less chooses it from the twist of
+        /// the tooth trace (5 to 8, see <see cref="SpiralToothSpaceSections.SectionCountFor"/>). More sections follow the curved tooth more
+        /// closely but take longer in Alibre. One more section past the toe, towards the apex, is added to this count so that the loft cuts
+        /// through the conical toe face of the blank completely (see <see cref="SpiralToothSpaceSections.ToeExtensionScale"/>).
+        /// </summary>
+        public int CurvedBevelSectionCount { get; set; }
 
         /// <summary>Largest distance, in Alibre units (centimetres), between where a new plane should be and where Alibre put it.</summary>
         private const double PlaneTolerance = 1e-4;
@@ -333,15 +344,11 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// 5. a loft cut from the valley sketch to the apex design point,
         /// 6. a circular pattern of the cut about the X axis, which forms all the teeth.
         /// The bore and hub of the editor model are not part of the export.
+        /// A spiral, zerol or hypoid bevel gear is made by <see cref="ExportCurvedBevel"/> instead, with a multi-section loft cut.
         /// </summary>
         public IADPartSession Export(BevelGearComponent gear)
         {
-            if (gear is SpiralBevelGearComponent)
-            {
-                throw new NotSupportedException(
-                    $"The {gear.TypeName.ToLowerInvariant()} '{gear.Id}' cannot be exported to Alibre: its curved teeth cannot be made by the heel and toe loft " +
-                    "that the Alibre export uses for straight bevel gears. Use the STL or OBJ export of the 3D model instead.");
-            }
+            if (gear is SpiralBevelGearComponent spiral) return ExportCurvedBevel(spiral);
 
             var plan = BevelGearSketch.Build(gear);
 
@@ -422,6 +429,180 @@ namespace Bolsover.Gears.Calculator.Alibre
             }
         }
 
+
+        /// <summary>
+        /// Creates a spiral, zerol or hypoid bevel gear in a new Alibre part. The blank is revolved as for the straight bevel gear; the tooth
+        /// space is a loft cut through several sections (<see cref="SpiralToothSpaceSections"/>), which is patterned about the gear axis:
+        /// 1. the gear blank sketch and its revolve about the X axis,
+        /// 2. for every section a plane through three design points (the point on the X axis where the scaled back cone meets it, a point along
+        ///    the back cone line and a point across it, both turned about the X axis by the twist of the section), a sketch of the tooth
+        ///    space on that plane, scaled about the pitch cone apex,
+        /// 3. a loft cut through all the sketches, from the heel to the toe and one section past it, because the flat plane of the toe section
+        ///    touches the conical toe face of the blank along one line only,
+        /// 4. a circular pattern of the cut about the X axis, the axis of the gear itself (a hypoid gear's axis does not pass through the apex of its mate).
+        /// The number of sections from the heel to the toe is <see cref="CurvedBevelSectionCount"/>; the section past the toe is in addition to it.
+        /// The bore and hub of the editor model are not part of the export.
+        /// </summary>
+        public IADPartSession ExportCurvedBevel(SpiralBevelGearComponent gear)
+        {
+            if (gear == null) throw new ArgumentNullException(nameof(gear));
+
+            var plan = BevelGearSketch.Build(gear);
+            var sections = SpiralToothSpaceSections.Build(gear, plan, CurvedBevelSectionCount, true);
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(plan.PartName);
+                var xyPlane = session.DesignPlanes.Item(SketchPlaneName);
+                var gearAxis = session.DesignAxes.Item(BevelGearAxisName);
+
+                stage = "adding the gear blank sketch on the " + SketchPlaneName;
+                var blankSketch = session.Sketches.AddSketch(null, xyPlane, BevelBlankSketchName);
+
+                stage = "drawing the gear blank profile";
+                var closed = DrawFigures(blankSketch, plan.BlankFigures, null);
+
+                stage = "revolving the gear blank about the " + BevelGearAxisName;
+                IADPartFeature blank;
+                try
+                {
+                    blank = session.Features.AddRevolvedBoss(blankSketch, null, gearAxis, 2.0 * Math.PI, BevelBlankFeatureName);
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the gear blank sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(blank, "The revolved gear blank");
+
+                plan.GetBackConeDirection(out var dx, out var dy);
+                var sketches = new List<IADSketch>();
+                for (var k = 0; k < sections.Count; k++)
+                {
+                    var section = sections[k];
+                    var number = k + 1;
+                    var label = $"section {number} of {sections.Count}";
+
+                    // The section plane holds the back cone line of the scaled section turned about the X axis by the twist (right hand
+                    // rule about +X, the way the 3D model turns its sections); the tooth space is symmetric across that line.
+                    var cos = Math.Cos(section.TwistRad);
+                    var sin = Math.Sin(section.TwistRad);
+                    var length = plan.BackConeDistance * section.Scale;
+                    var origin = new[] { section.PlaneOriginX, 0.0, 0.0 };
+                    var along = new[] { section.PlaneOriginX + length * dx, length * dy * cos, length * dy * sin };
+                    var across = new[] { section.PlaneOriginX, -length * sin, length * cos };
+
+                    stage = "adding the design points of the plane of " + label;
+                    var pointOrigin = AddSectionPoint(session, origin, $"{BevelSectionPointName}{number}A");
+                    var pointAlong = AddSectionPoint(session, along, $"{BevelSectionPointName}{number}B");
+                    var pointAcross = AddSectionPoint(session, across, $"{BevelSectionPointName}{number}C");
+
+                    stage = "adding the plane of " + label;
+                    var plane = session.DesignPlanes.CreateBy3Points(null, pointOrigin, null, pointAlong, null, pointAcross, $"{BevelSectionPlaneName}{number}");
+                    if (plane == null) throw new InvalidOperationException($"The plane of {label} was not created.");
+
+                    stage = "adding the tooth space sketch of " + label;
+                    var sketch = session.Sketches.AddSketch(null, plane, $"{BevelSectionSketchName}{number}");
+
+                    stage = "locating the axes of the sketch of " + label;
+                    var map = SketchMap.CreateFromPoints(session, sketch, origin, along, across, length);
+
+                    stage = "drawing the tooth space profile of " + label;
+                    if (!DrawMappedFigures(sketch, section.Figures, map))
+                    {
+                        throw new InvalidOperationException($"Alibre reports that the tooth space sketch of {label} is not closed.");
+                    }
+
+                    sketches.Add(sketch);
+                }
+
+                stage = $"cutting a tooth space with a loft through {sections.Count} sections, including one section past the toe";
+                var valley = AddSectionLoftCut(session, sketches);
+
+                stage = "patterning the tooth space about the " + BevelGearAxisName;
+                var targets = _root.NewObjectCollector();
+                targets.Add(valley);
+                var pattern = session.Features.AddCircularFeaturePattern(targets, plan.Teeth, plan.PatternAngle, null, gearAxis, false,
+                    PatternGeometry, BevelPatternFeatureName);
+                CheckFeature(pattern, "The circular pattern of the tooth space");
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of {gear.TypeName.ToLowerInvariant()} '{gear.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>Adds a design point at a world position (Alibre units) that defines a section plane.</summary>
+        private static IADDesignPoint AddSectionPoint(IADPartSession session, double[] position, string name)
+        {
+            var point = session.DesignPoints.CreatePoint(position[0], position[1], position[2], name);
+            if (point == null) throw new InvalidOperationException($"The design point {name} was not created.");
+            return point;
+        }
+
+        /// <summary>
+        /// Cuts one tooth space with a loft through the section sketches, ordered from the heel to the toe. Alibre can accept the call and
+        /// still report the feature as failed, so each attempt is checked and the next form is tried: twist minimised, the same with empty
+        /// tangent and guide collectors, then without minimising the twist.
+        /// Throws <see cref="InvalidOperationException"/> when no attempt gives a valid loft cut.
+        /// </summary>
+        private IADPartFeature AddSectionLoftCut(IADPartSession session, IReadOnlyList<IADSketch> sketches)
+        {
+            var failures = new List<string>();
+
+            IADPartFeature Attempt(string label, bool emptyCollectors, bool minimizeTwist)
+            {
+                IADLoftFeature loft = null;
+                try
+                {
+                    var sections = _root.NewObjectCollector();
+                    foreach (var sketch in sketches) sections.Add(sketch);
+                    IObjectCollector tangents = null;
+                    IObjectCollector magnitudes = null;
+                    IObjectCollector angles = null;
+                    IObjectCollector guides = null;
+                    if (emptyCollectors)
+                    {
+                        tangents = _root.NewObjectCollector();
+                        magnitudes = _root.NewObjectCollector();
+                        angles = _root.NewObjectCollector();
+                        guides = _root.NewObjectCollector();
+                    }
+
+                    loft = session.Features.AddLoftCut(sections, tangents, magnitudes, angles, guides, ADLoftGuideType.AD_NONE, minimizeTwist, false, false, false,
+                        BevelValleyFeatureName);
+                    if (loft != null && !loft.HasError) return loft;
+                    failures.Add(label + ": Alibre reports an error in the loft cut");
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(label + ": " + ex.Message);
+                }
+
+                try
+                {
+                    loft?.Delete();
+                }
+                catch (Exception)
+                {
+                    // A loft that cannot be removed is left for the user to see; the next attempt still runs.
+                }
+
+                return null;
+            }
+
+            var result = Attempt("minimised twist", false, true) ?? Attempt("minimised twist, empty collectors", true, true) ?? Attempt("natural twist", false, false);
+            if (result != null) return result;
+
+            throw new InvalidOperationException(
+                $"the loft cut of the tooth space through {sketches.Count} sections was not accepted ({string.Join("; ", failures)}). " +
+                "Use more sections (CurvedBevelSectionCount), a smaller spiral angle or a narrower face.");
+        }
 
         /// <summary>
         /// Adds the plane offset from the YZ plane to the point where the back cone meets the X axis. Alibre's offset direction is not
@@ -529,17 +710,27 @@ namespace Bolsover.Gears.Calculator.Alibre
 
             public static SketchMap Create(IADPartSession session, IADSketch sketch, BevelGearSketch plan)
             {
+                return CreateFromPoints(session, sketch, new[] { plan.BackConeApexX, 0.0, 0.0 }, new[] { 0.0, plan.PointAY, 0.0 },
+                    new[] { plan.BackConeApexX, 0.0, 1.0 }, plan.BackConeDistance);
+            }
+
+            /// <summary>
+            /// The map of a sketch from three world points on its plane: the origin, a point along the sketch x axis at <paramref name="alongLength"/>
+            /// from the origin (in the units of the sketch figures) and a point along the sketch y axis.
+            /// </summary>
+            public static SketchMap CreateFromPoints(IADPartSession session, IADSketch sketch, double[] origin, double[] along, double[] across, double alongLength)
+            {
                 var factory = session.GeometryFactory;
-                MapPoint(sketch, factory, plan.BackConeApexX, 0.0, 0.0, out var cx, out var cy);
-                MapPoint(sketch, factory, 0.0, plan.PointAY, 0.0, out var ax, out var ay);
-                MapPoint(sketch, factory, plan.BackConeApexX, 0.0, 1.0, out var zx, out var zy);
+                MapPoint(sketch, factory, origin[0], origin[1], origin[2], out var cx, out var cy);
+                MapPoint(sketch, factory, along[0], along[1], along[2], out var ax, out var ay);
+                MapPoint(sketch, factory, across[0], across[1], across[2], out var zx, out var zy);
 
                 var uLength = Math.Sqrt((ax - cx) * (ax - cx) + (ay - cy) * (ay - cy));
                 var vLength = Math.Sqrt((zx - cx) * (zx - cx) + (zy - cy) * (zy - cy));
                 if (!(uLength > 1e-9) || !(vLength > 1e-9)) throw new InvalidOperationException("the back cone line has no length in the sketch");
 
                 // The sketch is in the same units as the world, so the scale is 1; it is measured anyway.
-                var scale = uLength / plan.BackConeDistance;
+                var scale = uLength / alongLength;
                 var u = new[] { (ax - cx) / uLength, (ay - cy) / uLength };
                 var v = new[] { (zx - cx) / vLength, (zy - cy) / vLength };
                 if (Math.Abs(u[0] * v[0] + u[1] * v[1]) > 1e-6) throw new InvalidOperationException("the sketch axes of the back cone plane are not perpendicular");
