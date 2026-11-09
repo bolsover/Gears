@@ -59,7 +59,7 @@ With these relations the sliding velocity at the mean point lies along the tooth
 
 ## Editor
 
-*Build > Start with* offers *Spiral bevel gear*, *Zerol bevel gear* and *Hypoid pinion*. *Add mate > Bevel gear for the selected bevel gear* adds the mate of a straight, spiral or zerol gear (a spiral or zerol mate gets the opposite hand and the same spiral angle and cutter radius). *Add mate > Hypoid gear or pinion for the selected hypoid gear* adds the other gear of the pair on an offset shaft; the default offset is a quarter of the gear mean pitch radius. The property grid shows the spiral angle, hand, cutter radius and, for a hypoid gear, the offset and the values of the pair (pitch radii, spiral angles and cone angles).
+*Bevel > Spiral*, *Bevel > Zerol* and *Bevel > Hypoid* start a train with a spiral bevel gear, a zerol bevel gear or a hypoid pinion. *Bevel > Add meshed bevel gear* adds the mate of a straight, spiral or zerol gear (a spiral or zerol mate gets the opposite hand and the same spiral angle and cutter radius). *Bevel > Add hypoid gear or pinion* adds the other gear of the pair of the selected hypoid gear on an offset shaft; the default offset is a quarter of the gear mean pitch radius. The property grid shows the spiral angle, hand, cutter radius and, for a hypoid gear, the offset and the values of the pair (pitch radii, spiral angles and cone angles).
 
 ## Limits
 

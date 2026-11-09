@@ -32,7 +32,10 @@ namespace Bolsover.Gears.Gui.Presenters
         ZerolBevel,
 
         /// <summary>The pinion of a hypoid pair, with the offset of a hypoid mate already set.</summary>
-        Hypoid
+        Hypoid,
+
+        /// <summary>A helical spur gear (15 degree helix angle, right hand).</summary>
+        Helical
     }
 
     /// <summary>One node of the assembly tree: assembly, then shafts, then the gears mounted on each shaft.</summary>
@@ -147,6 +150,14 @@ namespace Bolsover.Gears.Gui.Presenters
                     pinion.OffsetMm = DefaultHypoidOffset(pinion.Module, pinion.MateTeeth);
                     pinion.Hand = SpiralHand.Left;
                     first = pinion;
+                    break;
+                }
+                case GearFamily.Helical:
+                {
+                    var helical = CreateGear(null, 20);
+                    helical.HelixAngleDeg = 15.0;
+                    helical.HelicalDirection = "R";
+                    first = helical;
                     break;
                 }
                 default:

@@ -225,35 +225,10 @@ namespace Bolsover.Gears.Gui.Views
         {
             var menu = new MenuStrip();
             var btnNew = new ToolStripMenuItem("&New train");
-            var btnAddGear = new ToolStripMenuItem("Add &gear to shaft");
-            var btnAddMeshed = new ToolStripMenuItem("Add &meshed gear");
-            var btnRemove = new ToolStripMenuItem("&Remove selected");
-            var btnFitShift = new ToolStripMenuItem("Fit &profile shift")
-            {
-                ToolTipText = "Give the selected driven gear the profile shift that makes its mesh run at the current centre distance."
-            };
             var btnFit = new ToolStripMenuItem("&Fit view");
 
-            var ddStart = new ToolStripMenuItem("&Start with");
-            ddStart.DropDownItems.Add("Spur gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Spur)));
-            ddStart.DropDownItems.Add("Bevel gear (standard)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Standard)));
-            ddStart.DropDownItems.Add("Bevel gear (Gleason)", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Gleason)));
-            ddStart.DropDownItems.Add("Spiral bevel gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.SpiralBevel)));
-            ddStart.DropDownItems.Add("Zerol bevel gear", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.ZerolBevel)));
-            ddStart.DropDownItems.Add("Hypoid pinion", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Hypoid)));
-            ddStart.DropDownItems.Add("Worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm)));
-            ddStart.DropDownItems.Add("Planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()));
-            ddStart.DropDownItems.Add("Cycloidal wheel and pinion", null, (s, e) => RunCommand(() => _presenter.NewCycloidalPair()));
-
-            var ddMate = new ToolStripMenuItem("Add m&ate");
-            ddMate.DropDownItems.Add("Rack for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack)));
-            var bevelItem = ddMate.DropDownItems.Add("Bevel gear for the selected bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)));
-            bevelItem.ToolTipText = "Add the mate of the selected straight, spiral or zerol bevel gear. The mate of a spiral or zerol gear has the opposite hand and the same spiral angle and cutter radius.";
-            var hypoidItem = ddMate.DropDownItems.Add("Hypoid gear or pinion for the selected hypoid gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Hypoid)));
-            hypoidItem.ToolTipText = "Add the gear for a hypoid pinion, or the pinion for a hypoid gear, on a shaft offset from the selected one. Change the offset in the properties; its sign sets the hands.";
-            ddMate.DropDownItems.Add("Worm wheel for the selected worm", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Worm)));
-            var crossedItem = ddMate.DropDownItems.Add("Helical gear on crossed shafts for the selected gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.CrossedHelical)));
-            crossedItem.ToolTipText = "Add a helical gear whose shaft is not parallel to the shaft of the selected helical gear. It gets the same hand and the helix angle that puts the shafts at 90 degrees; change the helix angles and the shaft angle in the properties.";
+            // A ToolStripMenuItem can only have one parent, so each menu gets its own Remove item.
+            Func<ToolStripMenuItem> createRemoveItem = () => new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected));
 
             var ddFile = new ToolStripMenuItem("&File");
             ddFile.DropDownItems.Add(btnNew);
@@ -273,10 +248,69 @@ namespace Bolsover.Gears.Gui.Views
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
-            var menuBuild = new ToolStripMenuItem("&Build");
-            menuBuild.DropDownItems.AddRange(new ToolStripItem[]
+            var menuSpur = new ToolStripMenuItem("Sp&ur");
+            menuSpur.DropDownItems.AddRange(new ToolStripItem[]
             {
-                ddStart, new ToolStripSeparator(), btnAddGear, btnAddMeshed, ddMate, new ToolStripSeparator(), btnFitShift, btnRemove
+                new ToolStripMenuItem("&Straight", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Spur)))
+                {
+                    ToolTipText = "Start a new train with a straight (non-helical) spur gear."
+                },
+                new ToolStripMenuItem("&Helical", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Helical)))
+                {
+                    ToolTipText = "Start a new train with a helical spur gear (15 degree right-hand helix by default)."
+                },
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("Add &gear to shaft", null, (s, e) => RunCommand(AddGearToSelectedShaft)),
+                new ToolStripMenuItem("Add &meshed gear", null, (s, e) => RunCommand(AddMeshedToSelectedGear)),
+                new ToolStripMenuItem("Add rac&k for the selected pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Rack))),
+                new ToolStripMenuItem("Add helical gear on crosse&d shafts for the selected gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.CrossedHelical)))
+                {
+                    ToolTipText = "Add a helical gear whose shaft is not parallel to the shaft of the selected helical gear. It gets the same hand and the helix angle that puts the shafts at 90 degrees; change the helix angles and the shaft angle in the properties."
+                },
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("Fit &profile shift", null, (s, e) => RunCommand(FitProfileShiftOfSelectedGear))
+                {
+                    ToolTipText = "Give the selected driven gear the profile shift that makes its mesh run at the current centre distance."
+                },
+                createRemoveItem()
+            });
+
+            var menuBevel = new ToolStripMenuItem("&Bevel");
+            var ddBevelStraight = new ToolStripMenuItem("&Straight");
+            ddBevelStraight.DropDownItems.Add("&Standard", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Standard)));
+            ddBevelStraight.DropDownItems.Add("&Gleason", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Gleason)));
+            menuBevel.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                ddBevelStraight,
+                new ToolStripMenuItem("Spir&al", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.SpiralBevel))),
+                new ToolStripMenuItem("&Zerol", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.ZerolBevel))),
+                new ToolStripMenuItem("&Hypoid", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Hypoid))),
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("Add &meshed bevel gear", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Bevel)))
+                {
+                    ToolTipText = "Add the mate of the selected straight, spiral or zerol bevel gear. The mate of a spiral or zerol gear has the opposite hand and the same spiral angle and cutter radius."
+                },
+                new ToolStripMenuItem("Add hypoid gear or &pinion", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Hypoid)))
+                {
+                    ToolTipText = "Add the gear for a hypoid pinion, or the pinion for a hypoid gear, on a shaft offset from the selected one. Change the offset in the properties; its sign sets the hands."
+                },
+                new ToolStripSeparator(),
+                createRemoveItem()
+            });
+
+            var menuWorm = new ToolStripMenuItem("&Worm");
+            menuWorm.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                new ToolStripMenuItem("&New worm", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Worm))),
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("Add worm &wheel for the selected worm", null, (s, e) => RunCommand(() => AddMateToSelectedGear(MeshType.Worm))),
+                createRemoveItem()
+            });
+
+            var menuPlanetary = new ToolStripMenuItem("Pl&anetary");
+            menuPlanetary.DropDownItems.Add(new ToolStripMenuItem("&New planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()))
+            {
+                ToolTipText = "Start a new train with a planetary stage (sun, planets and ring). A planetary stage cannot be edited gear by gear."
             });
 
             var menuPulley = new ToolStripMenuItem("&Pulley");
@@ -327,7 +361,7 @@ namespace Bolsover.Gears.Gui.Views
                 {
                     ToolTipText = "Add a compound cycloidal gear next to the gears of the selected shaft (or the shaft of the selected gear): the opposite kind to the last cycloidal gear on the shaft."
                 },
-                new ToolStripMenuItem("&Remove selected", null, (s, e) => _presenter.RemoveSelected()),
+                new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected)),
                 new ToolStripSeparator(),
                 _btnExportCycloidal,
                 _btnExportCycloidalPair
@@ -353,10 +387,6 @@ namespace Bolsover.Gears.Gui.Views
             _btnExportCycloidal.Click += (s, e) => RunCommand(ExportSelectedCycloidalGearToAlibre);
             _btnExportCycloidalPair.Click += (s, e) => RunCommand(ExportAssemblyToAlibre);
             btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
-            btnAddGear.Click += (s, e) => RunCommand(AddGearToSelectedShaft);
-            btnAddMeshed.Click += (s, e) => RunCommand(AddMeshedToSelectedGear);
-            btnRemove.Click += (s, e) => _presenter.RemoveSelected();
-            btnFitShift.Click += (s, e) => RunCommand(FitProfileShiftOfSelectedGear);
             btnFit.Click += (s, e) =>
             {
                 _viewport.FitView();
@@ -372,7 +402,7 @@ namespace Bolsover.Gears.Gui.Views
             menuHelp.DropDownItems.Add("&Help", null, (s, e) => ShowDocument("Help", "README.html"));
             menuHelp.DropDownItems.Add("&License", null, (s, e) => ShowDocument("License", "LICENSE.html"));
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuBuild, menuPulley, menuCycloidal, menuView, menuSimulation, menuHelp });
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuSpur, menuBevel, menuWorm, menuPlanetary, menuPulley, menuCycloidal, menuView, menuSimulation, menuHelp });
             MainMenuStrip = menu;
 
             var statusBar = new StatusStrip();

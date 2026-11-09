@@ -27,7 +27,7 @@ A component's *phase* is its rotation about its axis in radians. For a rack the 
   and perpendicular to the line of centres, with the tooth tips pointing at the pinion.
 * Turning the pinion by `phi` slides the rack by `r * phi`, where `r` is the transverse pitch radius (`m z / 2` for a spur pinion). The linear speed is `2 pi r` mm per revolution.
 * The pinion must be an external gear. A spur pinion needs a straight rack.
-* **Helical rack:** the rack has a *Helix angle* and a *Helix hand*. As for helical gears, the module and pressure angle are the normal values. In the end-face section the rack has the pitch `p_t = pi m_n / cos(beta)` and the pressure angle `tan(alpha_t) = tan(alpha_n) / cos(beta)`, and the pinion datum radius is `m_n z / (2 cos(beta))`. Each tooth section is sheared along the rack by `tan(beta)` per mm of face width. A helical pinion needs a rack of the **same helix angle and the opposite hand**, as external helical gears do; the solver reports an error otherwise. *Add mate* gives the new rack the pinion's helix angle and the opposite hand.
+* **Helical rack:** the rack has a *Helix angle* and a *Helix hand*. As for helical gears, the module and pressure angle are the normal values. In the end-face section the rack has the pitch `p_t = pi m_n / cos(beta)` and the pressure angle `tan(alpha_t) = tan(alpha_n) / cos(beta)`, and the pinion datum radius is `m_n z / (2 cos(beta))`. Each tooth section is sheared along the rack by `tan(beta)` per mm of face width. A helical pinion needs a rack of the **same helix angle and the opposite hand**, as external helical gears do; the solver reports an error otherwise. *Spur > Add rack for the selected pinion* gives the new rack the pinion's helix angle and the opposite hand.
 
 ### Bevel gears (Tredgold)
 
@@ -53,7 +53,7 @@ The 3D solid of a bevel gear is the toothed slab between the back cone (the surf
 
 #### Standard and Gleason tooth proportions
 
-The *Bevel type* property (and the *Start with* menu entries *Bevel gear (standard)* and *Bevel gear (Gleason)*) selects the tooth depth system. Set it on the driving gear; the meshed gear follows.
+The *Bevel type* property (and the menu entries *Bevel > Straight > Standard* and *Bevel > Straight > Gleason*) selects the tooth depth system. Set it on the driving gear; the meshed gear follows.
 
 | | Standard | Gleason |
 |---|---|---|
@@ -75,7 +75,7 @@ A 2:1 pair therefore has a gear addendum of `0.655 m` and a pinion addendum of `
 
 ### Crossed helical gears
 
-Helical gears can mesh on shafts that are not parallel, and then the two gears may have different helix angles. Add the mesh with *Build > Add mate > Helical gear on crossed shafts for the selected gear*, or with `AddRelation(driver, driven, MeshType.CrossedHelical, centreLineAngleDeg, shaftAngleDeg)`.
+Helical gears can mesh on shafts that are not parallel, and then the two gears may have different helix angles. Add the mesh with *Spur > Add helical gear on crossed shafts for the selected gear*, or with `AddRelation(driver, driven, MeshType.CrossedHelical, centreLineAngleDeg, shaftAngleDeg)`.
 
 * The gears share the **normal** module and the normal pressure angle. Each gear has its own transverse module `m_t = m_n / cos(beta)` and pitch diameter `d = z m_t`, and the centre distance is `(d1 + d2) / 2`.
 * The **shaft angle** is entered on the relation and checked against the helix angles and hands: `Sigma = beta1 + beta2` for the same hand and `Sigma = |beta1 - beta2|` for opposite hands (equal angles of opposite hands give 0, the parallel mesh). A different angle is refused with a message that gives the angle the helix angles need, so after changing a helix angle or a hand the properties show the new *Expected shaft angle*. A new mate gets the same hand as its driver and the helix angle that puts the shafts at 90 degrees (45 degrees when the driver is a spur gear).
@@ -116,8 +116,8 @@ A `TimingBelt` joins two pulleys of the same series on different, parallel shaft
 
 ## Gear train editor
 
-The editor (`GearTrainForm`, the main window of the program) starts a train with a spur gear, a bevel gear (straight, spiral, zerol or hypoid), a worm or a planetary stage.
-*Add meshed gear* adds a parallel gear; *Add mate* adds a rack, bevel gear or worm wheel to the selected gear.
+The editor (`GearTrainForm`, the main window of the program) has one menu for each gear family. A new train starts from an item of the family menu: *Spur > Straight* or *Spur > Helical*, *Bevel > Straight > Standard*, *Bevel > Straight > Gleason*, *Bevel > Spiral*, *Bevel > Zerol* or *Bevel > Hypoid*, *Worm > New worm*, or *Planetary > New planetary stage*.
+The **Spur** menu adds a gear to the shaft (*Add gear to shaft*: the selected shaft, else the shaft of the selected gear, else the input shaft), a parallel gear (*Add meshed gear*), a rack for the selected pinion or a helical gear on crossed shafts. The **Bevel** menu adds a meshed bevel gear or a hypoid gear or pinion, and the **Worm** menu adds a worm wheel for the selected worm. Each of these menus has *Remove selected*. The **Planetary** menu only starts a stage, because the editor does not add or remove the gears of a planetary stage.
 The *File* menu saves and loads a train as JSON and exports the scene as STL or OBJ. *Animate* turns the input shaft
 at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
 
@@ -160,7 +160,7 @@ Select an involute gear in the editor to change these in the property grid. Mesh
   contact ratio and backlash are recalculated. For an unshifted pair without backlash the working backlash is `2 a_w (inv alpha_w - inv alpha)`:
   a larger distance adds backlash to an external pair and takes it away from an internal pair.
   A distance below `a cos(alpha_t)` is rejected because the base circles would overlap.
-* **Fit profile shift** (*Build* menu) gives the selected driven gear the profile shift that makes the mesh run at the current centre distance with no
+* **Fit profile shift** (*Spur* menu) gives the selected driven gear the profile shift that makes the mesh run at the current centre distance with no
   fixed distance, so the distance follows from the profile shifts. The driver is not changed.
 * The *Mesh* group of the property grid and the *Stages* tab show the standard and working centre distance, the working pressure angle, the working
   backlash and the contact ratio. The report warns when the working backlash is negative (the teeth jam) or the contact ratio is below 1.
