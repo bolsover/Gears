@@ -46,15 +46,26 @@ namespace UnitTests
         }
 
         [Test]
-        public void GetAssemblyParts_RequiresAtLeastTwoGears()
+        public void GetAssemblyParts_DoesNotCheckTheMinimumItself()
         {
             var assembly = new GearAssembly();
             assembly.AddShaft(new Shaft("s1")).Mount(Gear("g1"));
 
-            var ex = Assert.Throws<InvalidOperationException>(() => AlibreGearExporter.GetAssemblyParts(assembly));
-            StringAssert.Contains("at least 2", ex.Message);
-            Assert.Throws<InvalidOperationException>(() => AlibreGearExporter.GetAssemblyParts(new GearAssembly()));
+            Assert.AreEqual(1, AlibreGearExporter.GetAssemblyParts(assembly).Count, "ExportAssembly counts all part kinds together.");
+            Assert.AreEqual(0, AlibreGearExporter.GetAssemblyParts(new GearAssembly()).Count);
             Assert.Throws<ArgumentNullException>(() => AlibreGearExporter.GetAssemblyParts(null));
+        }
+
+        [Test]
+        public void GetAssemblyParts_WithASelection_ReturnsOnlyTheSelectedGears()
+        {
+            var assembly = TwoGearTrain(out var s1, out var s2);
+            var second = s2.Mounts[0].Component;
+
+            var parts = AlibreGearExporter.GetAssemblyParts(assembly, new object[] { second, s1 });
+
+            CollectionAssert.AreEqual(new[] { "g2" }, parts.Select(p => p.Key.Id).ToArray());
+            Assert.AreEqual(0, AlibreGearExporter.GetAssemblyParts(assembly, new object[0]).Count);
         }
 
         [Test]
@@ -174,7 +185,7 @@ namespace UnitTests
         }
 
         [Test]
-        public void GetShaftAssemblyParts_FollowsTheOptions()
+        public void GetShaftAssemblyParts_ReturnsEverythingOrOnlyTheSelection()
         {
             var assembly = new PlanetaryGearSet("P").BuildAssembly();
             var carrier = assembly.Shafts.Single(PlanetaryGearSet.IsCarrier);
@@ -182,20 +193,17 @@ namespace UnitTests
             var ringShaft = assembly.Shafts.Single(s => s.Mounts.Any(m => m.Component is InvoluteGearComponent g && g.IsInternal));
             var gearShafts = assembly.Shafts.Count - 2;
 
-            Assert.AreEqual(0, AlibreGearExporter.GetShaftAssemblyParts(assembly, null).Count);
-            Assert.AreEqual(0, AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions()).Count);
+            var all = AlibreGearExporter.GetShaftAssemblyParts(assembly);
+            Assert.AreEqual(gearShafts + 1, all.Count, "Every exportable shaft and the carrier are included automatically.");
+            CollectionAssert.Contains(all.Select(p => p.Key).ToList(), carrier);
+            CollectionAssert.DoesNotContain(all.Select(p => p.Key).ToList(), ringShaft);
 
-            var carriersOnly = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeCarriers = true });
-            Assert.AreEqual(1, carriersOnly.Count);
-            Assert.AreSame(carrier, carriersOnly[0].Key);
+            var carrierOnly = AlibreGearExporter.GetShaftAssemblyParts(assembly, new object[] { carrier });
+            Assert.AreEqual(1, carrierOnly.Count);
+            Assert.AreSame(carrier, carrierOnly[0].Key);
 
-            var shaftsOnly = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true });
-            Assert.AreEqual(gearShafts, shaftsOnly.Count);
-            CollectionAssert.DoesNotContain(shaftsOnly.Select(p => p.Key).ToList(), carrier);
-            CollectionAssert.DoesNotContain(shaftsOnly.Select(p => p.Key).ToList(), ringShaft);
-
-            var both = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true, IncludeCarriers = true });
-            Assert.AreEqual(gearShafts + 1, both.Count);
+            Assert.AreEqual(0, AlibreGearExporter.GetShaftAssemblyParts(assembly, new object[0]).Count);
+            Assert.AreEqual(0, AlibreGearExporter.GetShaftAssemblyParts(assembly, new object[] { ringShaft }).Count, "A shaft without a part stays out even when selected.");
         }
 
         [Test]
@@ -205,7 +213,7 @@ namespace UnitTests
             assembly.AddShaft(new Shaft("rackCarrier")).Mount(new RackComponent("r"));
             assembly.AddShaft(new Shaft("s1")).Mount(Gear("g1"));
 
-            var parts = AlibreGearExporter.GetShaftAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true });
+            var parts = AlibreGearExporter.GetShaftAssemblyParts(assembly);
 
             CollectionAssert.AreEqual(new[] { "s1" }, parts.Select(p => p.Key.Id).ToArray());
         }

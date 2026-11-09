@@ -21,8 +21,8 @@ namespace Bolsover.Gears.Gui.Views
         /// <summary>Shows the editable properties of the selected node; null clears the editor.</summary>
         void ShowProperties(object properties);
 
-        /// <summary>Shows the 3D scene; the selected gear or shaft is highlighted and hidden gears are skipped.</summary>
-        void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears);
+        /// <summary>Shows the 3D scene; every selected gear, shaft or belt is highlighted and hidden gears are skipped.</summary>
+        void ShowScene(AssemblyScene scene, IReadOnlyCollection<object> selectedItems, ISet<GearComponent> hiddenGears);
 
         /// <summary>Shows the ratio and speed report; null clears it.</summary>
         void ShowReport(GearTrainReport report);

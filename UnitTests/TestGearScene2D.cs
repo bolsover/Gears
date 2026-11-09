@@ -75,6 +75,17 @@ namespace UnitTests
         }
 
         [Test]
+        public void TestSetScene_AcceptsSeveralSelectedItems()
+        {
+            using (var view = new GearScene2DControl())
+            {
+                view.SetScene(_scene, new object[] { _gearA, _gearB }, null, true);
+
+                Assert.AreEqual(4, view.PartCount, "Selecting parts does not change what is drawn.");
+            }
+        }
+
+        [Test]
         public void TestSetScene_NullClearsTheView()
         {
             using (var view = new GearScene2DControl())

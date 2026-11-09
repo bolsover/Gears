@@ -667,7 +667,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             return _root.CreateEmptyPartEx(name, false, true);
         }
 
-        /// <summary>The smallest number of gears for which an assembly export makes sense.</summary>
+        /// <summary>The smallest number of parts (gears, shafts, carriers and belts together) for which an assembly export makes sense.</summary>
         public const int MinimumAssemblyParts = 2;
 
         /// <summary>Name given to the Alibre assembly that a gear train is exported to.</summary>
@@ -680,17 +680,20 @@ namespace Bolsover.Gears.Calculator.Alibre
         public string AssemblyFolder { get; set; }
 
         /// <summary>
-        /// Exports every gear of the train to a new Alibre assembly. Each gear is built as a new part exactly like the single-part export
+        /// Exports the train to a new Alibre assembly: every gear, every shaft (a shaft that only carries a rack has none), every planetary carrier
+        /// and every timing belt, or only the items of <paramref name="selection"/> when one is given. Each gear is built as a new part exactly like the single-part export
         /// (so it gets its full set of teeth), saved to <see cref="AssemblyFolder"/> and added to the assembly with
         /// <c>IADOccurrences.Add</c> (the Alibre API has no <c>AddPart</c>) at its shaft placement and axial offset in the train.
-        /// Throws <see cref="InvalidOperationException"/> when the train has fewer than <see cref="MinimumAssemblyParts"/> gears,
-        /// holds a gear family that cannot be exported yet, or Alibre rejects a step.
+        /// Throws <see cref="InvalidOperationException"/> when there are fewer than <see cref="MinimumAssemblyParts"/> parts in total,
+        /// a gear family cannot be exported yet, or Alibre rejects a step.
         /// </summary>
-        public IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName, AssemblyExportOptions options = null)
+        /// <param name="selection">The gears, shafts and belts to export; null exports everything.</param>
+        public IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName, IReadOnlyCollection<object> selection = null)
         {
-            var parts = GetAssemblyParts(train);
-            var shaftParts = GetShaftAssemblyParts(train, options);
-            var beltParts = GetBeltAssemblyParts(train, options);
+            var parts = GetAssemblyParts(train, selection);
+            var shaftParts = GetShaftAssemblyParts(train, selection);
+            var beltParts = GetBeltAssemblyParts(train, selection);
+            CheckPartCount(parts.Count + shaftParts.Count + beltParts.Count);
 
             var stage = "creating the assembly";
             var folder = string.IsNullOrWhiteSpace(AssemblyFolder)
@@ -903,11 +906,12 @@ namespace Bolsover.Gears.Calculator.Alibre
         }
 
         /// <summary>
-        /// The gears of a train with the location of each one in the assembly, in shaft and mount order. Throws
-        /// <see cref="InvalidOperationException"/> when the train has fewer than <see cref="MinimumAssemblyParts"/> gears or holds a gear that
-        /// cannot be exported. Needs no Alibre, so it is checked before anything is created there.
+        /// The gears of a train (or only the gears of <paramref name="selection"/> when one is given) with the location of each one in the
+        /// assembly, in shaft and mount order. Throws <see cref="InvalidOperationException"/> when one of them cannot be exported.
+        /// Needs no Alibre, so it is checked before anything is created there.
         /// </summary>
-        public static IReadOnlyList<KeyValuePair<GearComponent, Transform3D>> GetAssemblyParts(GearAssembly train)
+        /// <param name="selection">The items to export; null returns every gear.</param>
+        public static IReadOnlyList<KeyValuePair<GearComponent, Transform3D>> GetAssemblyParts(GearAssembly train, IReadOnlyCollection<object> selection = null)
         {
             if (train == null) throw new ArgumentNullException(nameof(train));
 
@@ -916,6 +920,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             {
                 foreach (var mount in shaft.Mounts)
                 {
+                    if (!IsIncluded(selection, mount.Component)) continue;
                     if (!IsExportable(mount.Component))
                     {
                         throw new InvalidOperationException(
@@ -926,49 +931,66 @@ namespace Bolsover.Gears.Calculator.Alibre
                 }
             }
 
-            if (parts.Count < MinimumAssemblyParts)
-            {
-                throw new InvalidOperationException(
-                    $"An assembly needs at least {MinimumAssemblyParts} gears; the train has {parts.Count}. Use the single gear export instead.");
-            }
-
             return parts;
         }
 
+        private static void CheckPartCount(int count)
+        {
+            if (count < MinimumAssemblyParts)
+            {
+                throw new InvalidOperationException(
+                    $"An assembly needs at least {MinimumAssemblyParts} parts; there are {count}. Use the single part export instead.");
+            }
+        }
+
+        /// <summary>True when there is no selection (everything is included) or the item is one of the selected items.</summary>
+        private static bool IsIncluded(IReadOnlyCollection<object> selection, object item)
+        {
+            if (selection == null) return true;
+            foreach (var candidate in selection)
+            {
+                if (ReferenceEquals(candidate, item)) return true;
+            }
+
+            return false;
+        }
+
         /// <summary>
-        /// The shafts and planetary carriers of a train that <paramref name="options"/> asks for, with the location of each one in the assembly
-        /// (the shaft placement, then the start of the shaft along its axis). A shaft that only carries a rack has no part. Needs no Alibre.
+        /// The shafts and planetary carriers of a train (or only those of <paramref name="selection"/> when one is given), with the location of
+        /// each one in the assembly (the shaft placement, then the start of the shaft along its axis). A shaft that only carries a rack has no
+        /// part. Needs no Alibre.
         /// </summary>
-        public static IReadOnlyList<KeyValuePair<Shaft, Transform3D>> GetShaftAssemblyParts(GearAssembly train, AssemblyExportOptions options)
+        /// <param name="selection">The items to export; null returns every exportable shaft and carrier.</param>
+        public static IReadOnlyList<KeyValuePair<Shaft, Transform3D>> GetShaftAssemblyParts(GearAssembly train, IReadOnlyCollection<object> selection = null)
         {
             if (train == null) throw new ArgumentNullException(nameof(train));
 
             var parts = new List<KeyValuePair<Shaft, Transform3D>>();
-            if (options == null || (!options.IncludeShafts && !options.IncludeCarriers)) return parts;
-
             foreach (var shaft in train.Shafts)
             {
-                var include = PlanetaryGearSet.IsCarrier(shaft) ? options.IncludeCarriers : options.IncludeShafts && ShaftPartSketchBuilder.IsExportable(shaft);
-                if (include) parts.Add(new KeyValuePair<Shaft, Transform3D>(shaft, GetShaftPlacement(shaft)));
+                if (!IsIncluded(selection, shaft)) continue;
+                if (PlanetaryGearSet.IsCarrier(shaft) || ShaftPartSketchBuilder.IsExportable(shaft))
+                {
+                    parts.Add(new KeyValuePair<Shaft, Transform3D>(shaft, GetShaftPlacement(shaft)));
+                }
             }
 
             return parts;
         }
 
         /// <summary>
-        /// The timing belts of a train, with the location of each one in the assembly, when <paramref name="options"/> asks for them. The belt
+        /// The timing belts of a train (or only those of <paramref name="selection"/> when one is given), with the location of each one in the assembly. The belt
         /// part has the driver pulley's axis at its origin and lies on its mid-plane, so it is placed like the driver pulley: the driver shaft
         /// placement, then the axial offset of the driver mount. A belt whose driver is not mounted has no part. Needs no Alibre.
         /// </summary>
-        public static IReadOnlyList<KeyValuePair<TimingBelt, Transform3D>> GetBeltAssemblyParts(GearAssembly train, AssemblyExportOptions options)
+        public static IReadOnlyList<KeyValuePair<TimingBelt, Transform3D>> GetBeltAssemblyParts(GearAssembly train, IReadOnlyCollection<object> selection = null)
         {
             if (train == null) throw new ArgumentNullException(nameof(train));
 
             var parts = new List<KeyValuePair<TimingBelt, Transform3D>>();
-            if (options == null || !options.IncludeBelts) return parts;
-
             foreach (var belt in train.Belts)
             {
+                if (!IsIncluded(selection, belt)) continue;
                 var mount = train.FindMount(belt.Driver, out var shaft);
                 if (mount == null) continue;
                 parts.Add(new KeyValuePair<TimingBelt, Transform3D>(belt, GetBeltPlacement(shaft, mount)));

@@ -65,12 +65,23 @@ namespace Bolsover.Gears.Gui
 
         /// <summary>Replaces the displayed scene.</summary>
         /// <param name="scene">The solved scene; null clears the viewport.</param>
-        /// <param name="selected">The selected gear or shaft, drawn in the highlight colour; may be null.</param>
+        /// <param name="selected">The selected gears, shafts and belts, drawn in the highlight colour; may be null.</param>
         /// <param name="hiddenGears">Gears that are not drawn; may be null.</param>
         /// <param name="wireframe">True to draw triangle edges instead of solid faces.</param>
         /// <param name="showShafts">True to draw the shaft cylinders.</param>
-        public void SetScene(AssemblyScene scene, object selected, ISet<GearComponent> hiddenGears, bool wireframe, bool showShafts)
+        public void SetScene(AssemblyScene scene, IReadOnlyCollection<object> selected, ISet<GearComponent> hiddenGears, bool wireframe, bool showShafts)
         {
+            bool IsSelected(object tag)
+            {
+                if (selected == null) return false;
+                foreach (var candidate in selected)
+                {
+                    if (ReferenceEquals(candidate, tag)) return true;
+                }
+
+                return false;
+            }
+
             foreach (var visual in _sceneVisuals)
             {
                 Viewport.Children.Remove(visual);
@@ -85,7 +96,7 @@ namespace Bolsover.Gears.Gui
             {
                 shaftIndex[shaftItem.Shaft] = shaftIndex.Count;
                 if (!showShafts) continue;
-                var color = ReferenceEquals(selected, shaftItem.Shaft) ? SelectedColor : ShaftColor;
+                var color = IsSelected(shaftItem.Shaft) ? SelectedColor : ShaftColor;
                 AddMesh(shaftItem.Mesh, shaftItem.Shaft, color, wireframe);
             }
 
@@ -93,14 +104,14 @@ namespace Bolsover.Gears.Gui
             {
                 if (hiddenGears != null && hiddenGears.Contains(item.Component)) continue;
                 var index = shaftIndex.TryGetValue(item.Shaft, out var i) ? i : 0;
-                var color = ReferenceEquals(selected, item.Component) ? SelectedColor : Palette[index % Palette.Length];
+                var color = IsSelected(item.Component) ? SelectedColor : Palette[index % Palette.Length];
                 AddMesh(item.Mesh, item.Component, color, wireframe);
             }
 
             foreach (var beltItem in scene.BeltItems)
             {
                 if (hiddenGears != null && (hiddenGears.Contains(beltItem.Belt.Driver) || hiddenGears.Contains(beltItem.Belt.Driven))) continue;
-                var color = ReferenceEquals(selected, beltItem.Belt) ? SelectedColor : BeltColor;
+                var color = IsSelected(beltItem.Belt) ? SelectedColor : BeltColor;
                 AddMesh(beltItem.Mesh, beltItem.Belt, color, wireframe);
             }
 

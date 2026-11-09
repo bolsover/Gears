@@ -4,19 +4,6 @@ using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Calculator.Alibre
 {
-    /// <summary>Which parts besides the gears an assembly export to Alibre adds.</summary>
-    public sealed class AssemblyExportOptions
-    {
-        /// <summary>Add a part for every shaft of the train (a shaft that only carries a rack has none).</summary>
-        public bool IncludeShafts { get; set; }
-
-        /// <summary>Add a part for the carrier plate of every planetary stage.</summary>
-        public bool IncludeCarriers { get; set; }
-
-        /// <summary>Add a part for every timing belt of the train: a plain strip without teeth.</summary>
-        public bool IncludeBelts { get; set; }
-    }
-
     /// <summary>
     /// What an Alibre part for a shaft or a planetary carrier is made of: a circle of the shaft radius on the XY plane, extruded along Z
     /// to the length of the shaft. Needs no Alibre. Lengths are in centimetres, the unit of Alibre part sketches and features.

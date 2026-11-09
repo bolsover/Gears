@@ -389,7 +389,7 @@ namespace UnitTests
             public void ShowTree(TrainTreeNode root, object selectedTag) { }
             public void ShowSelection(object selectedTag) { }
             public void ShowProperties(object properties) => Properties = properties;
-            public void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears) { }
+            public void ShowScene(AssemblyScene scene, IReadOnlyCollection<object> selectedItems, ISet<GearComponent> hiddenGears) { }
             public void ShowReport(GearTrainReport report) => Report = report;
 
             public void ShowMessage(string message, bool isError)

@@ -171,6 +171,7 @@
     <Compile Include="TestHypoidMesh.cs" />
     <Compile Include="TestSpiralBevelEditor.cs" />
     <Compile Include="TestGearTrainHelicalStart.cs" />
+    <Compile Include="TestMultiSelection.cs" />
     <Compile Include="TestBevelBlankProfile.cs" />
     <Compile Include="TestBevelToothSketch.cs" />
     <Compile Include="TestGearTrainPhases3To7.cs" />

@@ -418,6 +418,7 @@ namespace UnitTests
             public object Properties;
             public AssemblyScene Scene;
             public object SceneSelected;
+            public List<object> SceneSelectedItems = new List<object>();
             public ISet<GearComponent> SceneHidden;
             public GearTrainReport Report;
             public string Message;
@@ -427,10 +428,11 @@ namespace UnitTests
             public void ShowSelection(object selectedTag) { }
             public void ShowProperties(object properties) => Properties = properties;
 
-            public void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears)
+            public void ShowScene(AssemblyScene scene, IReadOnlyCollection<object> selectedItems, ISet<GearComponent> hiddenGears)
             {
                 Scene = scene;
-                SceneSelected = selectedTag;
+                SceneSelectedItems = new List<object>(selectedItems);
+                SceneSelected = SceneSelectedItems.Count > 0 ? SceneSelectedItems[SceneSelectedItems.Count - 1] : null;
                 SceneHidden = new HashSet<GearComponent>(hiddenGears);
             }
 

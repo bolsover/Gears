@@ -182,6 +182,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Gui\Views\IGearTrainView.cs" />
+    <Compile Include="Gui\Views\ExportChoiceDialog.cs" />
     <Compile Include="Gui\Views\HtmlDocumentForm.cs">
       <SubType>Form</SubType>
     </Compile>

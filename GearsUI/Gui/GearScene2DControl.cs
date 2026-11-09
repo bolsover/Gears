@@ -39,7 +39,7 @@ namespace Bolsover.Gears.Gui
         private bool _fitPending;
         private bool _showPitchCircles = true;
         private bool _showLabels = true;
-        private object _selected;
+        private IReadOnlyCollection<object> _selected = new object[0];
         private bool _dragging;
         private Point _downPoint;
         private Point _lastPoint;
@@ -84,14 +84,14 @@ namespace Bolsover.Gears.Gui
 
         /// <summary>Replaces the displayed scene.</summary>
         /// <param name="scene">The solved scene; null clears the view.</param>
-        /// <param name="selected">The selected gear or shaft, drawn in the highlight colour; may be null.</param>
+        /// <param name="selected">The selected gears, shafts and belts, drawn in the highlight colour; may be null.</param>
         /// <param name="hiddenGears">Gears that are not drawn; may be null.</param>
         /// <param name="showShafts">True to draw the shafts.</param>
-        public void SetScene(AssemblyScene scene, object selected, ISet<GearComponent> hiddenGears, bool showShafts)
+        public void SetScene(AssemblyScene scene, IReadOnlyCollection<object> selected, ISet<GearComponent> hiddenGears, bool showShafts)
         {
             var hadParts = _parts.Count > 0;
             _parts.Clear();
-            _selected = selected;
+            _selected = selected ?? new object[0];
 
             if (scene != null)
             {
@@ -291,9 +291,19 @@ namespace Bolsover.Gears.Gui
             }
         }
 
+        private bool IsSelected(object tag)
+        {
+            foreach (var item in _selected)
+            {
+                if (ReferenceEquals(item, tag)) return true;
+            }
+
+            return false;
+        }
+
         private void DrawShaft(Graphics g, Part part)
         {
-            var selected = ReferenceEquals(_selected, part.Tag);
+            var selected = IsSelected(part.Tag);
             var points = part.Polylines[0].Select(ToScreen).ToArray();
             using (var brush = new SolidBrush(Color.FromArgb(70, ShaftColor)))
             using (var pen = new Pen(selected ? SelectedColor : ShaftColor, selected ? 2.5f : 1f))
@@ -305,7 +315,7 @@ namespace Bolsover.Gears.Gui
 
         private void DrawBelt(Graphics g, Part part)
         {
-            var selected = ReferenceEquals(_selected, part.Tag);
+            var selected = IsSelected(part.Tag);
             using (var path = new GraphicsPath(FillMode.Alternate))
             {
                 foreach (var polyline in part.Polylines) path.AddPolygon(polyline.Select(ToScreen).ToArray());
@@ -320,7 +330,7 @@ namespace Bolsover.Gears.Gui
 
         private void DrawGear(Graphics g, Part part)
         {
-            var selected = ReferenceEquals(_selected, part.Tag);
+            var selected = IsSelected(part.Tag);
             var color = selected ? SelectedColor : Palette[part.ColorIndex % Palette.Length];
 
             if (_showPitchCircles && part.PitchRadius > 0 && part.HasCentre)

@@ -76,6 +76,7 @@ namespace Bolsover.Gears.Gui.Presenters
 
         private readonly IGearTrainView _view;
         private readonly HashSet<GearComponent> _hidden = new HashSet<GearComponent>();
+        private readonly List<object> _selection = new List<object>();
         private int _gearCounter;
         private int _shaftCounter;
         private double _planetaryInputRad;
@@ -89,8 +90,22 @@ namespace Bolsover.Gears.Gui.Presenters
 
         public GearAssembly Assembly { get; private set; }
 
-        /// <summary>The selected <see cref="Shaft"/> or <see cref="GearComponent"/>; null when nothing is selected.</summary>
-        public object Selected { get; private set; }
+        /// <summary>
+        /// The last selected <see cref="Shaft"/>, <see cref="GearComponent"/> or <see cref="TimingBelt"/>; null when nothing is selected.
+        /// Assigning an item replaces the whole selection with that one item.
+        /// </summary>
+        public object Selected
+        {
+            get => _selection.Count > 0 ? _selection[_selection.Count - 1] : null;
+            private set
+            {
+                _selection.Clear();
+                if (IsSelectable(value)) _selection.Add(value);
+            }
+        }
+
+        /// <summary>All selected items in the order they were selected; the last one is <see cref="Selected"/>.</summary>
+        public IReadOnlyList<object> SelectedItems => _selection;
 
         /// <summary>The most recent successfully built scene; null before the first refresh.</summary>
         public AssemblyScene Scene { get; private set; }
@@ -819,6 +834,7 @@ namespace Bolsover.Gears.Gui.Presenters
         public void RemoveSelected()
         {
             EnsureNotPlanetary();
+            var removed = Selected;
             if (Selected is Shaft shaft)
             {
                 RemoveShaftBranch(shaft, new HashSet<Shaft>());
@@ -836,17 +852,49 @@ namespace Bolsover.Gears.Gui.Presenters
                 return;
             }
 
-            Selected = null;
+            _selection.Remove(removed);
             Refresh();
         }
 
-        /// <summary>Selects a shaft or gear (or nothing) and updates the selection highlight and the property editor.</summary>
+        /// <summary>Selects a shaft, gear or belt (or nothing), replacing the selection, and updates the highlight and the property editor.</summary>
         public void Select(object tag)
         {
-            Selected = tag is Shaft || tag is GearComponent || tag is TimingBelt ? tag : null;
+            Selected = tag;
+            PublishSelection();
+        }
+
+        /// <summary>
+        /// Adds the shaft, gear or belt to the selection, or removes it when it is already selected. The last selected item
+        /// feeds the property editor. Anything else is ignored.
+        /// </summary>
+        public void ToggleSelection(object tag)
+        {
+            if (!IsSelectable(tag)) return;
+            if (!_selection.Remove(tag)) _selection.Add(tag);
+            PublishSelection();
+        }
+
+        private static bool IsSelectable(object tag) => tag is Shaft || tag is GearComponent || tag is TimingBelt;
+
+        private void PublishSelection()
+        {
             _view.ShowSelection(Selected);
             _view.ShowProperties(CreateProperties(Selected));
-            if (Scene != null) _view.ShowScene(Scene, Selected, _hidden);
+            if (Scene != null) _view.ShowScene(Scene, _selection, _hidden);
+        }
+
+        /// <summary>Drops selected items that are no longer part of the assembly.</summary>
+        private void PruneSelection()
+        {
+            _selection.RemoveAll(item => !IsInAssembly(item));
+        }
+
+        private bool IsInAssembly(object item)
+        {
+            if (item is Shaft shaft) return Assembly.Shafts.Contains(shaft);
+            if (item is TimingBelt belt) return Assembly.Belts.Contains(belt);
+            if (item is GearComponent gear) return Assembly.Components.Contains(gear);
+            return false;
         }
 
         public void SetGearVisible(GearComponent gear, bool visible)
@@ -862,7 +910,7 @@ namespace Bolsover.Gears.Gui.Presenters
                 else _hidden.Add(gear);
             }
 
-            if (Scene != null) _view.ShowScene(Scene, Selected, _hidden);
+            if (Scene != null) _view.ShowScene(Scene, _selection, _hidden);
         }
 
         /// <summary>
@@ -953,11 +1001,12 @@ namespace Bolsover.Gears.Gui.Presenters
                 Report = null;
             }
 
+            PruneSelection();
             _view.ShowTree(BuildTree(), Selected);
             _view.ShowProperties(CreateProperties(Selected));
             if (error == null)
             {
-                _view.ShowScene(Scene, Selected, _hidden);
+                _view.ShowScene(Scene, _selection, _hidden);
                 _view.ShowReport(Report);
                 if (Report != null && Report.Warnings.Count > 0)
                 {

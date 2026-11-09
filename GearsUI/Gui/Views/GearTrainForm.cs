@@ -60,46 +60,7 @@ namespace Bolsover.Gears.Gui.Views
         private readonly ToolStripMenuItem _btnPitchCircles = new ToolStripMenuItem("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
         private readonly ToolStripMenuItem _btnLabels = new ToolStripMenuItem("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
         private readonly ToolStripMenuItem _btnAnimate = new ToolStripMenuItem("Animate") { CheckOnClick = true };
-        private readonly ToolStripMenuItem _btnExportAlibre = new ToolStripMenuItem("Export gear to &Alibre…")
-        {
-            Enabled = false,
-            ToolTipText = "Create the selected gear as a new Alibre part. Involute gears (external or internal, spur or helical) and worm wheels: one closed tooth sketch, extruded (swept along a helix for a helical gear) and circular-patterned. Racks (straight or helical): one tooth cell, extruded (swept along a slanted path for a helical rack) and linear-patterned. Worms: a core cylinder with a helical thread. Bevel gears: the revolved gear blank, then one tooth valley sketched on a plane on the back cone, loft cut to the cone apex and circular-patterned. Available when the editor runs inside Alibre Design."
-        };
-        private readonly ToolStripMenuItem _btnExportAlibreAssembly = new ToolStripMenuItem("Export Assembly to Alibre")
-        {
-            Enabled = false,
-            ToolTipText = "Create a new Alibre assembly from the gear train (two or more gears). Each gear is added as a new part, built like the single gear export and placed at its shaft position. Shafts and planetary carriers are added as well when the matching options below are checked. Available when the editor runs inside Alibre Design."
-        };
-        private readonly ToolStripMenuItem _btnExportAlibreShaft = new ToolStripMenuItem("Export shaft or carrier to Alibre…")
-        {
-            Enabled = false,
-            ToolTipText = "Create the selected shaft, or the carrier plate of a planetary stage, as a new Alibre part: a circle sketched on the XY plane and extruded along Z to the length of the shaft. Available when the editor runs inside Alibre Design."
-        };
-        private readonly ToolStripMenuItem _btnIncludeShafts = new ToolStripMenuItem("Include shafts in assembly export")
-        {
-            CheckOnClick = true,
-            ToolTipText = "Export Assembly to Alibre also adds a part for every shaft (a shaft that only carries a rack has none), placed on its shaft axis."
-        };
-        private readonly ToolStripMenuItem _btnIncludeCarriers = new ToolStripMenuItem("Include planetary carriers in assembly export")
-        {
-            CheckOnClick = true,
-            ToolTipText = "Export Assembly to Alibre also adds a part for the carrier plate of every planetary stage."
-        };
-        private readonly ToolStripMenuItem _btnIncludeBelts = new ToolStripMenuItem("Include timing belts in assembly export")
-        {
-            CheckOnClick = true,
-            ToolTipText = "Export Assembly to Alibre also adds a part for every timing belt: a plain strip without teeth, as wide as the belt, placed on the mid-planes of its pulleys."
-        };
-        private readonly ToolStripMenuItem _btnExportCycloidal = new ToolStripMenuItem("Export selected gear to &Alibre…")
-        {
-            Enabled = false,
-            ToolTipText = "Create the selected cycloidal gear as a new Alibre part: the whole gear outline (tip arcs, radial flanks and root arcs of every tooth, and the centre hole) sketched on the XY plane and extruded mid-plane to the face width. Available when the editor runs inside Alibre Design."
-        };
-        private readonly ToolStripMenuItem _btnExportCycloidalPair = new ToolStripMenuItem("Export &train to Alibre assembly")
-        {
-            Enabled = false,
-            ToolTipText = "Create a new Alibre assembly from the gear train: every gear, so both the wheel and the pinion of a cycloidal pair, is added as a new part placed at its shaft position. Available when the editor runs inside Alibre Design."
-        };
+        private readonly ToolStripMenuItem _btnExportSelected = new ToolStripMenuItem("Export &selected to Alibre…")         {             Enabled = false,             ToolTipText = "Create the selected parts in Alibre Design. One selected part (an involute gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier) is exported directly as a new Alibre part. With several parts selected you choose between separate new parts and one new assembly that holds only the selected gears, shafts, carriers and belts at their train positions. Click parts in the 3D or 2D view to select several. Available when the editor runs inside Alibre Design."         };         private readonly ToolStripMenuItem _btnExportAll = new ToolStripMenuItem("Export &all to Alibre…")         {             Enabled = false,             ToolTipText = "Create a new Alibre assembly from the whole gear train: every gear, every shaft (a shaft that only carries a rack is skipped), every planetary carrier and every timing belt. Each one is built as a new part and placed at its train position. The assembly needs at least two parts. Available when the editor runs inside Alibre Design."         };
         private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
@@ -107,6 +68,7 @@ namespace Bolsover.Gears.Gui.Views
         private bool _updating;
         private AssemblyScene _scene;
         private object _selected;
+        private IReadOnlyCollection<object> _selectedItems = new object[0];
         private ISet<GearComponent> _hidden;
         private AlibreGearExporter _alibreExporter;
         private PropertyLayoutSettings _layout = PropertyLayoutStore.Load(PropertyLayoutStore.DefaultPath);
@@ -156,11 +118,8 @@ namespace Bolsover.Gears.Gui.Views
             set
             {
                 _alibreExporter = value;
-                _btnExportAlibre.Enabled = value != null;
-                _btnExportAlibreAssembly.Enabled = value != null;
-                _btnExportAlibreShaft.Enabled = value != null;
-                _btnExportCycloidal.Enabled = value != null;
-                _btnExportCycloidalPair.Enabled = value != null;
+                _btnExportSelected.Enabled = value != null;
+                _btnExportAll.Enabled = value != null;
             }
         }
 
@@ -228,7 +187,10 @@ namespace Bolsover.Gears.Gui.Views
             var btnFit = new ToolStripMenuItem("&Fit view");
 
             // A ToolStripMenuItem can only have one parent, so each menu gets its own Remove item.
-            Func<ToolStripMenuItem> createRemoveItem = () => new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected));
+            Func<ToolStripMenuItem> createRemoveItem = () => new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected))
+            {
+                ToolTipText = "Remove the last selected part together with everything that hangs off it. When several parts are selected only the last one is removed."
+            };
 
             var ddFile = new ToolStripMenuItem("&File");
             ddFile.DropDownItems.Add(btnNew);
@@ -239,12 +201,8 @@ namespace Bolsover.Gears.Gui.Views
             ddFile.DropDownItems.Add("Export STL…", null, (s, e) => ExportScene(false));
             ddFile.DropDownItems.Add("Export OBJ…", null, (s, e) => ExportScene(true));
             ddFile.DropDownItems.Add(new ToolStripSeparator());
-            ddFile.DropDownItems.Add(_btnExportAlibre);
-            ddFile.DropDownItems.Add(_btnExportAlibreShaft);
-            ddFile.DropDownItems.Add(_btnExportAlibreAssembly);
-            ddFile.DropDownItems.Add(_btnIncludeShafts);
-            ddFile.DropDownItems.Add(_btnIncludeCarriers);
-            ddFile.DropDownItems.Add(_btnIncludeBelts);
+            ddFile.DropDownItems.Add(_btnExportSelected);
+            ddFile.DropDownItems.Add(_btnExportAll);
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
@@ -361,10 +319,7 @@ namespace Bolsover.Gears.Gui.Views
                 {
                     ToolTipText = "Add a compound cycloidal gear next to the gears of the selected shaft (or the shaft of the selected gear): the opposite kind to the last cycloidal gear on the shaft."
                 },
-                new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected)),
-                new ToolStripSeparator(),
-                _btnExportCycloidal,
-                _btnExportCycloidalPair
+                new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected))
             });
 
             var menuView = new ToolStripMenuItem("&View");
@@ -381,11 +336,8 @@ namespace Bolsover.Gears.Gui.Views
                 _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed)
             });
 
-            _btnExportAlibre.Click += (s, e) => RunCommand(ExportSelectedGearToAlibre);
-            _btnExportAlibreAssembly.Click += (s, e) => RunCommand(ExportAssemblyToAlibre);
-            _btnExportAlibreShaft.Click += (s, e) => RunCommand(ExportSelectedShaftToAlibre);
-            _btnExportCycloidal.Click += (s, e) => RunCommand(ExportSelectedCycloidalGearToAlibre);
-            _btnExportCycloidalPair.Click += (s, e) => RunCommand(ExportAssemblyToAlibre);
+            _btnExportSelected.Click += (s, e) => RunCommand(ExportSelectedToAlibre);
+            _btnExportAll.Click += (s, e) => RunCommand(ExportAllToAlibre);
             btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
             btnFit.Click += (s, e) =>
             {
@@ -602,8 +554,8 @@ namespace Bolsover.Gears.Gui.Views
             };
 
             _grid.PropertyValueChanged += (s, e) => BeginInvoke(new Action(_presenter.Refresh));
-            _viewport.ItemPicked += tag => _presenter.Select(tag);
-            _view2D.ItemPicked += tag => _presenter.Select(tag);
+            _viewport.ItemPicked += tag => _presenter.ToggleSelection(tag);
+            _view2D.ItemPicked += tag => _presenter.ToggleSelection(tag);
 
             _numSpeed.ValueChanged += (s, e) => _presenter.Refresh();
             _numAngle.ValueChanged += (s, e) =>
@@ -702,7 +654,10 @@ namespace Bolsover.Gears.Gui.Views
             }
         }
 
-        private void ExportAssemblyToAlibre()
+        /// <summary>
+        /// Exports the selected parts: one part directly, several as separate Alibre parts or as one assembly, as the user chooses.
+        /// </summary>
+        private void ExportSelectedToAlibre()
         {
             if (_alibreExporter == null)
             {
@@ -710,21 +665,94 @@ namespace Bolsover.Gears.Gui.Views
                 return;
             }
 
-            var count = _presenter.Assembly.Components.Count();
-            if (count < AlibreGearExporter.MinimumAssemblyParts)
+            var items = _selectedItems.ToList();
+            if (items.Count == 0)
             {
-                ShowMessage($"Add at least {AlibreGearExporter.MinimumAssemblyParts} gears to the train to export an assembly to Alibre.", true);
+                ShowMessage("Select one or more parts first.", true);
                 return;
             }
 
-            var options = new AssemblyExportOptions
+            if (items.Count == 1)
             {
-                IncludeShafts = _btnIncludeShafts.Checked,
-                IncludeCarriers = _btnIncludeCarriers.Checked,
-                IncludeBelts = _btnIncludeBelts.Checked
-            };
-            var extraParts = AlibreGearExporter.GetShaftAssemblyParts(_presenter.Assembly, options).Count;
-            var beltCount = AlibreGearExporter.GetBeltAssemblyParts(_presenter.Assembly, options).Count;
+                ExportItemToAlibre(items[0]);
+                return;
+            }
+
+            switch (ExportChoiceDialog.Ask(this, items.Count))
+            {
+                case ExportChoice.SeparateParts:
+                    ExportSeparatePartsToAlibre(items);
+                    break;
+                case ExportChoice.Assembly:
+                    ExportAssemblyToAlibre(items);
+                    break;
+            }
+        }
+
+        /// <summary>Exports every gear, shaft, carrier and belt of the train to one new Alibre assembly.</summary>
+        private void ExportAllToAlibre()
+        {
+            if (_alibreExporter == null)
+            {
+                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
+                return;
+            }
+
+            ExportAssemblyToAlibre(null);
+        }
+
+        /// <summary>Exports each item as its own new Alibre part; a failure is reported and the rest continue.</summary>
+        private void ExportSeparatePartsToAlibre(IReadOnlyCollection<object> items)
+        {
+            var failures = new List<string>();
+            var exported = 0;
+            foreach (var item in items)
+            {
+                try
+                {
+                    ExportItemToAlibre(item);
+                    exported++;
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(DescribeItem(item) + ": " + ex.Message);
+                }
+            }
+
+            if (failures.Count == 0)
+            {
+                ShowMessage($"Exported {exported} parts to new Alibre parts.", false);
+                return;
+            }
+
+            var report = $"Exported {exported} of {items.Count} parts. Not exported:\n" + string.Join("\n", failures);
+            ShowMessage(report.Replace("\n", " "), true);
+            MessageBox.Show(this, report, "Export selected to Alibre", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private static string DescribeItem(object item)
+        {
+            switch (item)
+            {
+                case GearComponent gear: return gear.Id;
+                case Shaft shaft: return shaft.Id;
+                case TimingBelt belt: return belt.Id;
+                default: return "item";
+            }
+        }
+
+        /// <summary>Exports the selection (null: the whole train) to one new Alibre assembly.</summary>
+        private void ExportAssemblyToAlibre(IReadOnlyCollection<object> selection)
+        {
+            var count = AlibreGearExporter.GetAssemblyParts(_presenter.Assembly, selection).Count;
+            var extraParts = AlibreGearExporter.GetShaftAssemblyParts(_presenter.Assembly, selection).Count;
+            var beltCount = AlibreGearExporter.GetBeltAssemblyParts(_presenter.Assembly, selection).Count;
+            if (count + extraParts + beltCount < AlibreGearExporter.MinimumAssemblyParts)
+            {
+                ShowMessage($"Select at least {AlibreGearExporter.MinimumAssemblyParts} exportable parts to export an assembly to Alibre.", true);
+                return;
+            }
+
             var description = $"{count} gears";
             if (extraParts > 0) description += $" and {extraParts} shaft or carrier part(s)";
             if (beltCount > 0) description += $" and {beltCount} belt(s)";
@@ -732,7 +760,7 @@ namespace Bolsover.Gears.Gui.Views
             ShowMessage($"Exporting {description} to a new Alibre assembly…", false);
             try
             {
-                _alibreExporter.ExportAssembly(_presenter.Assembly, AlibreGearExporter.DefaultAssemblyName, options);
+                _alibreExporter.ExportAssembly(_presenter.Assembly, AlibreGearExporter.DefaultAssemblyName, selection);
             }
             catch (Exception ex)
             {
@@ -742,24 +770,6 @@ namespace Bolsover.Gears.Gui.Views
             }
 
             ShowMessage($"Exported {description} to a new Alibre assembly, each as a new part. Log: {_alibreExporter.LastExportLog}", false);
-        }
-
-        /// <summary>Exports the selected shaft, or the carrier plate of a planetary stage, as a new Alibre part.</summary>
-        private void ExportSelectedShaftToAlibre()
-        {
-            if (_alibreExporter == null)
-            {
-                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
-                return;
-            }
-
-            if (!(_selected is Shaft shaft))
-            {
-                ShowMessage("Select a shaft or a planetary carrier in the tree to export it to Alibre.", true);
-                return;
-            }
-
-            ExportShaftToAlibre(shaft);
         }
 
         private void ExportShaftToAlibre(Shaft shaft)
@@ -772,15 +782,10 @@ namespace Bolsover.Gears.Gui.Views
             ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1}, diameter {2:0.###} mm, length {3:0.###} mm) to a new Alibre part.", shaft.Id, kind, shaft.Diameter, end - start), false);
         }
 
-        private void ExportSelectedGearToAlibre()
+        /// <summary>Exports one gear, shaft, carrier or belt as a new Alibre part; throws when the item cannot be exported.</summary>
+        private void ExportItemToAlibre(object item)
         {
-            if (_alibreExporter == null)
-            {
-                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
-                return;
-            }
-
-            switch (_selected)
+            switch (item)
             {
                 case InvoluteGearComponent gear:
                 {
@@ -827,8 +832,7 @@ namespace Bolsover.Gears.Gui.Views
                     break;
                 }
                 case SpiralBevelGearComponent curved:
-                    ShowMessage($"The {curved.TypeName.ToLowerInvariant()} {curved.Id} cannot be exported to Alibre: its curved teeth need more than the heel and toe loft of the straight bevel export. Use the STL or OBJ export instead.", true);
-                    break;
+                    throw new InvalidOperationException($"The {curved.TypeName.ToLowerInvariant()} {curved.Id} cannot be exported to Alibre: its curved teeth need more than the heel and toe loft of the straight bevel export. Use the STL or OBJ export instead.");
                 case BevelGearComponent bevel:
                 {
                     ShowMessage($"Exporting {bevel.Id} to Alibre…", false);
@@ -847,8 +851,7 @@ namespace Bolsover.Gears.Gui.Views
                     ExportShaftToAlibre(shaft);
                     break;
                 default:
-                    ShowMessage("Select a gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.", true);
-                    break;
+                    throw new InvalidOperationException("Select a gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.");
             }
         }
 
@@ -876,18 +879,6 @@ namespace Bolsover.Gears.Gui.Views
             }
 
             _presenter.AddGearToShaft(shaft);
-        }
-
-        /// <summary>Exports the selected cycloidal gear as a new Alibre part; of a pair, select the wheel or the pinion.</summary>
-        private void ExportSelectedCycloidalGearToAlibre()
-        {
-            if (!(_selected is CycloidalGearComponent))
-            {
-                ShowMessage("Select a cycloidal wheel or pinion in the tree or in the views first.", true);
-                return;
-            }
-
-            ExportSelectedGearToAlibre();
         }
 
         private void AddCycloidalMateToSelectedGear()
@@ -1058,10 +1049,11 @@ namespace Bolsover.Gears.Gui.Views
             ApplyPropertyLayout();
         }
 
-        public void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears)
+        public void ShowScene(AssemblyScene scene, IReadOnlyCollection<object> selectedItems, ISet<GearComponent> hiddenGears)
         {
             _scene = scene;
-            _selected = selectedTag;
+            _selectedItems = selectedItems ?? new object[0];
+            _selected = _selectedItems.LastOrDefault();
             _hidden = hiddenGears;
             RenderScene();
         }
@@ -1299,8 +1291,8 @@ namespace Bolsover.Gears.Gui.Views
 
         private void RenderScene()
         {
-            _viewport.SetScene(_scene, _selected, _hidden, _btnWireframe.Checked, _btnShafts.Checked);
-            _view2D.SetScene(_scene, _selected, _hidden, _btnShafts.Checked);
+            _viewport.SetScene(_scene, _selectedItems, _hidden, _btnWireframe.Checked, _btnShafts.Checked);
+            _view2D.SetScene(_scene, _selectedItems, _hidden, _btnShafts.Checked);
         }
     }
 }

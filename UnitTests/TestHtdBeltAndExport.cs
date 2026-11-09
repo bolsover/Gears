@@ -30,7 +30,7 @@ namespace UnitTests
             public void ShowTree(TrainTreeNode root, object selectedTag) { }
             public void ShowSelection(object selectedTag) { }
             public void ShowProperties(object properties) => Properties = properties;
-            public void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears) => Scene = scene;
+            public void ShowScene(AssemblyScene scene, IReadOnlyCollection<object> selectedItems, ISet<GearComponent> hiddenGears) => Scene = scene;
             public void ShowReport(GearTrainReport report) { }
 
             public void ShowMessage(string message, bool isError)
@@ -368,16 +368,18 @@ namespace UnitTests
         }
 
         [Test]
-        public void TestAlibreExport_BeltsAreOnlyIncludedWhenAsked()
+        public void TestAlibreExport_BeltsAreIncludedAutomatically_AndCanBeSelected()
         {
-            var assembly = TwoPulleys(out _, out _, out var belt, 120.0, 20, 40);
+            var assembly = TwoPulleys(out var driver, out _, out var belt, 120.0, 20, 40);
 
-            Assert.AreEqual(0, AlibreGearExporter.GetBeltAssemblyParts(assembly, null).Count);
-            Assert.AreEqual(0, AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeShafts = true }).Count);
+            var all = AlibreGearExporter.GetBeltAssemblyParts(assembly);
+            Assert.AreEqual(1, all.Count);
+            Assert.AreSame(belt, all[0].Key);
 
-            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeBelts = true });
-            Assert.AreEqual(1, parts.Count);
-            Assert.AreSame(belt, parts[0].Key);
+            var selected = AlibreGearExporter.GetBeltAssemblyParts(assembly, new object[] { belt });
+            Assert.AreEqual(1, selected.Count);
+            Assert.AreEqual(0, AlibreGearExporter.GetBeltAssemblyParts(assembly, new object[] { driver }).Count, "A selected pulley does not select the belt.");
+            Assert.AreEqual(0, AlibreGearExporter.GetBeltAssemblyParts(assembly, new object[0]).Count);
         }
 
         [Test]
@@ -386,7 +388,7 @@ namespace UnitTests
             var assembly = TwoPulleys(out _, out _, out _, 120.0, 20, 40);
             assembly.Solve();
 
-            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeBelts = true });
+            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly);
 
             var translation = parts[0].Value.Translation;
             Assert.AreEqual(0.0, translation.X, 1e-9, "The driver shaft is at the origin.");
@@ -401,7 +403,7 @@ namespace UnitTests
             assembly.Shafts[0].Mounts[0].AxialOffset = 4.0;
             assembly.Solve();
 
-            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly, new AssemblyExportOptions { IncludeBelts = true });
+            var parts = AlibreGearExporter.GetBeltAssemblyParts(assembly);
 
             Assert.AreEqual(4.0, parts[0].Value.Translation.Z, 1e-9);
             Assert.IsNotNull(a);

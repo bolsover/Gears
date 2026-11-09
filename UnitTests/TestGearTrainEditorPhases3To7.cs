@@ -31,7 +31,7 @@ namespace UnitTests
             public void ShowSelection(object selectedTag) { }
             public void ShowProperties(object properties) => Properties = properties;
 
-            public void ShowScene(AssemblyScene scene, object selectedTag, ISet<GearComponent> hiddenGears) => Scene = scene;
+            public void ShowScene(AssemblyScene scene, IReadOnlyCollection<object> selectedItems, ISet<GearComponent> hiddenGears) => Scene = scene;
 
             public void ShowReport(GearTrainReport report) => Report = report;
 
