@@ -3,7 +3,7 @@
   "id": "{05A0F2F2-61D4-48B3-A737-BD23152F6FFF}",
   "name": "Gears",
   "folderName": "GearsAddOn",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "dllType": "managed",
   "arch": "x64",
   "minAlibreBuild": 29000,

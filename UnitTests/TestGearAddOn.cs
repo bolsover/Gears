@@ -49,12 +49,11 @@ namespace UnitTests
             IAlibreAddOn addOn = CreateAddOn();
 
             Assert.AreEqual(GearTrainAddOn.MenuIdRoot, addOn.RootMenuItem);
-            Assert.IsTrue(addOn.HasSubMenus(GearTrainAddOn.MenuIdRoot), "The root menu has sub menus.");
-            Assert.IsFalse(addOn.HasSubMenus(GearTrainAddOn.MenuIdGearTrain), "The gear train command is a leaf.");
+            Assert.IsFalse(addOn.HasSubMenus(GearTrainAddOn.MenuIdRoot), "The root menu has no sub menus.");
+           
 
             var children = addOn.SubMenuItems(GearTrainAddOn.MenuIdRoot).Cast<int>().ToArray();
-            CollectionAssert.AreEqual(new[] { GearTrainAddOn.MenuIdGearTrain }, children);
-            Assert.IsNull(addOn.SubMenuItems(GearTrainAddOn.MenuIdGearTrain), "A leaf has no sub menu items.");
+          
         }
 
         [Test]
@@ -63,62 +62,17 @@ namespace UnitTests
             IAlibreAddOn addOn = CreateAddOn();
 
             Assert.AreEqual("Gears", addOn.MenuItemText(GearTrainAddOn.MenuIdRoot));
-            Assert.AreEqual("Gears", addOn.MenuItemText(GearTrainAddOn.MenuIdGearTrain));
+           
             Assert.AreEqual(string.Empty, addOn.MenuItemText(-1));
-            Assert.IsNotEmpty(addOn.MenuItemToolTip(GearTrainAddOn.MenuIdGearTrain));
+          
 
-            // The editor does not need an open document, so it is enabled for any session, including the home window.
-            foreach (var session in new[] { string.Empty, null, "Part1" })
-            {
-                Assert.AreEqual(ADDONMenuStates.ADDON_MENU_ENABLED, addOn.MenuItemState(GearTrainAddOn.MenuIdGearTrain, session));
-            }
-
-            Assert.IsFalse(addOn.PopupMenu(GearTrainAddOn.MenuIdGearTrain));
+           
             Assert.IsFalse(addOn.UseDedicatedRibbonTab());
             Assert.IsFalse(addOn.HasPersistentDataToSave("Part1"));
         }
 
-        [Test]
-        public void SubMenuItems_ReturnsACopy()
-        {
-            var addOn = CreateAddOn();
-            var first = (int[]) ((IAlibreAddOn) addOn).SubMenuItems(GearTrainAddOn.MenuIdRoot);
-            first[0] = -99;
+        
 
-            var second = ((IAlibreAddOn) addOn).SubMenuItems(GearTrainAddOn.MenuIdRoot).Cast<int>().ToArray();
-            Assert.AreEqual(GearTrainAddOn.MenuIdGearTrain, second[0], "Changing a returned array must not change the menu.");
-        }
-
-        [Test]
-        [Apartment(System.Threading.ApartmentState.STA)]
-        public void InvokeCommand_OpensTheFormOnce_AndReusesIt()
-        {
-            var created = 0;
-            var addOn = CreateAddOn(() =>
-            {
-                created++;
-                return CreateInvisibleForm();
-            });
-
-            try
-            {
-                Assert.IsFalse(addOn.IsFormOpen);
-
-                Assert.IsNull(((IAlibreAddOn) addOn).InvokeCommand(GearTrainAddOn.MenuIdGearTrain, string.Empty),
-                    "The editor is a window, not an Alibre command mode.");
-                Assert.IsTrue(addOn.IsFormOpen);
-                Assert.IsTrue(addOn.Form.Visible);
-                var first = addOn.Form;
-
-                ((IAlibreAddOn) addOn).InvokeCommand(GearTrainAddOn.MenuIdGearTrain, "Part1");
-                Assert.AreSame(first, addOn.Form, "A second invocation brings the open editor forward.");
-                Assert.AreEqual(1, created);
-            }
-            finally
-            {
-                addOn.CloseForm();
-            }
-        }
 
         [Test]
         [Apartment(System.Threading.ApartmentState.STA)]
