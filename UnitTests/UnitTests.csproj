@@ -180,6 +180,7 @@
     <Compile Include="TestAlibreSpurGearExport.cs" />
     <Compile Include="TestAlibreRackWormExport.cs" />
     <Compile Include="TestAlibreAssemblyExport.cs" />
+    <Compile Include="TestAlibreSaveTarget.cs" />
     <Compile Include="TestAlibreBevelExport.cs" />
     <Compile Include="TestSpiralToothSpaceSections.cs" />
     <Compile Include="TestConversionUtils.cs" />

@@ -876,7 +876,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// (so it gets its full set of teeth), saved to <see cref="AssemblyFolder"/> and added to the assembly with
         /// <c>IADOccurrences.Add</c> (the Alibre API has no <c>AddPart</c>) at its shaft placement and axial offset in the train.
         /// Throws <see cref="InvalidOperationException"/> when there are fewer than <see cref="MinimumAssemblyParts"/> parts in total,
-        /// a gear family cannot be exported yet, or Alibre rejects a step.
+        /// a gear family cannot be exported yet, Alibre rejects a step, or Alibre is not set to save to the Windows file system (the Vault, a
+        /// PDM repository and an AD repository are refused before anything is created, see <see cref="AlibreSaveTargetReader"/>).
         /// </summary>
         /// <param name="selection">The gears, shafts and belts to export; null exports everything.</param>
         public IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName, IReadOnlyCollection<object> selection = null)
@@ -895,13 +896,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             try
             {
                 stage = "checking the Alibre save location";
-                if (IsUsingVault())
-                {
-                    throw new InvalidOperationException(
-                        "Alibre is set to save designs to the Alibre Vault (PDM). The Alibre API cannot change this option, and parts " +
-                        "cannot be saved to a Windows folder while it is on. In Alibre Design, change the system option to save files " +
-                        "to the Windows file system, then export again.");
-                }
+                CheckSaveTarget(log);
 
                 stage = "creating the assembly";
                 Directory.CreateDirectory(folder);
@@ -1030,18 +1025,18 @@ namespace Bolsover.Gears.Calculator.Alibre
         }
 
         /// <summary>
-        /// True when Alibre is set to save designs to the Alibre Vault instead of the Windows file system (<c>IADVaultInfo.IsUsingVault</c>,
-        /// read-only in the API). False when it is not, or when the option cannot be read.
+        /// Checks where Alibre is configured to save designs (the system option, read from the Alibre user profile, see
+        /// <see cref="AlibreSaveTargetReader"/>) and notes it in the export log. Throws <see cref="InvalidOperationException"/> for every
+        /// target but the Windows file system (the Vault, a PDM repository, an AD repository, or an unknown target): the Alibre API cannot
+        /// change the option, and parts cannot be saved to a Windows folder while it is on.
         /// </summary>
-        private bool IsUsingVault()
+        private void CheckSaveTarget(List<string> log)
         {
-            try
+            var target = AlibreSaveTargetReader.Read(_root, out var source);
+            log.Add("save target: " + target + " (" + source + ")");
+            if (!AlibreSaveTargetReader.IsSafe(target))
             {
-                return _root.VaultInfo.IsUsingVault;
-            }
-            catch (Exception)
-            {
-                return false;
+                throw new InvalidOperationException(AlibreSaveTargetReader.DescribeRefusal(target));
             }
         }
 

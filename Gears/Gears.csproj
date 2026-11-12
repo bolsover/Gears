@@ -39,6 +39,18 @@
         <Reference Include="AlibreX">
           <HintPath>..\..\..\..\AlibreLib\AlibreX.dll</HintPath>
         </Reference>
+        <Reference Include="alibre-client">
+          <HintPath>..\..\..\..\AlibreLib\alibre-client.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="alibre-core">
+          <HintPath>..\..\..\..\AlibreLib\alibre-core.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="SupportClass">
+          <HintPath>..\..\..\..\AlibreLib\SupportClass.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
         <Reference Include="ExtendedNumerics.BigDecimal, Version=3000.0.3.40, Culture=neutral, PublicKeyToken=65f1315a45ad8949, processorArchitecture=MSIL">
           <HintPath>..\packages\ExtendedNumerics.BigDecimal.3000.0.3.40\lib\net48\ExtendedNumerics.BigDecimal.dll</HintPath>
         </Reference>
@@ -165,6 +177,8 @@
         <Compile Include="Calculator\Assemblies\IMeshSolver.cs" />
         <Compile Include="Calculator\Assemblies\IAdjustableCentreSolver.cs" />
         <Compile Include="Calculator\Alibre\AlibreGearExporter.cs" />
+        <Compile Include="Calculator\Alibre\AlibreSaveTarget.cs" />
+        <Compile Include="Calculator\Alibre\AlibreSaveTargetReader.cs" />
         <Compile Include="Calculator\Alibre\BevelGearSketch.cs" />
         <Compile Include="Calculator\Alibre\SpiralToothSpaceSections.cs" />
         <Compile Include="Calculator\Alibre\SingleToothSketch.cs" />
