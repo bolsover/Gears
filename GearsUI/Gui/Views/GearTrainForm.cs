@@ -41,7 +41,7 @@ namespace Bolsover.Gears.Gui.Views
         private readonly DataGridView _imperialMeshGrid = CreateImperialGrid();
         private readonly Label _imperialGearTitle = CreateTitleLabel();
         private readonly Label _imperialMeshTitle = CreateTitleLabel();
-        private readonly Dictionary<string, Image> _latexImageCache = new Dictionary<string, Image>();
+        private readonly ParameterTableFiller _tableFiller = new ParameterTableFiller();
         private readonly TextBox _summary = new TextBox
         {
             Dock = DockStyle.Fill,
@@ -71,6 +71,7 @@ namespace Bolsover.Gears.Gui.Views
         private IReadOnlyCollection<object> _selectedItems = new object[0];
         private ISet<GearComponent> _hidden;
         private AlibreGearExporter _alibreExporter;
+        private readonly AlibreExportController _alibreExport;
         private PropertyLayoutSettings _layout = PropertyLayoutStore.Load(PropertyLayoutStore.DefaultPath);
         private object _gridSource;
         private ToolStripMenuItem[] _sortItems;
@@ -102,6 +103,7 @@ namespace Bolsover.Gears.Gui.Views
 
             _host.Child = _viewport;
             _presenter = new GearTrainPresenter(this);
+            _alibreExport = new AlibreExportController(this, _presenter, () => _alibreExporter, () => _selectedItems, ShowMessage);
             BuildLayout();
             WireEvents();
         }
@@ -192,6 +194,51 @@ namespace Bolsover.Gears.Gui.Views
                 ToolTipText = "Remove the last selected part together with everything that hangs off it. When several parts are selected only the last one is removed."
             };
 
+            var ddFile = CreateFileMenu(btnNew);
+            var menuSpur = CreateSpurMenu(createRemoveItem);
+            var menuBevel = CreateBevelMenu(createRemoveItem);
+            var menuWorm = CreateWormMenu(createRemoveItem);
+            var menuPlanetary = CreatePlanetaryMenu();
+            var menuPulley = CreatePulleyMenu();
+            var menuCycloidal = CreateCycloidalMenu();
+            var menuView = CreateViewMenu(btnFit);
+            var menuSimulation = CreateSimulationMenu();
+
+            WireMenuEvents(btnNew, btnFit);
+
+            var menuHelp = CreateHelpMenu();
+
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuSpur, menuBevel, menuWorm, menuPlanetary, menuPulley, menuCycloidal, menuView, menuSimulation, menuHelp });
+            MainMenuStrip = menu;
+
+            var statusBar = new StatusStrip();
+            statusBar.Items.Add(_status);
+
+            var leftSplit = CreateLeftSplit();
+
+            var tabs = CreateReportTabs();
+
+            var rightSplit = CreateRightSplit(tabs);
+
+            var mainSplit = new SplitContainer { Dock = DockStyle.Fill };
+            mainSplit.Panel1.Controls.Add(leftSplit);
+            mainSplit.Panel2.Controls.Add(rightSplit);
+
+            Controls.Add(mainSplit);
+            Controls.Add(statusBar);
+            Controls.Add(menu);
+
+            Load += (s, e) =>
+            {
+                SetSplitter(mainSplit, 360);
+                SetSplitter(leftSplit, leftSplit.Height / 2);
+                SetSplitter(rightSplit, (int)(rightSplit.Height * 0.62));
+                _presenter.NewTrain();
+            };
+        }
+
+        private ToolStripMenuItem CreateFileMenu(ToolStripMenuItem btnNew)
+        {
             var ddFile = new ToolStripMenuItem("&File");
             ddFile.DropDownItems.Add(btnNew);
             ddFile.DropDownItems.Add(new ToolStripSeparator());
@@ -206,6 +253,11 @@ namespace Bolsover.Gears.Gui.Views
             ddFile.DropDownItems.Add(new ToolStripSeparator());
             ddFile.DropDownItems.Add("E&xit", null, (s, e) => Close());
 
+            return ddFile;
+        }
+
+        private ToolStripMenuItem CreateSpurMenu(Func<ToolStripMenuItem> createRemoveItem)
+        {
             var menuSpur = new ToolStripMenuItem("Sp&ur");
             menuSpur.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -233,6 +285,11 @@ namespace Bolsover.Gears.Gui.Views
                 createRemoveItem()
             });
 
+            return menuSpur;
+        }
+
+        private ToolStripMenuItem CreateBevelMenu(Func<ToolStripMenuItem> createRemoveItem)
+        {
             var menuBevel = new ToolStripMenuItem("&Bevel");
             var ddBevelStraight = new ToolStripMenuItem("&Straight");
             ddBevelStraight.DropDownItems.Add("&Standard", null, (s, e) => RunCommand(() => _presenter.NewTrain(GearFamily.Bevel, BevelGearType.Standard)));
@@ -256,6 +313,11 @@ namespace Bolsover.Gears.Gui.Views
                 createRemoveItem()
             });
 
+            return menuBevel;
+        }
+
+        private ToolStripMenuItem CreateWormMenu(Func<ToolStripMenuItem> createRemoveItem)
+        {
             var menuWorm = new ToolStripMenuItem("&Worm");
             menuWorm.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -265,12 +327,22 @@ namespace Bolsover.Gears.Gui.Views
                 createRemoveItem()
             });
 
+            return menuWorm;
+        }
+
+        private ToolStripMenuItem CreatePlanetaryMenu()
+        {
             var menuPlanetary = new ToolStripMenuItem("Pl&anetary");
             menuPlanetary.DropDownItems.Add(new ToolStripMenuItem("&New planetary stage", null, (s, e) => RunCommand(() => _presenter.NewPlanetary()))
             {
                 ToolTipText = "Start a new train with a planetary stage (sun, planets and ring). A planetary stage cannot be edited gear by gear."
             });
 
+            return menuPlanetary;
+        }
+
+        private ToolStripMenuItem CreatePulleyMenu()
+        {
             var menuPulley = new ToolStripMenuItem("&Pulley");
             var ddPulleyStart = new ToolStripMenuItem("&New train with HTD pulley")
             {
@@ -303,6 +375,11 @@ namespace Bolsover.Gears.Gui.Views
                 new ToolStripMenuItem("HTD profile &data…", null, (s, e) => ShowHtdData())
             });
 
+            return menuPulley;
+        }
+
+        private ToolStripMenuItem CreateCycloidalMenu()
+        {
             var menuCycloidal = new ToolStripMenuItem("&Cycloidal");
             menuCycloidal.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -322,12 +399,22 @@ namespace Bolsover.Gears.Gui.Views
                 new ToolStripMenuItem("&Remove selected", null, (s, e) => RunCommand(_presenter.RemoveSelected))
             });
 
+            return menuCycloidal;
+        }
+
+        private ToolStripMenuItem CreateViewMenu(ToolStripMenuItem btnFit)
+        {
             var menuView = new ToolStripMenuItem("&View");
             menuView.DropDownItems.AddRange(new ToolStripItem[]
             {
                 _btnWireframe, _btnShafts, _btnPitchCircles, _btnLabels, new ToolStripSeparator(), btnFit
             });
 
+            return menuView;
+        }
+
+        private ToolStripMenuItem CreateSimulationMenu()
+        {
             var menuSimulation = new ToolStripMenuItem("&Simulation");
             menuSimulation.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -336,6 +423,11 @@ namespace Bolsover.Gears.Gui.Views
                 _btnAnimate, new ToolStripLabel("Animation (rpm)"), new ToolStripControlHost(_numAnimSpeed)
             });
 
+            return menuSimulation;
+        }
+
+        private void WireMenuEvents(ToolStripMenuItem btnNew, ToolStripMenuItem btnFit)
+        {
             _btnExportSelected.Click += (s, e) => RunCommand(ExportSelectedToAlibre);
             _btnExportAll.Click += (s, e) => RunCommand(ExportAllToAlibre);
             btnNew.Click += (s, e) => RunCommand(() => _presenter.NewTrain());
@@ -348,23 +440,30 @@ namespace Bolsover.Gears.Gui.Views
             _btnLabels.Click += (s, e) => _view2D.ShowLabels = _btnLabels.Checked;
             _btnWireframe.Click += (s, e) => RenderScene();
             _btnShafts.Click += (s, e) => RenderScene();
+        }
 
+        private ToolStripMenuItem CreateHelpMenu()
+        {
             var menuHelp = new ToolStripMenuItem("&Help");
             menuHelp.DropDownItems.Add("&About", null, (s, e) => ShowAbout());
             menuHelp.DropDownItems.Add("&Help", null, (s, e) => ShowDocument("Help", "README.html"));
             menuHelp.DropDownItems.Add("&License", null, (s, e) => ShowDocument("License", "LICENSE.html"));
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuSpur, menuBevel, menuWorm, menuPlanetary, menuPulley, menuCycloidal, menuView, menuSimulation, menuHelp });
-            MainMenuStrip = menu;
+            return menuHelp;
+        }
 
-            var statusBar = new StatusStrip();
-            statusBar.Items.Add(_status);
-
+        private SplitContainer CreateLeftSplit()
+        {
             var leftSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
             leftSplit.Panel1.Controls.Add(_tree);
             leftSplit.Panel2.Controls.Add(_grid);
             leftSplit.Panel2.Controls.Add(CreatePropertyBar());
 
+            return leftSplit;
+        }
+
+        private TabControl CreateReportTabs()
+        {
             var tabs = new TabControl { Dock = DockStyle.Fill };
             AddTab(tabs, "Summary", _summary);
             AddTab(tabs, "Gears", _gearsGrid);
@@ -374,6 +473,11 @@ namespace Bolsover.Gears.Gui.Views
             AddTab(tabs, "Mesh parameters", CreateParameterPanel(_meshParamsTitle, _meshParamsGrid));
             AddTab(tabs, "Imperial reference", CreateImperialPanel());
 
+            return tabs;
+        }
+
+        private SplitContainer CreateRightSplit(TabControl tabs)
+        {
             var rightSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
             var viewTabs = new TabControl { Dock = DockStyle.Fill };
             AddTab(viewTabs, "3D view", _host);
@@ -381,21 +485,7 @@ namespace Bolsover.Gears.Gui.Views
             rightSplit.Panel1.Controls.Add(viewTabs);
             rightSplit.Panel2.Controls.Add(tabs);
 
-            var mainSplit = new SplitContainer { Dock = DockStyle.Fill };
-            mainSplit.Panel1.Controls.Add(leftSplit);
-            mainSplit.Panel2.Controls.Add(rightSplit);
-
-            Controls.Add(mainSplit);
-            Controls.Add(statusBar);
-            Controls.Add(menu);
-
-            Load += (s, e) =>
-            {
-                SetSplitter(mainSplit, 360);
-                SetSplitter(leftSplit, leftSplit.Height / 2);
-                SetSplitter(rightSplit, (int)(rightSplit.Height * 0.62));
-                _presenter.NewTrain();
-            };
+            return rightSplit;
         }
 
         private Control CreateImperialPanel()
@@ -570,8 +660,7 @@ namespace Bolsover.Gears.Gui.Views
             {
                 _animationTimer.Stop();
                 _animationTimer.Dispose();
-                foreach (var image in _latexImageCache.Values) image?.Dispose();
-                _latexImageCache.Clear();
+                _tableFiller.DisposeImages();
             };
         }
 
@@ -657,201 +746,10 @@ namespace Bolsover.Gears.Gui.Views
         /// <summary>
         /// Exports the selected parts: one part directly, several as separate Alibre parts or as one assembly, as the user chooses.
         /// </summary>
-        private void ExportSelectedToAlibre()
-        {
-            if (_alibreExporter == null)
-            {
-                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
-                return;
-            }
-
-            var items = _selectedItems.ToList();
-            if (items.Count == 0)
-            {
-                ShowMessage("Select one or more parts first.", true);
-                return;
-            }
-
-            if (items.Count == 1)
-            {
-                ExportItemToAlibre(items[0]);
-                return;
-            }
-
-            switch (ExportChoiceDialog.Ask(this, items.Count))
-            {
-                case ExportChoice.SeparateParts:
-                    ExportSeparatePartsToAlibre(items);
-                    break;
-                case ExportChoice.Assembly:
-                    ExportAssemblyToAlibre(items);
-                    break;
-            }
-        }
+        private void ExportSelectedToAlibre() => _alibreExport.ExportSelectedToAlibre();
 
         /// <summary>Exports every gear, shaft, carrier and belt of the train to one new Alibre assembly.</summary>
-        private void ExportAllToAlibre()
-        {
-            if (_alibreExporter == null)
-            {
-                ShowMessage("Export to Alibre is only available when the editor is opened from the Alibre Design add-on.", true);
-                return;
-            }
-
-            ExportAssemblyToAlibre(null);
-        }
-
-        /// <summary>Exports each item as its own new Alibre part; a failure is reported and the rest continue.</summary>
-        private void ExportSeparatePartsToAlibre(IReadOnlyCollection<object> items)
-        {
-            var failures = new List<string>();
-            var exported = 0;
-            foreach (var item in items)
-            {
-                try
-                {
-                    ExportItemToAlibre(item);
-                    exported++;
-                }
-                catch (Exception ex)
-                {
-                    failures.Add(DescribeItem(item) + ": " + ex.Message);
-                }
-            }
-
-            if (failures.Count == 0)
-            {
-                ShowMessage($"Exported {exported} parts to new Alibre parts.", false);
-                return;
-            }
-
-            var report = $"Exported {exported} of {items.Count} parts. Not exported:\n" + string.Join("\n", failures);
-            ShowMessage(report.Replace("\n", " "), true);
-            MessageBox.Show(this, report, "Export selected to Alibre", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
-
-        private static string DescribeItem(object item)
-        {
-            switch (item)
-            {
-                case GearComponent gear: return gear.Id;
-                case Shaft shaft: return shaft.Id;
-                case TimingBelt belt: return belt.Id;
-                default: return "item";
-            }
-        }
-
-        /// <summary>Exports the selection (null: the whole train) to one new Alibre assembly.</summary>
-        private void ExportAssemblyToAlibre(IReadOnlyCollection<object> selection)
-        {
-            var count = AlibreGearExporter.GetAssemblyParts(_presenter.Assembly, selection).Count;
-            var extraParts = AlibreGearExporter.GetShaftAssemblyParts(_presenter.Assembly, selection).Count;
-            var beltCount = AlibreGearExporter.GetBeltAssemblyParts(_presenter.Assembly, selection).Count;
-            if (count + extraParts + beltCount < AlibreGearExporter.MinimumAssemblyParts)
-            {
-                ShowMessage($"Select at least {AlibreGearExporter.MinimumAssemblyParts} exportable parts to export an assembly to Alibre.", true);
-                return;
-            }
-
-            var description = $"{count} gears";
-            if (extraParts > 0) description += $" and {extraParts} shaft or carrier part(s)";
-            if (beltCount > 0) description += $" and {beltCount} belt(s)";
-
-            ShowMessage($"Exporting {description} to a new Alibre assembly…", false);
-            try
-            {
-                _alibreExporter.ExportAssembly(_presenter.Assembly, AlibreGearExporter.DefaultAssemblyName, selection);
-            }
-            catch (Exception ex)
-            {
-                ShowMessage(ex.Message, true);
-                MessageBox.Show(this, ex.Message, "Export Assembly to Alibre", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            ShowMessage($"Exported {description} to a new Alibre assembly, each as a new part. Log: {_alibreExporter.LastExportLog}", false);
-        }
-
-        private void ExportShaftToAlibre(Shaft shaft)
-        {
-            var isCarrier = PlanetaryGearSet.IsCarrier(shaft);
-            var kind = isCarrier ? "carrier" : "shaft";
-            ShowMessage($"Exporting {shaft.Id} to Alibre…", false);
-            _alibreExporter.Export(shaft);
-            shaft.GetAxialSpan(out var start, out var end);
-            ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1}, diameter {2:0.###} mm, length {3:0.###} mm) to a new Alibre part.", shaft.Id, kind, shaft.Diameter, end - start), false);
-        }
-
-        /// <summary>Exports one gear, shaft, carrier or belt as a new Alibre part; throws when the item cannot be exported.</summary>
-        private void ExportItemToAlibre(object item)
-        {
-            switch (item)
-            {
-                case InvoluteGearComponent gear:
-                {
-                    ShowMessage($"Exporting {gear.Id} to Alibre…", false);
-                    _alibreExporter.Export(gear);
-                    var kind = (gear.IsInternal ? "internal " : "external ") + (gear.IsHelical ? "helical" : "spur");
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1} gear, {2} teeth, module {3:0.###}) to a new Alibre part.", gear.Id, kind, gear.Teeth, gear.Module), false);
-                    break;
-                }
-                case RackComponent rack:
-                {
-                    ShowMessage($"Exporting {rack.Id} to Alibre…", false);
-                    _alibreExporter.Export(rack);
-                    var kind = rack.IsHelical ? string.Format(CultureInfo.InvariantCulture, "helical, {0:0.###} degrees {1}", rack.HelixAngleDeg, rack.HelicalDirection) : "straight";
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (rack, {1}, {2} teeth, module {3:0.###}) to a new Alibre part.", rack.Id, kind, rack.Teeth, rack.Module), false);
-                    break;
-                }
-                case WormComponent worm:
-                {
-                    ShowMessage($"Exporting {worm.Id} to Alibre…", false);
-                    _alibreExporter.Export(worm);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (worm, {1} start(s), axial module {2:0.###}, {3} hand) to a new Alibre part.", worm.Id, worm.Starts, worm.Module, worm.HelicalDirection == "R" ? "right" : "left"), false);
-                    break;
-                }
-                case WormWheelComponent wheel:
-                {
-                    ShowMessage($"Exporting {wheel.Id} to Alibre…", false);
-                    _alibreExporter.Export(wheel);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (worm wheel, {1} teeth, axial module {2:0.###}, helix angle {3:0.###} degrees) to a new Alibre part.", wheel.Id, wheel.Teeth, wheel.Module, wheel.LeadAngleDeg), false);
-                    break;
-                }
-                case HtdPulleyComponent pulley:
-                {
-                    ShowMessage($"Exporting {pulley.Id} to Alibre…", false);
-                    _alibreExporter.Export(pulley);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} pulley, {2} grooves, {3:0.###} mm pitch diameter) to a new Alibre part.", pulley.Id, pulley.Profile.Name, pulley.Teeth, pulley.PitchDiameter), false);
-                    break;
-                }
-                case CycloidalGearComponent cycloidal:
-                {
-                    ShowMessage($"Exporting {cycloidal.Id} to Alibre…", false);
-                    _alibreExporter.Export(cycloidal);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (cycloidal {1}, {2} teeth, module {3:0.###}) to a new Alibre part.", cycloidal.Id, cycloidal.IsPinion ? "pinion" : "wheel", cycloidal.Teeth, cycloidal.Module), false);
-                    break;
-                }
-                case BevelGearComponent bevel:
-                {
-                    ShowMessage($"Exporting {bevel.Id} to Alibre…", false);
-                    _alibreExporter.Export(bevel);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} ({1}, {2} teeth, module {3:0.###}, {4} system) to a new Alibre part.", bevel.Id, bevel.TypeName.ToLowerInvariant(), bevel.Teeth, bevel.Module, bevel.BevelType), false);
-                    break;
-                }
-                case TimingBelt belt:
-                {
-                    ShowMessage($"Exporting {belt.Id} to Alibre...", false);
-                    _alibreExporter.Export(belt);
-                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} belt without teeth, {2:0.###} mm wide, {3} teeth long) to a new Alibre part.", belt.Id, belt.Profile.Name, belt.Width, belt.BeltTeeth), false);
-                    break;
-                }
-                case Shaft shaft:
-                    ExportShaftToAlibre(shaft);
-                    break;
-                default:
-                    throw new InvalidOperationException("Select a gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.");
-            }
-        }
+        private void ExportAllToAlibre() => _alibreExport.ExportAllToAlibre();
 
         private void RunCommand(Action command)
         {
@@ -1089,10 +987,10 @@ namespace Bolsover.Gears.Gui.Views
             var gear = _selected as GearComponent;
             if (gear == null)
             {
-                FillParameterTable(_gearParamsGrid, _gearParamsTitle, GearParameterTable.Empty, "Select a gear to see its parameters, symbols and formulae.");
-                FillParameterTable(_meshParamsGrid, _meshParamsTitle, GearParameterTable.Empty, "Select a gear to see the parameters of its mesh.");
-                FillImperialTable(_imperialGearGrid, _imperialGearTitle, ImperialTable.Empty, "Select a gear to see its module as diametral pitch and circular pitch, and its lengths in inches.");
-                FillImperialTable(_imperialMeshGrid, _imperialMeshTitle, ImperialTable.Empty, "Select a gear to see the lengths of its mesh in inches.");
+                _tableFiller.FillParameterTable(_gearParamsGrid, _gearParamsTitle, GearParameterTable.Empty, "Select a gear to see its parameters, symbols and formulae.");
+                _tableFiller.FillParameterTable(_meshParamsGrid, _meshParamsTitle, GearParameterTable.Empty, "Select a gear to see the parameters of its mesh.");
+                ParameterTableFiller.FillImperialTable(_imperialGearGrid, _imperialGearTitle, ImperialTable.Empty, "Select a gear to see its module as diametral pitch and circular pitch, and its lengths in inches.");
+                ParameterTableFiller.FillImperialTable(_imperialMeshGrid, _imperialMeshTitle, ImperialTable.Empty, "Select a gear to see the lengths of its mesh in inches.");
                 return;
             }
 
@@ -1107,11 +1005,11 @@ namespace Bolsover.Gears.Gui.Views
                 _gearParamsTitle.Text = ex.Message;
             }
 
-            FillParameterTable(_gearParamsGrid, _gearParamsTitle, gearTable, _gearParamsTitle.Text);
+            _tableFiller.FillParameterTable(_gearParamsGrid, _gearParamsTitle, gearTable, _gearParamsTitle.Text);
 
             var relation = GearParameterTables.FindMeshFor(_presenter.Assembly, gear);
             var meshTable = GearParameterTables.ForMesh(relation);
-            FillParameterTable(_meshParamsGrid, _meshParamsTitle, meshTable,
+            _tableFiller.FillParameterTable(_meshParamsGrid, _meshParamsTitle, meshTable,
                 relation == null ? $"{gear.Name} does not mesh with another gear." : "This mesh has no involute pair parameters.");
 
             ImperialTable imperialGear;
@@ -1125,84 +1023,9 @@ namespace Bolsover.Gears.Gui.Views
                 _imperialGearTitle.Text = ex.Message;
             }
 
-            FillImperialTable(_imperialGearGrid, _imperialGearTitle, imperialGear, _imperialGearTitle.Text);
-            FillImperialTable(_imperialMeshGrid, _imperialMeshTitle, ImperialReference.ForMesh(relation),
+            ParameterTableFiller.FillImperialTable(_imperialGearGrid, _imperialGearTitle, imperialGear, _imperialGearTitle.Text);
+            ParameterTableFiller.FillImperialTable(_imperialMeshGrid, _imperialMeshTitle, ImperialReference.ForMesh(relation),
                 relation == null ? $"{gear.Name} does not mesh with another gear." : "This mesh has no involute pair parameters.");
-        }
-
-        /// <summary>
-        /// Fills an imperial reference table. The design stays metric; the inch values, diametral pitch and circular pitch are for reference.
-        /// </summary>
-        private static void FillImperialTable(DataGridView grid, Label title, ImperialTable table, string emptyText)
-        {
-            grid.SuspendLayout();
-            try
-            {
-                grid.Rows.Clear();
-                title.Text = table.Rows.Count > 0 ? table.Title + " - imperial reference (metric values remain the design values)" : emptyText;
-                foreach (var row in table.Rows)
-                {
-                    grid.Rows.Add(
-                        row.Name,
-                        row.Symbol,
-                        row.Formula,
-                        row.MetricValue.ToString("0.#######", CultureInfo.InvariantCulture),
-                        row.MetricUnit,
-                        row.ImperialValue.ToString("0.#######", CultureInfo.InvariantCulture),
-                        row.ImperialUnit);
-                }
-            }
-            finally
-            {
-                grid.ResumeLayout();
-            }
-        }
-
-        private void FillParameterTable(DataGridView grid, Label title, GearParameterTable table, string emptyText)
-        {
-            grid.SuspendLayout();
-            try
-            {
-                grid.Rows.Clear();
-                title.Text = table.Rows.Count > 0 ? table.Title : emptyText;
-                foreach (var row in table.Rows)
-                {
-                    var index = grid.Rows.Add(
-                        row.ParameterName,
-                        GetLatexImage(row.SymbolLatex),
-                        GetLatexImage(row.FormulaLatex),
-                        row.Value.ToString("0.#######", CultureInfo.InvariantCulture),
-                        row.Unit);
-                    grid.Rows[index].Cells["colSymbol"].ToolTipText = row.SymbolLatex;
-                    grid.Rows[index].Cells["colFormula"].ToolTipText = row.FormulaLatex;
-                }
-            }
-            finally
-            {
-                grid.ResumeLayout();
-            }
-        }
-
-        private Image GetLatexImage(string latex)
-        {
-            if (string.IsNullOrWhiteSpace(latex)) return null;
-            if (_latexImageCache.TryGetValue(latex, out var cached)) return cached;
-
-            try
-            {
-                if (LaTeXUtils.TryParse(latex, out _))
-                {
-                    var image = LaTeXUtils.CreateImageFromLatex(latex);
-                    if (image != null) _latexImageCache[latex] = image;
-                    return image;
-                }
-            }
-            catch
-            {
-                // A formula the renderer cannot handle is shown as a blank cell; the tooltip still has the source.
-            }
-
-            return null;
         }
 
         private TreeNode CreateNode(TrainTreeNode model)

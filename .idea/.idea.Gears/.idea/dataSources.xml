@@ -8,5 +8,11 @@
       <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/Gears/Data/Nexus.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="ISO 606 sprocket user_parts (SQLite)" uuid="c9f60d06-cc25-40e4-a637-cab235a354bd">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:F:/Downloads/ISO 606 sprocket/user_parts.sqlite</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

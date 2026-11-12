@@ -176,7 +176,24 @@
     </Compile>
     <Compile Include="Gui\HelixMeshAdapter.cs" />
     <Compile Include="Gui\Presenters\GearTrainPresenter.cs" />
-    <Compile Include="Gui\Presenters\TrainNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\GearNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\ComponentNodePropertiesBase.cs" />
+    <Compile Include="Gui\Presenters\RackNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\PulleyNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\CycloidalNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\BeltNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\BevelNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\SpiralBevelNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\HypoidNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\WormNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\WormWheelNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\PlanetaryNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\ShaftNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\TrainNodeKind.cs" />
+    <Compile Include="Gui\Presenters\GearFamily.cs" />
+    <Compile Include="Gui\Presenters\TrainTreeNode.cs" />
+    <Compile Include="Gui\Presenters\NodePropertiesFactory.cs" />
+    <Compile Include="Gui\Presenters\PlanetaryReportBuilder.cs" />
     <Compile Include="Gui\Presenters\PropertyLayout.cs" />
     <Compile Include="Gui\Views\PropertyLayoutDialog.cs">
       <SubType>Form</SubType>
@@ -186,6 +203,8 @@
     <Compile Include="Gui\Views\HtmlDocumentForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Gui\Views\AlibreExportController.cs" />
+    <Compile Include="Gui\Views\ParameterTableFiller.cs" />
     <Compile Include="Gui\Views\GearTrainForm.cs">
       <SubType>Form</SubType>
     </Compile>

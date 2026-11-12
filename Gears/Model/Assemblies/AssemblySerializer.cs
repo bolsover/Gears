@@ -220,112 +220,161 @@ namespace Bolsover.Gears.Model.Assemblies
             switch (component)
             {
                 case InvoluteGearComponent g:
-                    dto.Type = "Involute";
-                    dto.Teeth = g.Teeth;
-                    dto.HelixAngleDeg = g.HelixAngleDeg;
-                    dto.HelicalDirection = g.HelicalDirection;
-                    if (g.IsHerringbone) dto.IsHerringbone = true;
-                    dto.Clearance = g.Clearance;
-                    dto.Backlash = g.Backlash;
-                    dto.ProfileShift = g.ProfileShift;
-                    dto.IsInternal = g.IsInternal;
-                    dto.RimThickness = g.RimThickness;
-                    dto.OptimalShift = g.OptimalShift;
-                    dto.ShowFullGear = g.ShowFullGear;
+                    WriteInvolute(dto, g);
                     break;
                 case RackComponent g:
-                    dto.Type = "Rack";
-                    dto.Teeth = g.Teeth;
-                    dto.Backlash = g.Backlash;
-                    dto.BodyHeight = g.BodyHeight;
-                    if (g.IsHelical)
-                    {
-                        dto.HelixAngleDeg = g.HelixAngleDeg;
-                        dto.HelicalDirection = g.HelicalDirection;
-                        if (g.IsHerringbone) dto.IsHerringbone = true;
-                    }
+                    WriteRack(dto, g);
                     break;
                 case HypoidGearComponent g:
-                    dto.Type = "Hypoid";
-                    WriteBevel(dto, g);
-                    WriteSpiral(dto, g);
-                    dto.OffsetMm = g.OffsetMm;
-                    dto.IsPinion = g.IsPinion;
+                    WriteHypoid(dto, g);
                     break;
                 case ZerolBevelGearComponent g:
-                    dto.Type = "ZerolBevel";
-                    WriteBevel(dto, g);
-                    dto.CutterRadius = g.CutterRadius;
-                    dto.Hand = g.Hand == SpiralHand.Right ? "R" : "L";
+                    WriteZerolBevel(dto, g);
                     break;
                 case SpiralBevelGearComponent g:
-                    dto.Type = "SpiralBevel";
-                    WriteBevel(dto, g);
-                    WriteSpiral(dto, g);
+                    WriteSpiralBevel(dto, g);
                     break;
                 case BevelGearComponent g:
-                    dto.Type = "Bevel";
-                    dto.Teeth = g.Teeth;
-                    dto.MateTeeth = g.MateTeeth;
-                    dto.ShaftAngleDeg = g.ShaftAngleDeg;
-                    dto.Backlash = g.Backlash;
-                    dto.BevelType = g.BevelType.ToString();
-                    dto.RackTipRadiusFactor = g.RackTipRadiusFactor;
-                    dto.BoreDiameter = g.BoreDiameter;
-                    dto.HasHub = g.HasHub;
-                    dto.HubDiameter = g.HubDiameter;
-                    dto.HubLength = g.HubLength;
+                    WritePlainBevel(dto, g);
                     break;
                 case WormComponent g:
-                    dto.Type = "Worm";
-                    dto.Starts = g.Starts;
-                    dto.DiameterQuotient = g.DiameterQuotient;
-                    dto.HelicalDirection = g.HelicalDirection;
+                    WriteWorm(dto, g);
                     break;
                 case WormWheelComponent g:
-                    dto.Type = "WormWheel";
-                    dto.Teeth = g.Teeth;
-                    dto.LeadAngleDeg = g.LeadAngleDeg;
-                    dto.HelicalDirection = g.HelicalDirection;
-                    dto.Backlash = g.Backlash;
+                    WriteWormWheel(dto, g);
                     break;
                 case HtdPulleyComponent g:
-                    dto.Type = "HtdPulley";
-                    dto.Teeth = g.Teeth;
-                    dto.HtdSeries = g.Series.ToString();
-                    if (g.HasFlanges)
-                    {
-                        dto.HasFlanges = true;
-                        dto.FlangeHeight = g.FlangeHeight;
-                        dto.FlangeThickness = g.FlangeThickness;
-                    }
-
-                    if (g.BoreDiameter > 0.0) dto.BoreDiameter = g.BoreDiameter;
-                    if (g.HasHub)
-                    {
-                        dto.HubDiameter = g.HubDiameter;
-                        dto.HubLength = g.HubLength;
-                    }
-
+                    WriteHtdPulley(dto, g);
                     break;
                 case CycloidalGearComponent g:
-                    dto.Type = "Cycloidal";
-                    dto.Teeth = g.Teeth;
-                    dto.MateTeeth = g.MateTeeth;
-                    dto.CycloidalRole = g.Role.ToString();
-                    if (g.CustomSlopEnabled)
-                    {
-                        dto.CustomSlopEnabled = true;
-                        dto.CustomSlop = g.CustomSlop;
-                    }
-
-                    if (g.CentreHole > 0.0) dto.CentreHole = g.CentreHole;
+                    WriteCycloidal(dto, g);
                     break;
                 default:
                     throw new NotSupportedException($"Gear '{component.Id}' is of type {component.GetType().Name}, which cannot be saved.");
             }
 
             return dto;
+        }
+
+        private static void WriteInvolute(GearDto dto, InvoluteGearComponent g)
+        {
+            dto.Type = "Involute";
+            dto.Teeth = g.Teeth;
+            dto.HelixAngleDeg = g.HelixAngleDeg;
+            dto.HelicalDirection = g.HelicalDirection;
+            if (g.IsHerringbone) dto.IsHerringbone = true;
+            dto.Clearance = g.Clearance;
+            dto.Backlash = g.Backlash;
+            dto.ProfileShift = g.ProfileShift;
+            dto.IsInternal = g.IsInternal;
+            dto.RimThickness = g.RimThickness;
+            dto.OptimalShift = g.OptimalShift;
+            dto.ShowFullGear = g.ShowFullGear;
+        }
+
+        private static void WriteRack(GearDto dto, RackComponent g)
+        {
+            dto.Type = "Rack";
+            dto.Teeth = g.Teeth;
+            dto.Backlash = g.Backlash;
+            dto.BodyHeight = g.BodyHeight;
+            if (g.IsHelical)
+            {
+                dto.HelixAngleDeg = g.HelixAngleDeg;
+                dto.HelicalDirection = g.HelicalDirection;
+                if (g.IsHerringbone) dto.IsHerringbone = true;
+            }
+        }
+
+        private static void WriteHypoid(GearDto dto, HypoidGearComponent g)
+        {
+            dto.Type = "Hypoid";
+            WriteBevel(dto, g);
+            WriteSpiral(dto, g);
+            dto.OffsetMm = g.OffsetMm;
+            dto.IsPinion = g.IsPinion;
+        }
+
+        private static void WriteZerolBevel(GearDto dto, ZerolBevelGearComponent g)
+        {
+            dto.Type = "ZerolBevel";
+            WriteBevel(dto, g);
+            dto.CutterRadius = g.CutterRadius;
+            dto.Hand = g.Hand == SpiralHand.Right ? "R" : "L";
+        }
+
+        private static void WriteSpiralBevel(GearDto dto, SpiralBevelGearComponent g)
+        {
+            dto.Type = "SpiralBevel";
+            WriteBevel(dto, g);
+            WriteSpiral(dto, g);
+        }
+
+        private static void WritePlainBevel(GearDto dto, BevelGearComponent g)
+        {
+            dto.Type = "Bevel";
+            dto.Teeth = g.Teeth;
+            dto.MateTeeth = g.MateTeeth;
+            dto.ShaftAngleDeg = g.ShaftAngleDeg;
+            dto.Backlash = g.Backlash;
+            dto.BevelType = g.BevelType.ToString();
+            dto.RackTipRadiusFactor = g.RackTipRadiusFactor;
+            dto.BoreDiameter = g.BoreDiameter;
+            dto.HasHub = g.HasHub;
+            dto.HubDiameter = g.HubDiameter;
+            dto.HubLength = g.HubLength;
+        }
+
+        private static void WriteWorm(GearDto dto, WormComponent g)
+        {
+            dto.Type = "Worm";
+            dto.Starts = g.Starts;
+            dto.DiameterQuotient = g.DiameterQuotient;
+            dto.HelicalDirection = g.HelicalDirection;
+        }
+
+        private static void WriteWormWheel(GearDto dto, WormWheelComponent g)
+        {
+            dto.Type = "WormWheel";
+            dto.Teeth = g.Teeth;
+            dto.LeadAngleDeg = g.LeadAngleDeg;
+            dto.HelicalDirection = g.HelicalDirection;
+            dto.Backlash = g.Backlash;
+        }
+
+        private static void WriteHtdPulley(GearDto dto, HtdPulleyComponent g)
+        {
+            dto.Type = "HtdPulley";
+            dto.Teeth = g.Teeth;
+            dto.HtdSeries = g.Series.ToString();
+            if (g.HasFlanges)
+            {
+                dto.HasFlanges = true;
+                dto.FlangeHeight = g.FlangeHeight;
+                dto.FlangeThickness = g.FlangeThickness;
+            }
+
+            if (g.BoreDiameter > 0.0) dto.BoreDiameter = g.BoreDiameter;
+            if (g.HasHub)
+            {
+                dto.HubDiameter = g.HubDiameter;
+                dto.HubLength = g.HubLength;
+            }
+        }
+
+        private static void WriteCycloidal(GearDto dto, CycloidalGearComponent g)
+        {
+            dto.Type = "Cycloidal";
+            dto.Teeth = g.Teeth;
+            dto.MateTeeth = g.MateTeeth;
+            dto.CycloidalRole = g.Role.ToString();
+            if (g.CustomSlopEnabled)
+            {
+                dto.CustomSlopEnabled = true;
+                dto.CustomSlop = g.CustomSlop;
+            }
+
+            if (g.CentreHole > 0.0) dto.CentreHole = g.CentreHole;
         }
 
         private static void WriteBevel(GearDto dto, BevelGearComponent g)
@@ -378,113 +427,34 @@ namespace Bolsover.Gears.Model.Assemblies
             switch (dto.Type)
             {
                 case "Involute":
-                    component = new InvoluteGearComponent(dto.Id)
-                    {
-                        Teeth = dto.Teeth ?? 20,
-                        HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
-                        HelicalDirection = dto.HelicalDirection ?? "R",
-                        IsHerringbone = dto.IsHerringbone ?? false,
-                        Clearance = dto.Clearance ?? 0.5,
-                        Backlash = dto.Backlash ?? 0.0,
-                        ProfileShift = dto.ProfileShift ?? 0.0,
-                        IsInternal = dto.IsInternal ?? false,
-                        RimThickness = dto.RimThickness ?? 10.0,
-                        OptimalShift = dto.OptimalShift ?? false,
-                        ShowFullGear = dto.ShowFullGear ?? true
-                    };
+                    component = ReadInvolute(dto);
                     break;
                 case "Rack":
-                    component = new RackComponent(dto.Id)
-                    {
-                        Teeth = dto.Teeth ?? 12,
-                        Backlash = dto.Backlash ?? 0.0,
-                        BodyHeight = dto.BodyHeight ?? 10.0,
-                        HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
-                        HelicalDirection = dto.HelicalDirection ?? "R",
-                        IsHerringbone = dto.IsHerringbone ?? false
-                    };
+                    component = ReadRack(dto);
                     break;
                 case "Bevel":
-                    component = new BevelGearComponent(dto.Id)
-                    {
-                        Teeth = dto.Teeth ?? 20,
-                        MateTeeth = dto.MateTeeth ?? 0,
-                        ShaftAngleDeg = dto.ShaftAngleDeg ?? 90.0,
-                        Backlash = dto.Backlash ?? 0.0,
-                        BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard,
-                        RackTipRadiusFactor = dto.RackTipRadiusFactor ?? 0.0,
-                        BoreDiameter = dto.BoreDiameter ?? 0.0,
-                        HasHub = dto.HasHub ?? true,
-                        HubDiameter = dto.HubDiameter ?? 0.0,
-                        HubLength = dto.HubLength ?? 0.0
-                    };
+                    component = ReadPlainBevel(dto);
                     break;
                 case "SpiralBevel":
-                {
-                    var spiral = new SpiralBevelGearComponent(dto.Id);
-                    ReadBevel(dto, spiral);
-                    ReadSpiral(dto, spiral, 35.0);
-                    component = spiral;
+                    component = ReadSpiralBevel(dto);
                     break;
-                }
                 case "ZerolBevel":
-                {
-                    var zerol = new ZerolBevelGearComponent(dto.Id);
-                    ReadBevel(dto, zerol);
-                    ReadSpiral(dto, zerol, 0.0);
-                    component = zerol;
+                    component = ReadZerolBevel(dto);
                     break;
-                }
                 case "Hypoid":
-                {
-                    var hypoid = new HypoidGearComponent(dto.Id);
-                    ReadBevel(dto, hypoid);
-                    ReadSpiral(dto, hypoid, 45.0);
-                    hypoid.OffsetMm = dto.OffsetMm ?? 0.0;
-                    hypoid.IsPinion = dto.IsPinion ?? false;
-                    component = hypoid;
+                    component = ReadHypoid(dto);
                     break;
-                }
                 case "Worm":
-                    component = new WormComponent(dto.Id)
-                    {
-                        Starts = dto.Starts ?? 1,
-                        DiameterQuotient = dto.DiameterQuotient ?? 10.0,
-                        HelicalDirection = dto.HelicalDirection ?? "R"
-                    };
+                    component = ReadWorm(dto);
                     break;
                 case "WormWheel":
-                    component = new WormWheelComponent(dto.Id)
-                    {
-                        Teeth = dto.Teeth ?? 30,
-                        LeadAngleDeg = dto.LeadAngleDeg ?? 0.0,
-                        HelicalDirection = dto.HelicalDirection ?? "R",
-                        Backlash = dto.Backlash ?? 0.0
-                    };
+                    component = ReadWormWheel(dto);
                     break;
                 case "HtdPulley":
-                    component = new HtdPulleyComponent(dto.Id)
-                    {
-                        Series = Enum.TryParse(dto.HtdSeries, true, out HtdSeries series) ? series : HtdSeries.Htd5M,
-                        Teeth = dto.Teeth ?? 20,
-                        HasFlanges = dto.HasFlanges ?? false,
-                        FlangeHeight = dto.FlangeHeight ?? 2.0,
-                        FlangeThickness = dto.FlangeThickness ?? 1.5,
-                        BoreDiameter = dto.BoreDiameter ?? 0.0,
-                        HubDiameter = dto.HubDiameter ?? 0.0,
-                        HubLength = dto.HubLength ?? 0.0
-                    };
+                    component = ReadHtdPulley(dto);
                     break;
                 case "Cycloidal":
-                    component = new CycloidalGearComponent(dto.Id)
-                    {
-                        Teeth = dto.Teeth ?? CycloidalGearComponent.DefaultWheelTeeth,
-                        MateTeeth = dto.MateTeeth ?? 0,
-                        Role = Enum.TryParse(dto.CycloidalRole, true, out CycloidalGearRole role) ? role : CycloidalGearRole.Wheel,
-                        CustomSlopEnabled = dto.CustomSlopEnabled ?? false,
-                        CustomSlop = dto.CustomSlop ?? 0.0,
-                        CentreHole = dto.CentreHole ?? 0.0
-                    };
+                    component = ReadCycloidal(dto);
                     break;
                 default:
                     throw new InvalidDataException($"Gear '{dto.Id}' has the unknown type '{dto.Type}'.");
@@ -495,6 +465,129 @@ namespace Bolsover.Gears.Model.Assemblies
             component.PressureAngleDeg = dto.PressureAngleDeg;
             component.FaceWidth = dto.FaceWidth;
             return component;
+        }
+
+        private static InvoluteGearComponent ReadInvolute(GearDto dto)
+        {
+            return new InvoluteGearComponent(dto.Id)
+            {
+                Teeth = dto.Teeth ?? 20,
+                HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
+                HelicalDirection = dto.HelicalDirection ?? "R",
+                IsHerringbone = dto.IsHerringbone ?? false,
+                Clearance = dto.Clearance ?? 0.5,
+                Backlash = dto.Backlash ?? 0.0,
+                ProfileShift = dto.ProfileShift ?? 0.0,
+                IsInternal = dto.IsInternal ?? false,
+                RimThickness = dto.RimThickness ?? 10.0,
+                OptimalShift = dto.OptimalShift ?? false,
+                ShowFullGear = dto.ShowFullGear ?? true
+            };
+        }
+
+        private static RackComponent ReadRack(GearDto dto)
+        {
+            return new RackComponent(dto.Id)
+            {
+                Teeth = dto.Teeth ?? 12,
+                Backlash = dto.Backlash ?? 0.0,
+                BodyHeight = dto.BodyHeight ?? 10.0,
+                HelixAngleDeg = dto.HelixAngleDeg ?? 0.0,
+                HelicalDirection = dto.HelicalDirection ?? "R",
+                IsHerringbone = dto.IsHerringbone ?? false
+            };
+        }
+
+        private static BevelGearComponent ReadPlainBevel(GearDto dto)
+        {
+            return new BevelGearComponent(dto.Id)
+            {
+                Teeth = dto.Teeth ?? 20,
+                MateTeeth = dto.MateTeeth ?? 0,
+                ShaftAngleDeg = dto.ShaftAngleDeg ?? 90.0,
+                Backlash = dto.Backlash ?? 0.0,
+                BevelType = Enum.TryParse(dto.BevelType, true, out BevelGearType bevelType) ? bevelType : BevelGearType.Standard,
+                RackTipRadiusFactor = dto.RackTipRadiusFactor ?? 0.0,
+                BoreDiameter = dto.BoreDiameter ?? 0.0,
+                HasHub = dto.HasHub ?? true,
+                HubDiameter = dto.HubDiameter ?? 0.0,
+                HubLength = dto.HubLength ?? 0.0
+            };
+        }
+
+        private static SpiralBevelGearComponent ReadSpiralBevel(GearDto dto)
+        {
+            var spiral = new SpiralBevelGearComponent(dto.Id);
+            ReadBevel(dto, spiral);
+            ReadSpiral(dto, spiral, 35.0);
+            return spiral;
+        }
+
+        private static ZerolBevelGearComponent ReadZerolBevel(GearDto dto)
+        {
+            var zerol = new ZerolBevelGearComponent(dto.Id);
+            ReadBevel(dto, zerol);
+            ReadSpiral(dto, zerol, 0.0);
+            return zerol;
+        }
+
+        private static HypoidGearComponent ReadHypoid(GearDto dto)
+        {
+            var hypoid = new HypoidGearComponent(dto.Id);
+            ReadBevel(dto, hypoid);
+            ReadSpiral(dto, hypoid, 45.0);
+            hypoid.OffsetMm = dto.OffsetMm ?? 0.0;
+            hypoid.IsPinion = dto.IsPinion ?? false;
+            return hypoid;
+        }
+
+        private static WormComponent ReadWorm(GearDto dto)
+        {
+            return new WormComponent(dto.Id)
+            {
+                Starts = dto.Starts ?? 1,
+                DiameterQuotient = dto.DiameterQuotient ?? 10.0,
+                HelicalDirection = dto.HelicalDirection ?? "R"
+            };
+        }
+
+        private static WormWheelComponent ReadWormWheel(GearDto dto)
+        {
+            return new WormWheelComponent(dto.Id)
+            {
+                Teeth = dto.Teeth ?? 30,
+                LeadAngleDeg = dto.LeadAngleDeg ?? 0.0,
+                HelicalDirection = dto.HelicalDirection ?? "R",
+                Backlash = dto.Backlash ?? 0.0
+            };
+        }
+
+        private static HtdPulleyComponent ReadHtdPulley(GearDto dto)
+        {
+            return new HtdPulleyComponent(dto.Id)
+            {
+                Series = Enum.TryParse(dto.HtdSeries, true, out HtdSeries series) ? series : HtdSeries.Htd5M,
+                Teeth = dto.Teeth ?? 20,
+                HasFlanges = dto.HasFlanges ?? false,
+                FlangeHeight = dto.FlangeHeight ?? 2.0,
+                FlangeThickness = dto.FlangeThickness ?? 1.5,
+                BoreDiameter = dto.BoreDiameter ?? 0.0,
+                HubDiameter = dto.HubDiameter ?? 0.0,
+                HubLength = dto.HubLength ?? 0.0
+            };
+        }
+
+        private static CycloidalGearComponent ReadCycloidal(GearDto dto)
+        {
+            return new CycloidalGearComponent(dto.Id)
+            {
+                Teeth = dto.Teeth ?? CycloidalGearComponent.DefaultWheelTeeth,
+                MateTeeth = dto.MateTeeth ?? 0,
+                Role = Enum.TryParse(dto.CycloidalRole, true, out CycloidalGearRole role) ? role : CycloidalGearRole.Wheel,
+                CustomSlopEnabled = dto.CustomSlopEnabled ?? false,
+                CustomSlop = dto.CustomSlop ?? 0.0,
+                CentreHole = dto.CentreHole ?? 0.0
+            };
         }
 
         private sealed class AssemblyDto

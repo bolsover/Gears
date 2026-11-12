@@ -5,99 +5,6 @@ using Bolsover.Gears.Model;
 namespace Bolsover.Gears.Calculator
 {
     /// <summary>
-    /// Calculated gear geometric parameters and metadata.
-    /// </summary>
-    public class CalculatedGearData
-    {
-        public int Teeth { get; set; }
-        public double Module { get; set; }
-        public double PressureAngleDeg { get; set; }
-        public double PressureAngleRad { get; set; }
-        public double HelixAngleDeg { get; set; }
-        public double HelixAngleRad { get; set; }
-        public string HelicalDirection { get; set; } = "R";
-        public bool IsHelical => HelixAngleDeg > 1e-6;
-        public double NormalModule => Module;
-        public double RadialModule { get; set; }
-        public double NormalPressureAngleDeg => PressureAngleDeg;
-        public double RadialPressureAngleDeg { get; set; }
-        public double RadialPressureAngleRad { get; set; }
-        public double AxialPitch { get; set; }
-        public double Lead { get; set; }
-        public double FaceWidth { get; set; }
-        public double ProfileShift { get; set; }
-        public bool IsInternal { get; set; }
-        public double RimThickness { get; set; }
-        public double PitchDiameter { get; set; }
-        public double BaseDiameter { get; set; }
-        public double Addendum { get; set; }
-        public double Dedendum { get; set; }
-        public double WholeDepth { get; set; }
-        public double TipDiameter { get; set; }
-        public double RootDiameter { get; set; }
-        public double CircularPitch { get; set; }
-        public double ToothThickness { get; set; }
-        public double BasePitch { get; set; }
-        public double InvoluteFunction { get; set; }
-        public double Clearance { get; set; }
-        public double Backlash { get; set; }
-
-        public List<GearParameterRow> ParameterRows { get; } = new List<GearParameterRow>();
-    }
-
-    /// <summary>
-    /// Calculated geometric parameters and metadata for a meshed pair of gears.
-    /// </summary>
-    public class CalculatedGearPairData
-    {
-        public CalculatedGearData Gear1 { get; set; }
-        public CalculatedGearData Gear2 { get; set; }
-        public double StandardCentreDistance { get; set; }
-        public double WorkingCentreDistance { get; set; }
-        public double WorkingPressureAngleDeg { get; set; }
-        public double WorkingPressureAngleRad { get; set; }
-        public double CentreDistanceIncrementFactor { get; set; }
-        public double WorkingInvoluteFunction { get; set; }
-        public double SumProfileShift { get; set; }
-        public double Gear1WorkingPitchDiameter { get; set; }
-        public double Gear2WorkingPitchDiameter { get; set; }
-        public double ContactRatio { get; set; }
-        public double AxialContactRatio { get; set; }
-        public double GearRatio { get; set; }
-        public double Gear1Clearance => Gear1?.Clearance ?? 0.0;
-        public double Gear2Clearance => Gear2?.Clearance ?? 0.0;
-        public double BottomClearance1 { get; set; }
-        public double BottomClearance2 { get; set; }
-        public double Gear1Backlash => Gear1?.Backlash ?? 0.0;
-        public double Gear2Backlash => Gear2?.Backlash ?? 0.0;
-        public double TotalBacklash => Gear1Backlash + Gear2Backlash;
-        public double NormalBacklash { get; set; }
-
-        /// <summary>
-        /// Circular backlash measured on the working pitch circles at the working centre distance (mm). Without a centre
-        /// distance override and with zero profile shift it equals <see cref="TotalBacklash"/>. For an external pair, moving the
-        /// shafts apart increases it and moving them closer reduces it; for an internal pair it is the other way round.
-        /// A negative value means the teeth jam.
-        /// </summary>
-        public double WorkingCircularBacklash { get; set; }
-
-        /// <summary>True when the working centre distance was set by the caller instead of being derived from the profile shifts.</summary>
-        public bool CentreDistanceOverridden { get; set; }
-        public double Gear1HelixAngle => Gear1?.HelixAngleDeg ?? 0.0;
-        public double Gear2HelixAngle => Gear2?.HelixAngleDeg ?? 0.0;
-        public string Gear1HelicalDirection => Gear1?.HelicalDirection ?? "R";
-        public string Gear2HelicalDirection => Gear2?.HelicalDirection ?? "L";
-
-        /// <summary>Angle between the two shaft axes in degrees; 0 for a parallel pair.</summary>
-        public double ShaftAngleDeg { get; set; }
-
-        /// <summary>True for a crossed helical pair, whose teeth touch at a point: the contact ratio is not calculated and stays 0.</summary>
-        public bool IsCrossedAxis { get; set; }
-
-        public List<GearParameterRow> ParameterRows { get; } = new List<GearParameterRow>();
-    }
-
-    /// <summary>
     /// Computes standard and profile-shifted metric gear parameters according to Elements of metric gear technology.
     /// </summary>
     public static class GearParameterCalculator
@@ -316,19 +223,7 @@ namespace Bolsover.Gears.Calculator
                 : invAlphaT;
             pairData.WorkingInvoluteFunction = invAlphaW;
 
-            double alphaWRad;
-            if (Math.Abs(sumX) < 1e-9 || Math.Abs(invAlphaW - invAlphaT) < 1e-9)
-            {
-                alphaWRad = alphaTRad;
-            }
-            else
-            {
-                alphaWRad = CustomCalculations.PressureAngleByNewtonRaphson(invAlphaW, alphaTRad, 1e-9, 100);
-                if (alphaWRad <= 0 || double.IsNaN(alphaWRad) || double.IsInfinity(alphaWRad))
-                {
-                    alphaWRad = alphaTRad;
-                }
-            }
+            var alphaWRad = SolveWorkingPressureAngle(sumX, invAlphaW, invAlphaT, alphaTRad);
 
             var aWorking = aStd * (Math.Cos(alphaTRad) / Math.Cos(alphaWRad));
 
@@ -368,6 +263,107 @@ namespace Bolsover.Gears.Calculator
             pairData.Gear2WorkingPitchDiameter = dw2;
 
             // Contact Ratio
+            var contactRatio = CalculateRadialContactRatio(gear1, gear2, mt, alphaTRad, alphaWRad, aWorking, isInternalPair);
+
+            var axialContactRatio = 0.0;
+            if (beta1 > 1e-6)
+            {
+                var minB = Math.Min(faceWidth1, faceWidth2);
+                axialContactRatio = (minB * Math.Sin(betaRad)) / (Math.PI * m);
+            }
+
+            pairData.AxialContactRatio = axialContactRatio;
+            pairData.ContactRatio = contactRatio + axialContactRatio;
+            pairData.GearRatio = z1 > 0 ? (double)z2 / z1 : 0.0;
+            pairData.WorkingCircularBacklash = CalculateWorkingBacklash(gear1, gear2, isInternal1, isInternal2, alphaTRad, alphaWRad, dw1, dw2, cosBeta);
+            pairData.NormalBacklash = pairData.CentreDistanceOverridden
+                ? pairData.WorkingCircularBacklash * Math.Cos(alphaWRad) * cosBeta
+                : pairData.TotalBacklash * Math.Cos(alphaWRad) * cosBeta;
+
+            // Populate pair tabular rows
+            AddPairHeaderRows(pairData, m, mt, alphaDeg, alphaTDeg, beta1, beta2, dir1, dir2);
+
+            AddPairGearRows(pairData, gear1, gear2, z1, z2, x1, x2, faceWidth1, faceWidth2, isInternal1, isInternal2, rimThickness1, rimThickness2, beta1, beta2, dw1, dw2);
+
+            AddPairCentreDistanceRows(pairData, beta1, beta2, isInternalPair, aStd, aWorking, y, invAlphaW);
+            AddPairContactRows(pairData, beta1, contactRatio, axialContactRatio);
+
+            return pairData;
+        }
+
+        /// <summary>
+        /// Calculates the geometry of two external helical gears on crossed shafts. Each gear has its own transverse module and pitch
+        /// diameter, and the centre distance is half the sum of the pitch diameters. The teeth touch at a point, so the contact ratio is
+        /// not calculated and stays 0. The shaft angle is stored as given; checking it against the helix angles is up to the caller
+        /// (see <see cref="HelicalPairGeometry.CheckShaftAngle"/>).
+        /// </summary>
+        public static CalculatedGearPairData CalculateCrossedPair(
+            int z1, double m, double alphaDeg, double faceWidth1, double x1, bool isInternal1,
+            int z2, double faceWidth2, double x2, bool isInternal2,
+            double shaftAngleDeg,
+            double? clearance1 = null, double? clearance2 = null,
+            double? backlash1 = null, double? backlash2 = null,
+            double helixAngle1 = 0.0, double helixAngle2 = 0.0,
+            string helicalDirection1 = "R", string helicalDirection2 = "R")
+        {
+            ValidateCrossedPair(z1, z2, m, x1, x2, isInternal1, isInternal2, helixAngle1, helixAngle2);
+
+            var dir1 = string.IsNullOrWhiteSpace(helicalDirection1) ? "R" : helicalDirection1;
+            var dir2 = string.IsNullOrWhiteSpace(helicalDirection2) ? "R" : helicalDirection2;
+
+            var gear1 = Calculate(z1, m, alphaDeg, faceWidth1, x1, false, 10.0, clearance1, backlash1, helixAngle1, dir1);
+            var gear2 = Calculate(z2, m, alphaDeg, faceWidth2, x2, false, 10.0, clearance2 ?? clearance1, backlash2 ?? backlash1, helixAngle2, dir2);
+
+            var centreDistance = HelicalPairGeometry.StandardCentreDistance(z1, helixAngle1, false, z2, helixAngle2, false, m);
+
+            var pair = new CalculatedGearPairData
+            {
+                Gear1 = gear1,
+                Gear2 = gear2,
+                StandardCentreDistance = centreDistance,
+                WorkingCentreDistance = centreDistance,
+                WorkingPressureAngleRad = gear1.RadialPressureAngleRad,
+                WorkingPressureAngleDeg = gear1.RadialPressureAngleDeg,
+                WorkingInvoluteFunction = gear1.InvoluteFunction,
+                SumProfileShift = 0.0,
+                Gear1WorkingPitchDiameter = gear1.PitchDiameter,
+                Gear2WorkingPitchDiameter = gear2.PitchDiameter,
+                ContactRatio = 0.0,
+                AxialContactRatio = 0.0,
+                GearRatio = (double)z2 / z1,
+                ShaftAngleDeg = shaftAngleDeg,
+                IsCrossedAxis = true
+            };
+
+            pair.NormalBacklash = pair.TotalBacklash * Math.Cos(gear1.PressureAngleRad);
+            pair.WorkingCircularBacklash = pair.TotalBacklash;
+
+            AddCrossedPairRows(pair, gear1, gear2, m, alphaDeg, helixAngle1, helixAngle2, z1, z2, faceWidth1, faceWidth2, shaftAngleDeg, centreDistance);
+
+            return pair;
+        }
+
+        private static double SolveWorkingPressureAngle(double sumX, double invAlphaW, double invAlphaT, double alphaTRad)
+        {
+            double alphaWRad;
+            if (Math.Abs(sumX) < 1e-9 || Math.Abs(invAlphaW - invAlphaT) < 1e-9)
+            {
+                alphaWRad = alphaTRad;
+            }
+            else
+            {
+                alphaWRad = CustomCalculations.PressureAngleByNewtonRaphson(invAlphaW, alphaTRad, 1e-9, 100);
+                if (alphaWRad <= 0 || double.IsNaN(alphaWRad) || double.IsInfinity(alphaWRad))
+                {
+                    alphaWRad = alphaTRad;
+                }
+            }
+
+            return alphaWRad;
+        }
+
+        private static double CalculateRadialContactRatio(CalculatedGearData gear1, CalculatedGearData gear2, double mt, double alphaTRad, double alphaWRad, double aWorking, bool isInternalPair)
+        {
             var ra1 = gear1.TipDiameter / 2.0;
             var rb1 = gear1.BaseDiameter / 2.0;
             var ra2 = gear2.TipDiameter / 2.0;
@@ -392,22 +388,11 @@ namespace Bolsover.Gears.Calculator
                     : 0.0;
             }
 
-            var axialContactRatio = 0.0;
-            if (beta1 > 1e-6)
-            {
-                var minB = Math.Min(faceWidth1, faceWidth2);
-                axialContactRatio = (minB * Math.Sin(betaRad)) / (Math.PI * m);
-            }
+            return contactRatio;
+        }
 
-            pairData.AxialContactRatio = axialContactRatio;
-            pairData.ContactRatio = contactRatio + axialContactRatio;
-            pairData.GearRatio = z1 > 0 ? (double)z2 / z1 : 0.0;
-            pairData.WorkingCircularBacklash = CalculateWorkingBacklash(gear1, gear2, isInternal1, isInternal2, alphaTRad, alphaWRad, dw1, dw2, cosBeta);
-            pairData.NormalBacklash = pairData.CentreDistanceOverridden
-                ? pairData.WorkingCircularBacklash * Math.Cos(alphaWRad) * cosBeta
-                : pairData.TotalBacklash * Math.Cos(alphaWRad) * cosBeta;
-
-            // Populate pair tabular rows
+        private static void AddPairHeaderRows(CalculatedGearPairData pairData, double m, double mt, double alphaDeg, double alphaTDeg, double beta1, double beta2, string dir1, string dir2)
+        {
             if (beta1 > 1e-6 || beta2 > 1e-6)
             {
                 pairData.ParameterRows.Add(new GearParameterRow("Normal Module", "m_n", "m_n", m, "mm"));
@@ -424,7 +409,11 @@ namespace Bolsover.Gears.Calculator
                 pairData.ParameterRows.Add(new GearParameterRow("Module", "m", "m", m, "mm"));
                 pairData.ParameterRows.Add(new GearParameterRow("Standard Pressure Angle", "\\alpha", "\\alpha", alphaDeg, "°"));
             }
+        }
 
+        private static void AddPairGearRows(CalculatedGearPairData pairData, CalculatedGearData gear1, CalculatedGearData gear2, int z1, int z2, double x1, double x2,
+            double faceWidth1, double faceWidth2, bool isInternal1, bool isInternal2, double rimThickness1, double rimThickness2, double beta1, double beta2, double dw1, double dw2)
+        {
             pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Teeth", "z_1", "z_1", z1, "-"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 2 Teeth", "z_2", "z_2", z2, "-"));
             pairData.ParameterRows.Add(new GearParameterRow("Gear 1 Profile Shift", "x_1", "x_1", x1, "-"));
@@ -461,12 +450,19 @@ namespace Bolsover.Gears.Calculator
             {
                 pairData.ParameterRows.Add(new GearParameterRow("Working Circular Backlash", "j_{tw}", "j_{tw}", pairData.WorkingCircularBacklash, "mm"));
             }
+        }
 
+        private static void AddPairCentreDistanceRows(CalculatedGearPairData pairData, double beta1, double beta2, bool isInternalPair, double aStd, double aWorking, double y, double invAlphaW)
+        {
             pairData.ParameterRows.Add(new GearParameterRow("Standard Centre Distance", "a", (beta1 > 1e-6 || beta2 > 1e-6) ? (isInternalPair ? "\\frac{m_t(z_2 - z_1)}{2}" : "\\frac{m_t(z_1 + z_2)}{2}") : (isInternalPair ? "\\frac{m(z_2 - z_1)}{2}" : "\\frac{m(z_1 + z_2)}{2}"), aStd, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Working Centre Distance", "a_w", (beta1 > 1e-6 || beta2 > 1e-6) ? "a \\frac{\\cos\\alpha_t}{\\cos\\alpha_{wt}}" : "a + y \\cdot m", aWorking, "mm"));
             pairData.ParameterRows.Add(new GearParameterRow("Working Pressure Angle", "\\alpha_w", (beta1 > 1e-6 || beta2 > 1e-6) ? "\\alpha_{wt}" : "\\alpha_w", pairData.WorkingPressureAngleDeg, "°"));
             pairData.ParameterRows.Add(new GearParameterRow("Centre Distance Increment Factor", "y", "\\frac{a_w - a}{m}", y, "-"));
             pairData.ParameterRows.Add(new GearParameterRow("Working Involute Function", "\\text{inv}(\\alpha_w)", (beta1 > 1e-6 || beta2 > 1e-6) ? "\\tan\\alpha_{wt} - \\alpha_{wt}" : "\\tan\\alpha_w - \\alpha_w", invAlphaW, "rad"));
+        }
+
+        private static void AddPairContactRows(CalculatedGearPairData pairData, double beta1, double contactRatio, double axialContactRatio)
+        {
             if (beta1 > 1e-6)
             {
                 pairData.ParameterRows.Add(new GearParameterRow("Radial Contact Ratio", "\\epsilon_\\alpha", "\\epsilon_\\alpha", contactRatio, "-"));
@@ -478,24 +474,9 @@ namespace Bolsover.Gears.Calculator
                 pairData.ParameterRows.Add(new GearParameterRow("Contact Ratio", "\\epsilon_\\alpha", "\\epsilon_\\alpha", contactRatio, "-"));
             }
             pairData.ParameterRows.Add(new GearParameterRow("Gear Ratio", "i", "\\frac{z_2}{z_1}", pairData.GearRatio, "-"));
-
-            return pairData;
         }
 
-        /// <summary>
-        /// Calculates the geometry of two external helical gears on crossed shafts. Each gear has its own transverse module and pitch
-        /// diameter, and the centre distance is half the sum of the pitch diameters. The teeth touch at a point, so the contact ratio is
-        /// not calculated and stays 0. The shaft angle is stored as given; checking it against the helix angles is up to the caller
-        /// (see <see cref="HelicalPairGeometry.CheckShaftAngle"/>).
-        /// </summary>
-        public static CalculatedGearPairData CalculateCrossedPair(
-            int z1, double m, double alphaDeg, double faceWidth1, double x1, bool isInternal1,
-            int z2, double faceWidth2, double x2, bool isInternal2,
-            double shaftAngleDeg,
-            double? clearance1 = null, double? clearance2 = null,
-            double? backlash1 = null, double? backlash2 = null,
-            double helixAngle1 = 0.0, double helixAngle2 = 0.0,
-            string helicalDirection1 = "R", string helicalDirection2 = "R")
+        private static void ValidateCrossedPair(int z1, int z2, double m, double x1, double x2, bool isInternal1, bool isInternal2, double helixAngle1, double helixAngle2)
         {
             if (isInternal1 || isInternal2)
             {
@@ -518,37 +499,11 @@ namespace Bolsover.Gears.Calculator
             {
                 throw new InvalidOperationException("The teeth and the module of crossed helical gears must be positive.");
             }
+        }
 
-            var dir1 = string.IsNullOrWhiteSpace(helicalDirection1) ? "R" : helicalDirection1;
-            var dir2 = string.IsNullOrWhiteSpace(helicalDirection2) ? "R" : helicalDirection2;
-
-            var gear1 = Calculate(z1, m, alphaDeg, faceWidth1, x1, false, 10.0, clearance1, backlash1, helixAngle1, dir1);
-            var gear2 = Calculate(z2, m, alphaDeg, faceWidth2, x2, false, 10.0, clearance2 ?? clearance1, backlash2 ?? backlash1, helixAngle2, dir2);
-
-            var centreDistance = HelicalPairGeometry.StandardCentreDistance(z1, helixAngle1, false, z2, helixAngle2, false, m);
-
-            var pair = new CalculatedGearPairData
-            {
-                Gear1 = gear1,
-                Gear2 = gear2,
-                StandardCentreDistance = centreDistance,
-                WorkingCentreDistance = centreDistance,
-                WorkingPressureAngleRad = gear1.RadialPressureAngleRad,
-                WorkingPressureAngleDeg = gear1.RadialPressureAngleDeg,
-                WorkingInvoluteFunction = gear1.InvoluteFunction,
-                SumProfileShift = 0.0,
-                Gear1WorkingPitchDiameter = gear1.PitchDiameter,
-                Gear2WorkingPitchDiameter = gear2.PitchDiameter,
-                ContactRatio = 0.0,
-                AxialContactRatio = 0.0,
-                GearRatio = (double)z2 / z1,
-                ShaftAngleDeg = shaftAngleDeg,
-                IsCrossedAxis = true
-            };
-
-            pair.NormalBacklash = pair.TotalBacklash * Math.Cos(gear1.PressureAngleRad);
-            pair.WorkingCircularBacklash = pair.TotalBacklash;
-
+        private static void AddCrossedPairRows(CalculatedGearPairData pair, CalculatedGearData gear1, CalculatedGearData gear2, double m, double alphaDeg, double helixAngle1, double helixAngle2,
+            int z1, int z2, double faceWidth1, double faceWidth2, double shaftAngleDeg, double centreDistance)
+        {
             var rows = pair.ParameterRows;
             rows.Add(new GearParameterRow("Normal Module", "m_n", "m_n", m, "mm"));
             rows.Add(new GearParameterRow("Normal Pressure Angle", "\\alpha_n", "\\alpha_n", alphaDeg, "°"));
@@ -574,8 +529,6 @@ namespace Bolsover.Gears.Calculator
             rows.Add(new GearParameterRow("Centre Distance", "a", "\\frac{d_1 + d_2}{2}", centreDistance, "mm"));
             rows.Add(new GearParameterRow("Gear Ratio", "i", "\\frac{z_2}{z_1}", pair.GearRatio, "-"));
             rows.Add(new GearParameterRow("Contact", "\\text{Contact}", "\\text{point contact}", 0.0, "point contact"));
-
-            return pair;
         }
 
         /// <summary>

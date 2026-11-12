@@ -278,6 +278,33 @@ namespace Bolsover.Gears.Calculator
                               helicalDirection.Trim().StartsWith("R", StringComparison.OrdinalIgnoreCase);
             var sign = isRightHand ? 1.0 : -1.0;
 
+            var outer = BuildRimPoints(inner, rimRadius);
+
+            var slices = SliceCount(faceWidth, isHelical, isHerringbone);
+            var dz = faceWidth / slices;
+            var stride = 2 * n;
+
+            AddInternalVertices(mesh, inner, outer, slices, dz, halfWidth, isHelical, sign, betaRad, pitchRadius, isHerringbone);
+
+            var segmentCount = isClosedLoop ? n : n - 1;
+
+            AddInternalSideWalls(mesh, slices, stride, n, segmentCount);
+
+            AddInternalCapVertices(mesh, stride, slices, out var frontCapBase, out var backCapBase);
+
+            AddInternalCaps(mesh, frontCapBase, backCapBase, n, segmentCount);
+
+            AddInternalRadialWalls(mesh, isClosedLoop, slices, stride, n);
+
+            mesh.CalculateNormals();
+            SetAxialNormals(mesh, frontCapBase, stride, 1.0);
+            SetAxialNormals(mesh, backCapBase, stride, -1.0);
+            return mesh;
+        }
+
+        private static List<GearPoint> BuildRimPoints(List<GearPoint> inner, double rimRadius)
+        {
+            var n = inner.Count;
             // Compute outer rim points corresponding to each inner point
             var outer = new List<GearPoint>(n);
             for (var i = 0; i < n; i++)
@@ -289,9 +316,13 @@ namespace Bolsover.Gears.Calculator
                 outer.Add(new GearPoint(p.X / mag * effectiveRim, p.Y / mag * effectiveRim));
             }
 
-            var slices = SliceCount(faceWidth, isHelical, isHerringbone);
-            var dz = faceWidth / slices;
-            var stride = 2 * n;
+            return outer;
+        }
+
+        private static void AddInternalVertices(Mesh3D mesh, List<GearPoint> inner, List<GearPoint> outer, int slices, double dz, double halfWidth,
+            bool isHelical, double sign, double betaRad, double pitchRadius, bool isHerringbone)
+        {
+            var n = inner.Count;
 
             // Generate vertices: each slice k has [inner_0..inner_n-1, outer_0..outer_n-1]
             for (var k = 0; k <= slices; k++)
@@ -317,9 +348,10 @@ namespace Bolsover.Gears.Calculator
                     mesh.Vertices.Add(new GearPoint3D(xRot, yRot, z));
                 }
             }
+        }
 
-            var segmentCount = isClosedLoop ? n : n - 1;
-
+        private static void AddInternalSideWalls(Mesh3D mesh, int slices, int stride, int n, int segmentCount)
+        {
             for (var k = 0; k < slices; k++)
             {
                 var base0 = k * stride;
@@ -358,20 +390,26 @@ namespace Bolsover.Gears.Calculator
                     mesh.TriangleIndices.Add(bo0);
                 }
             }
+        }
 
+        private static void AddInternalCapVertices(Mesh3D mesh, int stride, int slices, out int frontCapBase, out int backCapBase)
+        {
             // End faces use their own vertices (not shared with the side walls) so that they are flat
             // with exact +Z / -Z normals and no shading gradient from the adjacent walls.
-            var frontCapBase = mesh.Vertices.Count;
+            frontCapBase = mesh.Vertices.Count;
             for (var i = 0; i < stride; i++)
             {
                 mesh.Vertices.Add(mesh.Vertices[i]);
             }
-            var backCapBase = mesh.Vertices.Count;
+            backCapBase = mesh.Vertices.Count;
             for (var i = 0; i < stride; i++)
             {
                 mesh.Vertices.Add(mesh.Vertices[slices * stride + i]);
             }
+        }
 
+        private static void AddInternalCaps(Mesh3D mesh, int frontCapBase, int backCapBase, int n, int segmentCount)
+        {
             // Front Annular Cap (k = 0, z = +halfWidth, +Z normal)
             for (var i = 0; i < segmentCount; i++)
             {
@@ -408,7 +446,10 @@ namespace Bolsover.Gears.Calculator
                 mesh.TriangleIndices.Add(bi1);
                 mesh.TriangleIndices.Add(bo1);
             }
+        }
 
+        private static void AddInternalRadialWalls(Mesh3D mesh, bool isClosedLoop, int slices, int stride, int n)
+        {
             // Radial side walls if not a closed loop (single tooth sector)
             if (!isClosedLoop && n >= 2)
             {
@@ -446,11 +487,6 @@ namespace Bolsover.Gears.Calculator
                     mesh.TriangleIndices.Add(out0_end);
                 }
             }
-
-            mesh.CalculateNormals();
-            SetAxialNormals(mesh, frontCapBase, stride, 1.0);
-            SetAxialNormals(mesh, backCapBase, stride, -1.0);
-            return mesh;
         }
 
         /// <summary>
@@ -496,6 +532,27 @@ namespace Bolsover.Gears.Calculator
             var slices = SliceCount(faceWidth, isHelical, isHerringbone);
             var dz = faceWidth / slices;
 
+            AddExternalVertices(mesh, outer, slices, dz, halfWidth, isHelical, sign, betaRad, pitchRadius, isHerringbone);
+
+            var segmentCount = isClosedLoop ? n : n - 1;
+
+            AddExternalSideWalls(mesh, slices, n, segmentCount);
+
+            AddExternalCaps(mesh, halfWidth, slices, n, segmentCount, out var centerFrontIdx, out var centerBackIdx);
+
+            AddExternalRadialWalls(mesh, isClosedLoop, slices, halfWidth, dz, n);
+
+            mesh.CalculateNormals();
+            SetAxialNormals(mesh, centerFrontIdx, n + 1, 1.0);
+            SetAxialNormals(mesh, centerBackIdx, n + 1, -1.0);
+            return mesh;
+        }
+
+        private static void AddExternalVertices(Mesh3D mesh, List<GearPoint> outer, int slices, double dz, double halfWidth,
+            bool isHelical, double sign, double betaRad, double pitchRadius, bool isHerringbone)
+        {
+            var n = outer.Count;
+
             // Generate vertices for each slice layer: k = 0 (z = +halfWidth) to k = slices (z = -halfWidth)
             for (var k = 0; k <= slices; k++)
             {
@@ -512,9 +569,10 @@ namespace Bolsover.Gears.Calculator
                     mesh.Vertices.Add(new GearPoint3D(xRot, yRot, z));
                 }
             }
+        }
 
-            var segmentCount = isClosedLoop ? n : n - 1;
-
+        private static void AddExternalSideWalls(Mesh3D mesh, int slices, int n, int segmentCount)
+        {
             // Side wall quads between slice k and slice k+1
             for (var k = 0; k < slices; k++)
             {
@@ -540,13 +598,16 @@ namespace Bolsover.Gears.Calculator
                     mesh.TriangleIndices.Add(v3);
                 }
             }
+        }
 
+        private static void AddExternalCaps(Mesh3D mesh, double halfWidth, int slices, int n, int segmentCount, out int centerFrontIdx, out int centerBackIdx)
+        {
             var backBase = slices * n;
 
             // End faces use their own vertices (not shared with the side walls) so that they are flat disks
             // with exact +Z / -Z normals and no shading gradient from the adjacent tooth flanks.
             // Front Cap (k = 0, z = +halfWidth, normal +Z)
-            var centerFrontIdx = mesh.Vertices.Count;
+            centerFrontIdx = mesh.Vertices.Count;
             mesh.Vertices.Add(new GearPoint3D(0, 0, halfWidth));
             var frontRingBase = mesh.Vertices.Count;
             for (var i = 0; i < n; i++)
@@ -562,7 +623,7 @@ namespace Bolsover.Gears.Calculator
             }
 
             // Back Cap (k = slices, z = -halfWidth, normal -Z)
-            var centerBackIdx = mesh.Vertices.Count;
+            centerBackIdx = mesh.Vertices.Count;
             mesh.Vertices.Add(new GearPoint3D(0, 0, -halfWidth));
             var backRingBase = mesh.Vertices.Count;
             for (var i = 0; i < n; i++)
@@ -576,7 +637,10 @@ namespace Bolsover.Gears.Calculator
                 mesh.TriangleIndices.Add(backRingBase + next);
                 mesh.TriangleIndices.Add(backRingBase + i);
             }
+        }
 
+        private static void AddExternalRadialWalls(Mesh3D mesh, bool isClosedLoop, int slices, double halfWidth, double dz, int n)
+        {
             // Radial side walls if not a closed loop (single tooth sector)
             if (!isClosedLoop && n >= 2)
             {
@@ -615,11 +679,6 @@ namespace Bolsover.Gears.Calculator
                     mesh.TriangleIndices.Add(c1Idx);
                 }
             }
-
-            mesh.CalculateNormals();
-            SetAxialNormals(mesh, centerFrontIdx, n + 1, 1.0);
-            SetAxialNormals(mesh, centerBackIdx, n + 1, -1.0);
-            return mesh;
         }
 
         /// <summary>

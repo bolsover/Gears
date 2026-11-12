@@ -165,6 +165,8 @@
         <Compile Include="Calculator\CustomCalculations.cs" />
         <Compile Include="Calculator\GearMesh3DBuilder.cs" />
         <Compile Include="Calculator\GearParameterCalculator.cs" />
+        <Compile Include="Calculator\CalculatedGearData.cs" />
+        <Compile Include="Calculator\CalculatedGearPairData.cs" />
         <Compile Include="Calculator\HelicalPairGeometry.cs" />
         <Compile Include="Calculator\HypoidGeometry.cs" />
         <Compile Include="Calculator\SpiralToothTrace.cs" />
@@ -177,6 +179,12 @@
         <Compile Include="Calculator\Assemblies\IMeshSolver.cs" />
         <Compile Include="Calculator\Assemblies\IAdjustableCentreSolver.cs" />
         <Compile Include="Calculator\Alibre\AlibreGearExporter.cs" />
+        <Compile Include="Calculator\Alibre\AlibreAssemblyPartSelector.cs" />
+        <Compile Include="Calculator\Alibre\AlibrePartPlacement.cs" />
+        <Compile Include="Calculator\Alibre\AlibreSketchDrawer.cs" />
+        <Compile Include="Calculator\Alibre\AlibreRackWormPartExporter.cs" />
+        <Compile Include="Calculator\Alibre\AlibreBevelPartExporter.cs" />
+        <Compile Include="Calculator\Alibre\AlibreAssemblyBuilder.cs" />
         <Compile Include="Calculator\Alibre\AlibreSaveTarget.cs" />
         <Compile Include="Calculator\Alibre\AlibreSaveTargetReader.cs" />
         <Compile Include="Calculator\Alibre\BevelGearSketch.cs" />
