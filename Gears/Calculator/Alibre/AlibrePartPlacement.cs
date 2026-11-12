@@ -33,7 +33,8 @@ namespace Bolsover.Gears.Calculator.Alibre
             }
 
             // A herringbone part or a pulley is made about its sketch plane (half the face width on each side), so that plane is already the mid-plane.
-            var centred = AlibreAssemblyPartSelector.IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent || mount.Component is CycloidalGearComponent;
+            var centred = AlibreAssemblyPartSelector.IsHerringbone(mount.Component) || mount.Component is HtdPulleyComponent || mount.Component is SprocketComponent
+                          || mount.Component is CycloidalGearComponent;
             var start = centred ? mount.AxialOffset : mount.AxialOffset - mount.Component.FaceWidth / 2.0;
             var placement = shaft.Placement.ToTransform().Compose(Transform3D.Translate(new Vector3D(0.0, 0.0, start)));
             return placement.Compose(mount.Component.GetLocalMotion(mount.PhaseRad));

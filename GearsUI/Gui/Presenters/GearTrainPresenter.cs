@@ -31,6 +31,7 @@ namespace Bolsover.Gears.Gui.Presenters
         private int _shaftCounter;
         private double _planetaryInputRad;
         private int _beltCounter;
+        private int _chainCounter;
 
         public GearTrainPresenter(IGearTrainView view)
         {
@@ -231,6 +232,104 @@ namespace Bolsover.Gears.Gui.Presenters
             return driven;
         }
 
+        /// <summary>Starts a new train with one shaft carrying one ISO 606 roller chain sprocket of the given chain series. <paramref name="teeth"/> of zero or less chooses 19 teeth.</summary>
+        public SprocketComponent NewSprocket(ChainSeries series, int teeth = 0)
+        {
+            ResetState();
+
+            var sprocket = CreateSprocket(series, teeth);
+            var shaft = CreateShaft();
+            shaft.Mount(sprocket, 0.0);
+            Assembly.AddShaft(shaft);
+
+            Selected = sprocket;
+            Refresh();
+            return sprocket;
+        }
+
+        /// <summary>
+        /// Adds a roller chain sprocket to a shaft next to the existing parts, with a small axial gap. A sprocket has no meshing partner, so it is
+        /// not connected to the other gears of the train.
+        /// </summary>
+        public SprocketComponent AddSprocketToShaft(Shaft shaft, ChainSeries series, int teeth = 0)
+        {
+            EnsureNotPlanetary();
+            if (shaft == null) throw new ArgumentNullException(nameof(shaft));
+            if (!Assembly.Shafts.Contains(shaft)) throw new ArgumentException("The shaft is not part of the assembly.", nameof(shaft));
+
+            var sprocket = CreateSprocket(series, teeth);
+            sprocket.GetBodyAxialExtent(out var start, out _);
+
+            var offset = 0.0;
+            if (shaft.Mounts.Count > 0)
+            {
+                var last = double.MinValue;
+                foreach (var mount in shaft.Mounts)
+                {
+                    mount.GetAxialExtent(out _, out var e);
+                    if (e > last) last = e;
+                }
+
+                offset = last + AxialGap - start;
+            }
+
+            shaft.Mount(sprocket, GearPrecision.Round(offset));
+            Selected = sprocket;
+            Refresh();
+            return sprocket;
+        }
+
+        /// <summary>
+        /// Adds a second sprocket of the same chain on a new shaft and joins it to <paramref name="driver"/> with a roller chain. The new shaft is
+        /// placed by the chain, <paramref name="centreDistance"/> from the driver's shaft (zero or less chooses 30 pitches, or a distance that leaves a
+        /// gap of at least 10 mm between the sprockets when that is larger). <paramref name="teeth"/> of zero or less gives the new sprocket as many
+        /// teeth as the driver.
+        /// </summary>
+        public SprocketComponent AddChainedSprocket(SprocketComponent driver, int teeth = 0, double centreDistance = 0.0)
+        {
+            EnsureNotPlanetary();
+            if (driver == null) throw new ArgumentNullException(nameof(driver));
+            if (Assembly.FindMount(driver, out var driverShaft) == null) throw new ArgumentException("The sprocket is not part of the assembly.", nameof(driver));
+
+            var driven = CreateSprocket(driver.Series, teeth > 0 ? teeth : driver.Teeth);
+            driven.ToothForm = driver.ToothForm;
+            driven.FaceWidth = driver.FaceWidth;
+
+            var shaft = CreateShaft();
+            shaft.Diameter = driverShaft.Diameter;
+            shaft.Mount(driven, 0.0);
+
+            var chain = new RollerChain("Chain " + (++_chainCounter), driver, driven, 0.0);
+            chain.CentreDistance = centreDistance > 0.0
+                ? centreDistance
+                : GearPrecision.Round(Math.Max(30.0 * driver.Profile.Pitch,
+                    chain.MinimumCentreDistance + Math.Max(10.0, 0.5 * Math.Max(driver.OutsideDiameter, driven.OutsideDiameter))));
+
+            Assembly.AddShaft(shaft);
+            try
+            {
+                Assembly.AddChain(chain);
+            }
+            catch
+            {
+                Assembly.RemoveShaft(shaft);
+                throw;
+            }
+
+            Selected = driven;
+            Refresh();
+            return driven;
+        }
+
+        private SprocketComponent CreateSprocket(ChainSeries series, int teeth)
+        {
+            return new SprocketComponent("Sprocket " + (++_gearCounter))
+            {
+                Series = series,
+                Teeth = teeth > 0 ? teeth : 19
+            };
+        }
+
         private HtdPulleyComponent CreatePulley(HtdSeries series, int teeth)
         {
             var profile = HtdProfile.Get(series);
@@ -263,6 +362,7 @@ namespace Bolsover.Gears.Gui.Presenters
             _gearCounter = MaxSuffix(assembly.Components.Select(c => c.Id));
             _shaftCounter = MaxSuffix(assembly.Shafts.Select(s => s.Id));
             _beltCounter = MaxSuffix(assembly.Belts.Select(b => b.Id));
+            _chainCounter = MaxSuffix(assembly.Chains.Select(c => c.Id));
             Selected = assembly.Components.FirstOrDefault();
             Refresh();
         }
@@ -813,6 +913,10 @@ namespace Bolsover.Gears.Gui.Presenters
             {
                 Assembly.RemoveBelt(belt);
             }
+            else if (Selected is RollerChain chain)
+            {
+                Assembly.RemoveChain(chain);
+            }
             else
             {
                 return;
@@ -840,7 +944,7 @@ namespace Bolsover.Gears.Gui.Presenters
             PublishSelection();
         }
 
-        private static bool IsSelectable(object tag) => tag is Shaft || tag is GearComponent || tag is TimingBelt;
+        private static bool IsSelectable(object tag) => tag is Shaft || tag is GearComponent || tag is TimingBelt || tag is RollerChain;
 
         private void PublishSelection()
         {
@@ -859,6 +963,7 @@ namespace Bolsover.Gears.Gui.Presenters
         {
             if (item is Shaft shaft) return Assembly.Shafts.Contains(shaft);
             if (item is TimingBelt belt) return Assembly.Belts.Contains(belt);
+            if (item is RollerChain chain) return Assembly.Chains.Contains(chain);
             if (item is GearComponent gear) return Assembly.Components.Contains(gear);
             return false;
         }
@@ -1039,6 +1144,7 @@ namespace Bolsover.Gears.Gui.Presenters
             _gearCounter = 0;
             _shaftCounter = 0;
             _beltCounter = 0;
+            _chainCounter = 0;
             Scene = null;
             Report = null;
             Selected = null;
@@ -1208,6 +1314,8 @@ namespace Bolsover.Gears.Gui.Presenters
                     if (relation != null) text += $"  (driven by {relation.Driver.Name})";
                     var drivingBelt = Assembly.FindDrivingBelt(gear);
                     if (drivingBelt != null) text += $"  (belt from {drivingBelt.Driver.Name})";
+                    var drivingChain = Assembly.FindDrivingChain(gear);
+                    if (drivingChain != null) text += $"  (chain from {drivingChain.Driver.Name})";
                     shaftNode.Children.Add(new TrainTreeNode(text, TrainNodeKind.Gear, gear) { Visible = !_hidden.Contains(gear) });
                 }
 
@@ -1218,6 +1326,12 @@ namespace Bolsover.Gears.Gui.Presenters
             {
                 var beltText = $"{belt.Name}  HTD {belt.Profile.Name}  {belt.Driver.Name} -> {belt.Driven.Name}  {belt.BeltTeeth} teeth";
                 root.Children.Add(new TrainTreeNode(beltText, TrainNodeKind.Belt, belt));
+            }
+
+            foreach (var chain in Assembly.Chains)
+            {
+                var chainText = $"{chain.Name}  ISO 606 {chain.Profile.Name}  {chain.Driver.Name} -> {chain.Driven.Name}  {chain.LinkCount} links";
+                root.Children.Add(new TrainTreeNode(chainText, TrainNodeKind.Chain, chain));
             }
 
             return root;

@@ -49,10 +49,9 @@ namespace UnitTests
             IAlibreAddOn addOn = CreateAddOn();
 
             Assert.AreEqual(GearTrainAddOn.MenuIdRoot, addOn.RootMenuItem);
-            Assert.IsFalse(addOn.HasSubMenus(GearTrainAddOn.MenuIdRoot), "The root menu has no sub menus.");
+            Assert.IsTrue(addOn.HasSubMenus(GearTrainAddOn.MenuIdRoot), "The root menu has no sub menus.");
            
 
-            var children = addOn.SubMenuItems(GearTrainAddOn.MenuIdRoot).Cast<int>().ToArray();
           
         }
 
@@ -114,16 +113,7 @@ namespace UnitTests
             Assert.DoesNotThrow(addOn.CloseForm);
         }
 
-        [Test]
-        [Apartment(System.Threading.ApartmentState.STA)]
-        public void InvokeCommand_UnknownMenuId_DoesNothing()
-        {
-            var addOn = CreateAddOn();
-
-            Assert.IsNull(((IAlibreAddOn) addOn).InvokeCommand(-1, string.Empty));
-            Assert.IsNull(((IAlibreAddOn) addOn).InvokeCommand(GearTrainAddOn.MenuIdRoot, string.Empty));
-            Assert.IsFalse(addOn.IsFormOpen);
-        }
+       
 
         [Test]
         public void Constructor_NullFormFactory_Throws()

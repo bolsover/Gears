@@ -231,6 +231,13 @@
         <Compile Include="Calculator\Assemblies\TimingBeltMeshBuilder.cs" />
         <Compile Include="Model\Assemblies\HtdProfile.cs" />
         <Compile Include="Model\Assemblies\HtdPulleyComponent.cs" />
+        <Compile Include="Model\Assemblies\ChainProfile.cs" />
+        <Compile Include="Model\Assemblies\SprocketComponent.cs" />
+        <Compile Include="Calculator\Alibre\SprocketSketch.cs" />
+        <Compile Include="Calculator\Alibre\ChainSketch.cs" />
+        <Compile Include="Model\Assemblies\RollerChain.cs" />
+        <Compile Include="Calculator\Assemblies\RollerChainLayout.cs" />
+        <Compile Include="Calculator\Assemblies\RollerChainMeshBuilder.cs" />
         <Compile Include="Model\Assemblies\BevelGearComponent.cs" />
         <Compile Include="Model\Assemblies\SpiralBevelGearComponent.cs" />
         <Compile Include="Model\Assemblies\ZerolBevelGearComponent.cs" />

@@ -84,7 +84,8 @@ namespace Bolsover.Gears.Calculator.Alibre
             var parts = GetAssemblyParts(train, selection);
             var shaftParts = GetShaftAssemblyParts(train, selection);
             var beltParts = GetBeltAssemblyParts(train, selection);
-            CheckPartCount(parts.Count + shaftParts.Count + beltParts.Count);
+            var chainParts = GetChainAssemblyParts(train, selection);
+            CheckPartCount(parts.Count + shaftParts.Count + beltParts.Count + chainParts.Count);
 
             var stage = "creating the assembly";
             var logFolder = string.IsNullOrWhiteSpace(AssemblyFolder)
@@ -138,6 +139,16 @@ namespace Bolsover.Gears.Calculator.Alibre
                     var phase = beltDriverMount == null ? 0.0 : beltDriverMount.PhaseRad;
                     BuildInPlace(assembly, factory, beltPart.Value, () => Export(beltPart.Key, phase), log);
                     log.Add("built belt '" + current + "' in the assembly");
+                }
+
+                foreach (var chainPart in chainParts)
+                {
+                    var current = chainPart.Key.Id;
+                    stage = "building chain '" + current + "'";
+                    var chainDriverMount = train.FindMount(chainPart.Key.Driver, out _);
+                    var chainPhase = chainDriverMount == null ? 0.0 : chainDriverMount.PhaseRad;
+                    BuildInPlace(assembly, factory, chainPart.Value, () => Export(chainPart.Key, chainPhase), log);
+                    log.Add("built chain '" + current + "' in the assembly");
                 }
 
                 stage = "regenerating the assembly";

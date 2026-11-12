@@ -82,6 +82,39 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 return new GearParameterTable($"{pulley.Name} ({pulley.TypeName})", pulleyRows);
             }
 
+            if (gear is SprocketComponent sprocket)
+            {
+                var chain = sprocket.Profile;
+                var form = sprocket.ToothForm;
+                var sprocketRows = new List<GearParameterRow>
+                {
+                    new GearParameterRow("Chain Pitch", "p", "p", chain.Pitch, "mm"),
+                    new GearParameterRow("Roller Diameter", "d_1", "d_1", chain.RollerDiameter, "mm"),
+                    new GearParameterRow("Chain Inner Width", "b_1", "b_1", chain.InnerWidth, "mm"),
+                    new GearParameterRow("Number of Teeth", "z", "z", sprocket.Teeth, "-"),
+                    new GearParameterRow("Pitch Diameter", "d", "p / \\sin(180° / z)", sprocket.PitchDiameter, "mm"),
+                    new GearParameterRow("Root Diameter", "d_f", "d - d_1", sprocket.RootDiameter, "mm"),
+                    new GearParameterRow("Tip Diameter (" + form + ")", "d_a", form == SprocketToothForm.Maximum ? "d + 1.25 p - d_1" : "d + p (1 - 1.6 / z) - d_1", sprocket.OutsideDiameter, "mm"),
+                    new GearParameterRow("Roller Seating Radius (" + form + ")", "r_i", form == SprocketToothForm.Maximum ? "0.505 d_1 + 0.069 \\sqrt[3]{d_1}" : "0.505 d_1", chain.SeatRadius(form), "mm"),
+                    new GearParameterRow("Roller Seating Angle (" + form + ")", "\\alpha", form == SprocketToothForm.Maximum ? "120° - 90° / z" : "140° - 90° / z", ChainProfile.SeatAngle(sprocket.Teeth, form) * 180.0 / Math.PI, "°"),
+                    new GearParameterRow("Tooth Flank Radius (" + form + ")", "r_e", form == SprocketToothForm.Maximum ? "0.008 d_1 (z^2 + 180)" : "0.12 d_1 (z + 2)", chain.FlankRadius(sprocket.Teeth, form), "mm"),
+                    new GearParameterRow("Tooth Width", "b_f", chain.Pitch <= 12.7 + 1e-9 ? "0.93 b_1" : "0.95 b_1", sprocket.ToothWidth, "mm"),
+                    new GearParameterRow("Recommended Minimum Teeth", "z_min", "z_min", ChainProfile.RecommendedMinimumTeeth, "-")
+                };
+                if (sprocket.BoreDiameter > 0.0)
+                {
+                    sprocketRows.Add(new GearParameterRow("Bore Diameter", "d_b", "d_b", sprocket.BoreDiameter, "mm"));
+                }
+
+                if (sprocket.HasHub)
+                {
+                    sprocketRows.Add(new GearParameterRow("Hub Diameter", "d_h", "d_h", sprocket.HubDiameter, "mm"));
+                    sprocketRows.Add(new GearParameterRow("Hub Length", "l_h", "l_h", sprocket.HubLength, "mm"));
+                }
+
+                return new GearParameterTable($"{sprocket.Name} ({sprocket.TypeName})", sprocketRows);
+            }
+
             if (gear is CycloidalGearComponent cycloidal)
             {
                 var cycloidalRows = new List<GearParameterRow>

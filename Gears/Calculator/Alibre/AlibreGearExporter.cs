@@ -70,6 +70,11 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string BeltSketchName = "BeltSection";
         public const string BeltFeatureName = "Belt";
         public const string PulleyAxisName = "Z-Axis";
+        public const string HubSketchName = "HubSection";
+        public const string HubFeatureName = "Hub";
+        public const string BoreSketchName = "BoreSection";
+        public const string BoreFeatureName = "Bore";
+        public const string ChainSketchNamePrefix = "ChainLinks";
 
         /// <summary>Name of the default plane of a new Alibre part that the back cone plane of a bevel gear is first offset from.</summary>
         public const string BevelOffsetFromPlaneName = "YZ-Plane";
@@ -265,6 +270,14 @@ namespace Bolsover.Gears.Calculator.Alibre
         public static IReadOnlyList<KeyValuePair<TimingBelt, Transform3D>> GetBeltAssemblyParts(GearAssembly train, IReadOnlyCollection<object> selection = null)
             => AlibreAssemblyPartSelector.GetBeltAssemblyParts(train, selection);
 
+        /// <summary>
+        /// The roller chains of a train (or only those of <paramref name="selection"/> when one is given), with the location of each one in the assembly. Like a
+        /// belt part, the chain part has the driver sprocket's axis at its origin and lies on its mid-plane. A chain whose driver is not mounted has no part.
+        /// Needs no Alibre.
+        /// </summary>
+        public static IReadOnlyList<KeyValuePair<RollerChain, Transform3D>> GetChainAssemblyParts(GearAssembly train, IReadOnlyCollection<object> selection = null)
+            => AlibreAssemblyPartSelector.GetChainAssemblyParts(train, selection);
+
         /// <summary>Location of an exported belt part: the shaft placement of the driver pulley, then the axial offset of its mid-plane.</summary>
         public static Transform3D GetBeltPlacement(Shaft driverShaft, ShaftMount driverMount)
             => AlibrePartPlacement.GetBeltPlacement(driverShaft, driverMount);
@@ -429,6 +442,8 @@ namespace Bolsover.Gears.Calculator.Alibre
                     return Export(bevel);
                 case HtdPulleyComponent pulley:
                     return Export(pulley);
+                case SprocketComponent sprocket:
+                    return Export(sprocket);
                 case CycloidalGearComponent cycloidal:
                     return Export(cycloidal);
                 default:
@@ -516,6 +531,176 @@ namespace Bolsover.Gears.Calculator.Alibre
             catch (Exception ex) when (!(ex is InvalidOperationException))
             {
                 throw new InvalidOperationException($"Alibre export of pulley '{pulley.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Creates an ISO 606 roller chain sprocket in a new Alibre part: a closed sketch of one tooth cell (a wedge one pitch wide, with the
+        /// roller seating arc, the two flank arcs and the tip arcs) on the XY plane, extruded mid-plane (half the width to each side of the
+        /// plane), a circular pattern of that cell about the Z axis, for a sprocket with a hub a revolve of the hub rectangle on the positive
+        /// side (sketched on the plane that holds the Z axis) about the Z axis, and for a sprocket with a bore a circle on the XY plane that is
+        /// cut through the whole body. The toothed width runs from z = -width / 2 to z = width / 2, so the sketch plane is the mid-plane.
+        /// </summary>
+        public IADPartSession Export(SprocketComponent sprocket)
+        {
+            var plan = SprocketSketchBuilder.Build(sprocket);
+            var cell = plan.Tooth;
+            if (!cell.IsClosed()) throw new InvalidOperationException($"The tooth sketch of sprocket '{sprocket.Id}' is not closed, so it cannot be exported.");
+            if (!plan.IsHubClosed()) throw new InvalidOperationException($"The hub sketch of sprocket '{sprocket.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(cell.PartName);
+
+                stage = "adding the sketch on the " + SketchPlaneName;
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+                var sketch = session.Sketches.AddSketch(null, plane, SketchName);
+
+                stage = "drawing the tooth cell";
+                var closed = DrawFigures(sketch, cell.Figures, cell.ReferenceCircles);
+
+                stage = "extruding the tooth cell";
+                IADPartFeature tooth;
+                try
+                {
+                    // Mid-plane: half the width on each side of the sketch plane, so the sprocket is centred on z = 0.
+                    tooth = session.Features.AddExtrudedBoss(sketch, cell.ExtrusionDepth, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, ToothFeatureName, "", "");
+                }
+                catch (Exception ex) when (!closed)
+                {
+                    throw new InvalidOperationException("Alibre reports that the tooth sketch is not closed: " + ex.Message, ex);
+                }
+
+                CheckFeature(tooth, "The extruded tooth cell");
+
+                var axis = session.DesignAxes.Item(PulleyAxisName);
+                var targets = _root.NewObjectCollector();
+                targets.Add(tooth);
+
+                stage = "patterning the tooth cell";
+                session.Features.AddCircularFeaturePattern(targets, cell.Teeth, cell.PatternAngle, null, axis, false, PatternGeometry, PatternFeatureName);
+
+                if (plan.HasHub)
+                {
+                    var ySign = AxialPlaneSketchYIsNegativeZ ? -1.0 : 1.0;
+                    var axialPlane = session.DesignPlanes.Item(AxialSketchPlaneName);
+
+                    stage = "drawing the hub";
+                    var hubSketch = session.Sketches.AddSketch(null, axialPlane, HubSketchName);
+                    DrawFigures(hubSketch, plan.Hub, null, ySign);
+
+                    stage = "revolving the hub";
+                    var hub = session.Features.AddRevolvedBoss(hubSketch, null, axis, 2.0 * Math.PI, HubFeatureName);
+                    CheckFeature(hub, "The hub");
+                }
+
+                if (plan.HasBore)
+                {
+                    stage = "drawing the bore";
+                    var boreSketch = session.Sketches.AddSketch(null, plane, BoreSketchName);
+                    boreSketch.BeginChange();
+                    try
+                    {
+                        boreSketch.Figures.AddCircle(0.0, 0.0, plan.BoreRadius);
+                    }
+                    finally
+                    {
+                        boreSketch.EndChange();
+                    }
+
+                    stage = "cutting the bore";
+                    var bore = session.Features.AddExtrudedCutout(boreSketch, plan.BoreDepth, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, BoreFeatureName, "", "");
+                    CheckFeature(bore, "The bore");
+                }
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of sprocket '{sprocket.Id}' failed while {stage}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Creates a roller chain in a new Alibre part (see <see cref="ChainSketch"/> for the steps): the stadium outlines of the outer links are extruded
+        /// mid-plane over the whole width and cut back to the width over the inner plates, the outlines of the inner links are extruded over that width and cut back
+        /// to the width between the plates, and the rollers and the pins are extruded on top. The driver sprocket's axis is the Z axis and the driven sprocket lies
+        /// on the line of centres in the XY plane. Throws <see cref="InvalidOperationException"/> when the chain cannot be drawn or Alibre rejects a step.
+        /// <paramref name="driverPhaseRad"/> is the phase of the driver sprocket's mount (the rollers are placed in its tooth gaps); a caller without a mount
+        /// phase gets phase 0.
+        /// </summary>
+        public IADPartSession Export(RollerChain chain, double driverPhaseRad = 0.0)
+        {
+            var plan = ChainSketchBuilder.Build(chain, driverPhaseRad);
+            if (!plan.IsClosed()) throw new InvalidOperationException($"The link sketch of chain '{chain.Id}' is not closed, so it cannot be exported.");
+
+            var stage = "creating the part";
+            try
+            {
+                var session = CreatePart(plan.PartName);
+                var plane = session.DesignPlanes.Item(SketchPlaneName);
+
+                IADPartFeature Boss(IADSketch sketch, double depth, string name)
+                    => session.Features.AddExtrudedBoss(sketch, depth, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, name, "", "");
+
+                IADPartFeature Cut(IADSketch sketch, double depth, string name)
+                    => session.Features.AddExtrudedCutout(sketch, depth, ADPartFeatureEndCondition.AD_MID_PLANE, null, null, 0.0,
+                        ADDirectionType.AD_ALONG_NORMAL, null, null, false, 0.0, false, name, "", "");
+
+                IADSketch Circles(string name, IReadOnlyList<ChainSketchCircle> circles)
+                {
+                    var sketch = session.Sketches.AddSketch(null, plane, name);
+                    sketch.BeginChange();
+                    try
+                    {
+                        foreach (var circle in circles) sketch.Figures.AddCircle(circle.X, circle.Y, circle.Radius);
+                    }
+                    finally
+                    {
+                        sketch.EndChange();
+                    }
+
+                    return sketch;
+                }
+
+                stage = "drawing the outer links";
+                var outerSketch = session.Sketches.AddSketch(null, plane, ChainSketchNamePrefix + "Outer");
+                DrawFigures(outerSketch, plan.OuterLinks, null);
+                stage = "extruding the outer links";
+                CheckFeature(Boss(outerSketch, plan.OverallWidth, "OuterLinks"), "The outer links");
+                stage = "cutting the outer links back to the outer plates";
+                var outerCutSketch = session.Sketches.AddSketch(null, plane, ChainSketchNamePrefix + "OuterCut");
+                DrawFigures(outerCutSketch, plan.OuterLinks, null);
+                CheckFeature(Cut(outerCutSketch, plan.InnerLinkWidth, "OuterLinksCut"), "The cut of the outer links");
+
+                stage = "drawing the inner links";
+                var innerSketch = session.Sketches.AddSketch(null, plane, ChainSketchNamePrefix + "Inner");
+                DrawFigures(innerSketch, plan.InnerLinks, null);
+                stage = "extruding the inner links";
+                CheckFeature(Boss(innerSketch, plan.InnerLinkWidth, "InnerLinks"), "The inner links");
+                stage = "cutting the inner links back to the inner plates";
+                var innerCutSketch = session.Sketches.AddSketch(null, plane, ChainSketchNamePrefix + "InnerCut");
+                DrawFigures(innerCutSketch, plan.InnerLinks, null);
+                CheckFeature(Cut(innerCutSketch, plan.RollerWidth, "InnerLinksCut"), "The cut of the inner links");
+
+                stage = "extruding the rollers";
+                CheckFeature(Boss(Circles(ChainSketchNamePrefix + "Rollers", plan.Rollers), plan.RollerWidth, "Rollers"), "The rollers");
+                stage = "extruding the pins";
+                CheckFeature(Boss(Circles(ChainSketchNamePrefix + "Pins", plan.Pins), plan.OverallWidth, "Pins"), "The pins");
+
+                stage = "regenerating the part";
+                session.RegenerateAll();
+                return session;
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                throw new InvalidOperationException($"Alibre export of chain '{chain.Id}' failed while {stage}: {ex.Message}", ex);
             }
         }
 

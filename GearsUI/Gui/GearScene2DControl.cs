@@ -118,6 +118,19 @@ namespace Bolsover.Gears.Gui
                     if (beltLines.Count > 0) _parts.Add(new Part(beltItem.Belt, false, 0, beltLines) { IsBelt = true });
                 }
 
+                foreach (var chainItem in scene.ChainItems)
+                {
+                    if (hiddenGears != null && (hiddenGears.Contains(chainItem.Chain.Driver) || hiddenGears.Contains(chainItem.Chain.Driven))) continue;
+
+                    var chainLines = new List<List<Pt>>();
+                    foreach (var polyline in chainItem.Polylines)
+                    {
+                        if (polyline.Count > 1) chainLines.Add(polyline.Select(p => new Pt(p.X, p.Y)).ToList());
+                    }
+
+                    if (chainLines.Count > 0) _parts.Add(new Part(chainItem.Chain, false, 0, chainLines) { IsChain = true });
+                }
+
                 foreach (var item in scene.Items)
                 {
                     if (hiddenGears != null && hiddenGears.Contains(item.Component)) continue;
@@ -144,7 +157,8 @@ namespace Bolsover.Gears.Gui
 
                     // A pitch circle is only true to scale when the gear axis is perpendicular to the drawing plane.
                     var axis = item.LocalToWorld.TransformDirection(new Vector3D(0.0, 0.0, 1.0));
-                    if ((item.Component is InvoluteGearComponent || item.Component is HtdPulleyComponent || item.Component is CycloidalGearComponent)
+                    if ((item.Component is InvoluteGearComponent || item.Component is HtdPulleyComponent || item.Component is SprocketComponent
+                         || item.Component is CycloidalGearComponent)
                         && Math.Abs(axis.Z) > 0.999 && item.Component.PitchDiameter > 0)
                     {
                         part.PitchRadius = item.Component.PitchDiameter / 2.0;
@@ -271,7 +285,8 @@ namespace Bolsover.Gears.Gui
 
             foreach (var part in _parts.Where(p => p.IsShaft)) DrawShaft(g, part);
             foreach (var part in _parts.Where(p => p.IsBelt)) DrawBelt(g, part);
-            foreach (var part in _parts.Where(p => !p.IsShaft && !p.IsBelt)) DrawGear(g, part);
+            foreach (var part in _parts.Where(p => p.IsChain)) DrawChain(g, part);
+            foreach (var part in _parts.Where(p => !p.IsShaft && !p.IsBelt && !p.IsChain)) DrawGear(g, part);
 
             using (var brush = new SolidBrush(Color.DimGray))
             {
@@ -324,6 +339,19 @@ namespace Bolsover.Gears.Gui
                 {
                     g.FillPath(brush, path);
                     g.DrawPath(pen, path);
+                }
+            }
+        }
+
+        /// <summary>A roller chain: the outline of every link plate and roller, each on its own, since the plates of neighbouring links overlap at the pins.</summary>
+        private void DrawChain(Graphics g, Part part)
+        {
+            var selected = IsSelected(part.Tag);
+            using (var pen = new Pen(selected ? SelectedColor : BeltColor, selected ? 2.0f : 1.0f) { LineJoin = LineJoin.Round })
+            {
+                foreach (var polyline in part.Polylines)
+                {
+                    if (polyline.Count > 1) g.DrawLines(pen, polyline.Select(ToScreen).ToArray());
                 }
             }
         }
@@ -633,6 +661,9 @@ namespace Bolsover.Gears.Gui
 
             /// <summary>True for a timing belt: a ring between its two outlines.</summary>
             public bool IsBelt { get; set; }
+
+            /// <summary>True for a roller chain: the outlines of its plates and rollers.</summary>
+            public bool IsChain { get; set; }
 
             public int ColorIndex { get; }
             public List<List<Pt>> Polylines { get; }

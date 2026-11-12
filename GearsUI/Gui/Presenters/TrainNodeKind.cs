@@ -6,6 +6,7 @@ namespace Bolsover.Gears.Gui.Presenters
         Assembly,
         Shaft,
         Gear,
-        Belt
+        Belt,
+        Chain
     }
 }

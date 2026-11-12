@@ -115,6 +115,13 @@ namespace Bolsover.Gears.Gui
                 AddMesh(beltItem.Mesh, beltItem.Belt, color, wireframe);
             }
 
+            foreach (var chainItem in scene.ChainItems)
+            {
+                if (hiddenGears != null && (hiddenGears.Contains(chainItem.Chain.Driver) || hiddenGears.Contains(chainItem.Chain.Driven))) continue;
+                var color = IsSelected(chainItem.Chain) ? SelectedColor : BeltColor;
+                AddMesh(chainItem.Mesh, chainItem.Chain, color, wireframe);
+            }
+
             if (!_hasFitted && _sceneVisuals.Count > 0)
             {
                 _hasFitted = true;

@@ -23,12 +23,16 @@ namespace Bolsover.Gears.Model.Assemblies
         private readonly List<Shaft> _shafts = new List<Shaft>();
         private readonly List<GearMeshRelation> _relations = new List<GearMeshRelation>();
         private readonly List<TimingBelt> _belts = new List<TimingBelt>();
+        private readonly List<RollerChain> _chains = new List<RollerChain>();
 
         public IReadOnlyList<Shaft> Shafts => _shafts;
         public IReadOnlyList<GearMeshRelation> Relations => _relations;
 
         /// <summary>The timing belts that connect pulleys of different shafts.</summary>
         public IReadOnlyList<TimingBelt> Belts => _belts;
+
+        /// <summary>The roller chains that connect sprockets of different shafts.</summary>
+        public IReadOnlyList<RollerChain> Chains => _chains;
 
         /// <summary>All gears mounted on the assembly's shafts.</summary>
         public IEnumerable<GearComponent> Components => _shafts.SelectMany(s => s.Mounts.Select(m => m.Component));
@@ -143,7 +147,8 @@ namespace Bolsover.Gears.Model.Assemblies
                 throw new InvalidOperationException($"Pulleys '{belt.Driver.Id}' and '{belt.Driven.Id}' are on the same shaft and cannot be joined by a belt.");
             }
 
-            if (_belts.Any(b => ReferenceEquals(b.Driven, belt.Driven)) || _relations.Any(r => ReferenceEquals(r.Driven, belt.Driven)))
+            if (_belts.Any(b => ReferenceEquals(b.Driven, belt.Driven)) || _chains.Any(c => ReferenceEquals(c.Driven, belt.Driven))
+                || _relations.Any(r => ReferenceEquals(r.Driven, belt.Driven)))
             {
                 throw new InvalidOperationException($"Pulley '{belt.Driven.Id}' is already driven by another belt or gear.");
             }
@@ -166,6 +171,59 @@ namespace Bolsover.Gears.Model.Assemblies
         public IEnumerable<TimingBelt> FindBelts(GearComponent component)
         {
             return _belts.Where(b => ReferenceEquals(b.Driver, component) || ReferenceEquals(b.Driven, component));
+        }
+
+        /// <summary>
+        /// Adds a roller chain round two sprockets. Both sprockets must be mounted on different shafts of the assembly, and a sprocket can be
+        /// driven by one chain, belt or gear only.
+        /// </summary>
+        public RollerChain AddChain(RollerChain chain)
+        {
+            if (chain == null) throw new ArgumentNullException(nameof(chain));
+            if (_chains.Any(c => c.Id == chain.Id))
+            {
+                throw new ArgumentException($"A chain with identifier '{chain.Id}' already exists in the assembly.", nameof(chain));
+            }
+
+            if (FindMount(chain.Driver, out var driverShaft) == null)
+            {
+                throw new InvalidOperationException($"Sprocket '{chain.Driver.Id}' is not mounted on a shaft of this assembly.");
+            }
+
+            if (FindMount(chain.Driven, out var drivenShaft) == null)
+            {
+                throw new InvalidOperationException($"Sprocket '{chain.Driven.Id}' is not mounted on a shaft of this assembly.");
+            }
+
+            if (ReferenceEquals(driverShaft, drivenShaft))
+            {
+                throw new InvalidOperationException($"Sprockets '{chain.Driver.Id}' and '{chain.Driven.Id}' are on the same shaft and cannot be joined by a chain.");
+            }
+
+            if (_chains.Any(c => ReferenceEquals(c.Driven, chain.Driven)) || _belts.Any(b => ReferenceEquals(b.Driven, chain.Driven))
+                || _relations.Any(r => ReferenceEquals(r.Driven, chain.Driven)))
+            {
+                throw new InvalidOperationException($"Sprocket '{chain.Driven.Id}' is already driven by another chain, belt or gear.");
+            }
+
+            chain.Validate();
+            _chains.Add(chain);
+            return chain;
+        }
+
+        /// <summary>Removes a chain. Returns false when it is not part of the assembly.</summary>
+        public bool RemoveChain(RollerChain chain) => _chains.Remove(chain);
+
+        /// <summary>Returns the chain that drives the sprocket, or null.</summary>
+        public RollerChain FindDrivingChain(GearComponent component)
+        {
+            return _chains.FirstOrDefault(c => ReferenceEquals(c.Driven, component));
+        }
+
+        /// <summary>Returns the chains that run round the sprocket (as driver or driven).</summary>
+        public IEnumerable<RollerChain> FindChains(GearComponent component)
+        {
+            return _chains.Where(c => ReferenceEquals(c.Driver, component) || ReferenceEquals(c.Driven, component));
         }
 
         /// <summary>
@@ -192,6 +250,7 @@ namespace Bolsover.Gears.Model.Assemblies
             if (FindMount(component, out var shaft) == null) return false;
             _relations.RemoveAll(r => ReferenceEquals(r.Driver, component) || ReferenceEquals(r.Driven, component));
             _belts.RemoveAll(b => ReferenceEquals(b.Driver, component) || ReferenceEquals(b.Driven, component));
+            _chains.RemoveAll(c => ReferenceEquals(c.Driver, component) || ReferenceEquals(c.Driven, component));
             return shaft.Unmount(component);
         }
 
@@ -241,15 +300,23 @@ namespace Bolsover.Gears.Model.Assemblies
                 relation.Result = null;
             }
 
-            if (_shafts.Count == 0 || (_relations.Count == 0 && _belts.Count == 0)) return;
+            if (_shafts.Count == 0 || (_relations.Count == 0 && _belts.Count == 0 && _chains.Count == 0)) return;
 
             var placed = new HashSet<Shaft> { _shafts[0] };
             var pending = new List<GearMeshRelation>(_relations);
             var pendingBelts = new List<TimingBelt>(_belts);
+            var pendingChains = new List<RollerChain>(_chains);
 
-            while (pending.Count > 0 || pendingBelts.Count > 0)
+            while (pending.Count > 0 || pendingBelts.Count > 0 || pendingChains.Count > 0)
             {
                 var progressed = false;
+                for (var i = 0; i < pendingChains.Count; i++)
+                {
+                    if (!SolveChain(pendingChains[i], placed)) continue;
+                    pendingChains.RemoveAt(i);
+                    i--;
+                    progressed = true;
+                }
                 for (var i = 0; i < pendingBelts.Count; i++)
                 {
                     if (!SolveBelt(pendingBelts[i], placed)) continue;
@@ -278,6 +345,13 @@ namespace Bolsover.Gears.Model.Assemblies
 
                 if (!progressed && pending.Count == 0)
                 {
+                    if (pendingBelts.Count == 0)
+                    {
+                        var firstChain = pendingChains[0];
+                        throw new InvalidOperationException(
+                            $"Cannot place chain '{firstChain.Id}': neither of its sprockets is on a shaft that is connected to the first shaft of the assembly.");
+                    }
+
                     var firstBelt = pendingBelts[0];
                     throw new InvalidOperationException(
                         $"Cannot place belt '{firstBelt.Id}': neither of its pulleys is on a shaft that is connected to the first shaft of the assembly.");
@@ -310,26 +384,41 @@ namespace Bolsover.Gears.Model.Assemblies
         /// </summary>
         private bool SolveBelt(TimingBelt belt, ISet<Shaft> placed)
         {
-            var driverMount = FindMount(belt.Driver, out var driverShaft);
-            var drivenMount = FindMount(belt.Driven, out var drivenShaft);
+            return SolveConnector("belt", "pulley", belt.Id, belt.Driver, belt.Driven, belt.CentreDistance, belt.CentreLineAngleDeg, belt.GearRatio, belt.Validate,
+                phase => BeltRegistration.Compute(belt, phase).DrivenOffsetRad, placed);
+        }
+
+        /// <summary>Places the shaft of a sprocket that is not yet placed from the other one, as <see cref="SolveBelt"/> does for a belt; the rollers of the chain are registered on the tooth gaps.</summary>
+        private bool SolveChain(RollerChain chain, ISet<Shaft> placed)
+        {
+            return SolveConnector("chain", "sprocket", chain.Id, chain.Driver, chain.Driven, chain.CentreDistance, chain.CentreLineAngleDeg, chain.GearRatio, chain.Validate,
+                phase => RollerChainLayout.Register(chain, phase).DrivenOffsetRad, placed);
+        }
+
+        /// <summary>The placement and phase of a flexible connector (belt or chain) between two wheels; see <see cref="SolveBelt"/>.</summary>
+        private bool SolveConnector(string kind, string wheel, string id, GearComponent driver, GearComponent driven, double centreDistance, double centreLineAngleDeg,
+            double gearRatio, Action validate, Func<double, double> drivenOffsetAt, ISet<Shaft> placed)
+        {
+            var driverMount = FindMount(driver, out var driverShaft);
+            var drivenMount = FindMount(driven, out var drivenShaft);
             if (driverMount == null || drivenMount == null)
             {
-                throw new InvalidOperationException($"The belt '{belt.Id}' refers to a pulley that is no longer mounted.");
+                throw new InvalidOperationException($"The {kind} '{id}' refers to a {wheel} that is no longer mounted.");
             }
 
             var driverPlaced = placed.Contains(driverShaft);
             var drivenPlaced = placed.Contains(drivenShaft);
             if (!driverPlaced && !drivenPlaced) return false;
 
-            belt.Validate();
-            var theta = belt.CentreLineAngleDeg * Math.PI / 180.0;
+            validate();
+            var theta = centreLineAngleDeg * Math.PI / 180.0;
             var axialShift = driverMount.AxialOffset - drivenMount.AxialOffset;
 
             if (driverPlaced)
             {
                 var frame = driverShaft.Placement;
                 var direction = frame.XAxis * Math.Cos(theta) + frame.YAxis * Math.Sin(theta);
-                var origin = GearPrecision.Round(frame.Origin + direction * belt.CentreDistance + frame.ZAxis * axialShift);
+                var origin = GearPrecision.Round(frame.Origin + direction * centreDistance + frame.ZAxis * axialShift);
 
                 if (drivenPlaced)
                 {
@@ -337,7 +426,7 @@ namespace Bolsover.Gears.Model.Assemblies
                     if (error > 10 * GearPrecision.Tolerance)
                     {
                         throw new InvalidOperationException(
-                            $"Shaft '{drivenShaft.Id}' is over-constrained: belt '{belt.Id}' requires its origin at {origin}, but it is already placed at {drivenShaft.Placement.Origin}.");
+                            $"Shaft '{drivenShaft.Id}' is over-constrained: {kind} '{id}' requires its origin at {origin}, but it is already placed at {drivenShaft.Placement.Origin}.");
                     }
 
                     return true;
@@ -346,20 +435,20 @@ namespace Bolsover.Gears.Model.Assemblies
                 drivenShaft.Placement = new Placement3D(origin, frame.ZAxis, frame.XAxis);
                 placed.Add(drivenShaft);
                 var driverPhase = driverMount.PhaseRad;
-                var offset = BeltRegistration.Compute(belt, driverPhase).DrivenOffsetRad;
-                drivenShaft.RotationRad = driverPhase / belt.GearRatio + offset - drivenMount.PhaseOffsetRad;
+                var offset = drivenOffsetAt(driverPhase);
+                drivenShaft.RotationRad = driverPhase / gearRatio + offset - drivenMount.PhaseOffsetRad;
                 return true;
             }
 
             // Only the driven shaft is placed: place the driver from it, with the same orientation.
             var drivenFrame = drivenShaft.Placement;
             var back = drivenFrame.XAxis * Math.Cos(theta) + drivenFrame.YAxis * Math.Sin(theta);
-            var driverOrigin = GearPrecision.Round(drivenFrame.Origin - back * belt.CentreDistance - drivenFrame.ZAxis * axialShift);
+            var driverOrigin = GearPrecision.Round(drivenFrame.Origin - back * centreDistance - drivenFrame.ZAxis * axialShift);
             driverShaft.Placement = new Placement3D(driverOrigin, drivenFrame.ZAxis, drivenFrame.XAxis);
             placed.Add(driverShaft);
             var drivenPhase = drivenMount.PhaseRad;
-            var drivenOffset = BeltRegistration.Compute(belt, drivenPhase * belt.GearRatio).DrivenOffsetRad;
-            driverShaft.RotationRad = (drivenPhase - drivenOffset) * belt.GearRatio - driverMount.PhaseOffsetRad;
+            var drivenOffset = drivenOffsetAt(drivenPhase * gearRatio);
+            driverShaft.RotationRad = (drivenPhase - drivenOffset) * gearRatio - driverMount.PhaseOffsetRad;
             return true;
         }
 

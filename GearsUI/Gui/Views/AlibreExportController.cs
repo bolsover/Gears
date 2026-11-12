@@ -115,6 +115,7 @@ namespace Bolsover.Gears.Gui.Views
                 case GearComponent gear: return gear.Id;
                 case Shaft shaft: return shaft.Id;
                 case TimingBelt belt: return belt.Id;
+                case RollerChain chain: return chain.Id;
                 default: return "item";
             }
         }
@@ -125,7 +126,8 @@ namespace Bolsover.Gears.Gui.Views
             var count = AlibreGearExporter.GetAssemblyParts(_presenter.Assembly, selection).Count;
             var extraParts = AlibreGearExporter.GetShaftAssemblyParts(_presenter.Assembly, selection).Count;
             var beltCount = AlibreGearExporter.GetBeltAssemblyParts(_presenter.Assembly, selection).Count;
-            if (count + extraParts + beltCount < AlibreGearExporter.MinimumAssemblyParts)
+            var chainCount = AlibreGearExporter.GetChainAssemblyParts(_presenter.Assembly, selection).Count;
+            if (count + extraParts + beltCount + chainCount < AlibreGearExporter.MinimumAssemblyParts)
             {
                 ShowMessage($"Select at least {AlibreGearExporter.MinimumAssemblyParts} exportable parts to export an assembly to Alibre.", true);
                 return;
@@ -134,6 +136,7 @@ namespace Bolsover.Gears.Gui.Views
             var description = $"{count} gears";
             if (extraParts > 0) description += $" and {extraParts} shaft or carrier part(s)";
             if (beltCount > 0) description += $" and {beltCount} belt(s)";
+            if (chainCount > 0) description += $" and {chainCount} chain(s)";
 
             ShowMessage($"Exporting {description} to a new Alibre assembly…", false);
             try
@@ -202,6 +205,13 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} pulley, {2} grooves, {3:0.###} mm pitch diameter) to a new Alibre part.", pulley.Id, pulley.Profile.Name, pulley.Teeth, pulley.PitchDiameter), false);
                     break;
                 }
+                case SprocketComponent sprocket:
+                {
+                    ShowMessage($"Exporting {sprocket.Id} to Alibre…", false);
+                    Exporter.Export(sprocket);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (ISO 606 {1} sprocket, {2} teeth, {3:0.###} mm pitch diameter) to a new Alibre part.", sprocket.Id, sprocket.Profile.Name, sprocket.Teeth, sprocket.PitchDiameter), false);
+                    break;
+                }
                 case CycloidalGearComponent cycloidal:
                 {
                     ShowMessage($"Exporting {cycloidal.Id} to Alibre…", false);
@@ -223,11 +233,19 @@ namespace Bolsover.Gears.Gui.Views
                     ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (HTD {1} belt without teeth, {2:0.###} mm wide, {3} teeth long) to a new Alibre part.", belt.Id, belt.Profile.Name, belt.Width, belt.BeltTeeth), false);
                     break;
                 }
+                case RollerChain chain:
+                {
+                    ShowMessage($"Exporting {chain.Id} to Alibre...", false);
+                    var driverMount = _presenter.Assembly.FindMount(chain.Driver, out _);
+                    Exporter.Export(chain, driverMount == null ? 0.0 : driverMount.PhaseRad);
+                    ShowMessage(string.Format(CultureInfo.InvariantCulture, "Exported {0} (ISO 606 {1} chain, {2} links, {3:0.###} mm wide) to a new Alibre part.", chain.Id, chain.Profile.Name, chain.LinkCount, chain.Width), false);
+                    break;
+                }
                 case Shaft shaft:
                     ExportShaftToAlibre(shaft);
                     break;
                 default:
-                    throw new InvalidOperationException("Select a gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier to export to Alibre.");
+                    throw new InvalidOperationException("Select a gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, sprocket, timing belt, roller chain, shaft or planetary carrier to export to Alibre.");
             }
         }
     }

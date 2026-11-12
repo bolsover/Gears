@@ -65,6 +65,21 @@ namespace Bolsover.Gears.Model.Assemblies
         public GearMesh3DBuilder.Mesh3D Mesh { get; }
     }
 
+    /// <summary>One roller chain of a solved assembly with its outlines (world X/Y) and its world-space mesh.</summary>
+    public sealed class SceneChainItem
+    {
+        public SceneChainItem(RollerChain chain, List<List<GearPoint>> polylines, GearMesh3DBuilder.Mesh3D mesh)
+        {
+            Chain = chain;
+            Polylines = polylines;
+            Mesh = mesh;
+        }
+
+        public RollerChain Chain { get; }
+        public List<List<GearPoint>> Polylines { get; }
+        public GearMesh3DBuilder.Mesh3D Mesh { get; }
+    }
+
     /// <summary>
     /// A solved assembly as a list of per-component world-space geometry.
     /// <see cref="Items"/> holds the gears; <see cref="ShaftItems"/> holds the shafts and is not part of
@@ -80,6 +95,13 @@ namespace Bolsover.Gears.Model.Assemblies
         public IReadOnlyList<SceneBeltItem> BeltItems => _beltItems;
 
         public void Add(SceneBeltItem item) => _beltItems.Add(item);
+
+        private readonly List<SceneChainItem> _chainItems = new List<SceneChainItem>();
+
+        /// <summary>The roller chains; like the belts and shafts they are not part of <see cref="CombinedPolylines"/> or <see cref="CombinedMesh"/>.</summary>
+        public IReadOnlyList<SceneChainItem> ChainItems => _chainItems;
+
+        public void Add(SceneChainItem item) => _chainItems.Add(item);
 
         public IReadOnlyList<SceneItem> Items => _items;
 

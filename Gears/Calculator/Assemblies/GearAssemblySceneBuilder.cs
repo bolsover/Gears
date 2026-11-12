@@ -58,6 +58,17 @@ namespace Bolsover.Gears.Calculator.Assemblies
                 scene.Add(new SceneBeltItem(belt, beltPolylines, beltMesh));
             }
 
+            foreach (var chain in assembly.Chains)
+            {
+                var driverMount = assembly.FindMount(chain.Driver, out var driverShaft);
+                if (driverMount == null) continue;
+
+                var driverFrame = driverShaft.Placement.ToTransform()
+                    .Compose(Transform3D.Translate(new Vector3D(0, 0, driverMount.AxialOffset)));
+                RollerChainMeshBuilder.Build(chain, driverFrame, out var chainMesh, out var chainPolylines, driverMount.PhaseRad);
+                scene.Add(new SceneChainItem(chain, chainPolylines, chainMesh));
+            }
+
             return scene;
         }
 

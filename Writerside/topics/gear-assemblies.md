@@ -17,6 +17,7 @@ All computed lengths and coordinates are given to **7 decimal places**; angles k
 | Crossed helical | `InvoluteGearComponent` | `CrossedHelical` | Two helical gears on shafts that are not parallel; the helix angles may differ. |
 | Planetary | `PlanetaryGearSet` | none | Sun, planets, ring and carrier plate; builds an ordinary assembly. |
 | HTD pulley | `HtdPulleyComponent` | none (joined by a `TimingBelt`) | Timing belt pulley of the 3M, 5M, 8M or 14M series; a belt places the second pulley's shaft. |
+| Sprocket | `SprocketComponent` | none (joined by a `RollerChain`) | ISO 606 B-series simplex roller chain sprocket (06B to 40B); a chain places the second sprocket's shaft. See [ISO 606 roller chain sprockets and chains](roller-chain-sprockets.md). |
 | Cycloidal gear | `CycloidalGearComponent` | `Cycloidal` | A wheel and a pinion on parallel shafts at the sum of their pitch radii; always designed as a pair. |
 
 A component's *phase* is its rotation about its axis in radians. For a rack the phase is the linear displacement in mm.
@@ -124,6 +125,10 @@ at the chosen speed; the report shows speeds in rpm (mm/min for a rack).
 The **Pulley** menu works with HTD pulleys: *New train with HTD pulley* and *Add HTD pulley to shaft* offer the four series; *Toggle flanges* switches the flanges of the selected pulley; *Add belted pulley to selected pulley* adds a pulley of the same series on a new shaft, joined to the selected pulley by a belt at a distance that leaves at least 10 mm between the pulleys; *Remove selected belt* removes the selected belt. Select the belt in the tree or in the 2D or 3D view to set its centre distance and line of centres angle in the property grid. The tree lists the belts under the train.
 
 **Belt and groove registration:** a belt tooth is centred in a pulley groove (the cavity), never on a land. The belt tooth is placed on the groove of the driver that is nearest the middle of the driver's wrap, and the teeth follow at the belt tooth spacing, so the belt teeth slide with the driver phase (3D view, animation and Alibre export). The driven pulley is turned by a fixed offset, found by the solver, so that a belt tooth near the middle of its wrap also sits in a groove; the driven pulley keeps its speed ratio and direction. When the path length is a whole number of pitches the alignment is exact on every tooth; otherwise the spacing differs from the pitch by at most `p / (2 n)` for `n` belt teeth, so the drift is below `p / 4` towards the ends of a wrap. In the Alibre assembly export the HTD pulleys are turned about their shaft by the mount phase, like every other part (see *Files and export*), so the exported grooves meet the exported belt teeth. Known limitation: when both shafts are already placed by other relations the belt is registered on the driver only, and the driven pulley is not turned to match.
+
+### Roller chain sprockets
+
+A `SprocketComponent` is a sprocket for an ISO 606 (DIN 8187) B-series simplex roller chain, and a `RollerChain` joins two of them on different, parallel shafts and places the driven sprocket's shaft, as a `TimingBelt` does for pulleys (both use `GearAssembly.SolveConnector`). The chain has an even number of links and a roller in a tooth gap of each sprocket. The data, the tooth form formulae, the chain and the Alibre export are described in [ISO 606 roller chain sprockets and chains](roller-chain-sprockets.md); the **Sprocket** menu of the editor works like the **Pulley** menu.
 
 ### Cycloidal gears
 

@@ -33,12 +33,15 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         private IADPartSession Export(TimingBelt belt, double driverPhaseRad) => _owner.Export(belt, driverPhaseRad);
 
+        private IADPartSession Export(RollerChain chain, double driverPhaseRad) => _owner.Export(chain, driverPhaseRad);
+
         internal IADAssemblySession ExportAssembly(GearAssembly train, string assemblyName = DefaultAssemblyName, IReadOnlyCollection<object> selection = null)
         {
             var parts = GetAssemblyParts(train, selection);
             var shaftParts = GetShaftAssemblyParts(train, selection);
             var beltParts = GetBeltAssemblyParts(train, selection);
-            CheckPartCount(parts.Count + shaftParts.Count + beltParts.Count);
+            var chainParts = GetChainAssemblyParts(train, selection);
+            CheckPartCount(parts.Count + shaftParts.Count + beltParts.Count + chainParts.Count);
 
             var stage = "creating the assembly";
             var folder = string.IsNullOrWhiteSpace(AssemblyFolder)
@@ -95,6 +98,19 @@ namespace Bolsover.Gears.Calculator.Alibre
                     SavePart(session, current, folder, index, log);
                 }
 
+                foreach (var chainPart in chainParts)
+                {
+                    var current = chainPart.Key.Id;
+                    index++;
+
+                    stage = "building chain '" + current + "'";
+                    var chainDriverMount = train.FindMount(chainPart.Key.Driver, out _);
+                    var session = Export(chainPart.Key, chainDriverMount == null ? 0.0 : chainDriverMount.PhaseRad);
+                    log.Add("built chain '" + current + "'");
+                    saved.Add(session);
+                    SavePart(session, current, folder, index, log);
+                }
+
                 stage = "creating the assembly";
                 var assembly = _root.CreateEmptyAssemblyEx(string.IsNullOrWhiteSpace(assemblyName) ? DefaultAssemblyName : assemblyName, true);
                 log.Add("created the assembly");
@@ -139,6 +155,16 @@ namespace Bolsover.Gears.Calculator.Alibre
                     var transformation = factory.CreateTransform(ref matrix);
                     AddPart(occurrences, saved[parts.Count + shaftParts.Count + i], transformation);
                     log.Add("added belt '" + current + "' to the assembly");
+                }
+
+                for (var i = 0; i < chainParts.Count; i++)
+                {
+                    var current = chainParts[i].Key.Id;
+                    stage = "adding chain '" + current + "' to the assembly";
+                    Array matrix = ToAlibreMatrix(chainParts[i].Value);
+                    var transformation = factory.CreateTransform(ref matrix);
+                    AddPart(occurrences, saved[parts.Count + shaftParts.Count + beltParts.Count + i], transformation);
+                    log.Add("added chain '" + current + "' to the assembly");
                 }
 
                 stage = "regenerating the assembly";

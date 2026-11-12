@@ -81,6 +81,19 @@ namespace Bolsover.Gears.Model.Assemblies
                 });
             }
 
+            foreach (var chain in assembly.Chains)
+            {
+                dto.Chains.Add(new BeltDto
+                {
+                    Id = chain.Id,
+                    Name = chain.Name,
+                    Driver = chain.Driver.Id,
+                    Driven = chain.Driven.Id,
+                    CentreDistance = chain.CentreDistance,
+                    CentreLineAngleDeg = chain.CentreLineAngleDeg
+                });
+            }
+
             return JsonSerializer.Serialize(dto, Options);
         }
 
@@ -179,6 +192,26 @@ namespace Bolsover.Gears.Model.Assemblies
                 assembly.AddBelt(belt);
             }
 
+            foreach (var chainDto in dto.Chains ?? new List<BeltDto>())
+            {
+                if (!gears.TryGetValue(chainDto.Driver ?? string.Empty, out var chainDriver) || !(chainDriver is SprocketComponent driverSprocket))
+                {
+                    throw new InvalidDataException($"The chain '{chainDto.Id}' refers to '{chainDto.Driver}', which is not a sprocket of the file.");
+                }
+
+                if (!gears.TryGetValue(chainDto.Driven ?? string.Empty, out var chainDriven) || !(chainDriven is SprocketComponent drivenSprocket))
+                {
+                    throw new InvalidDataException($"The chain '{chainDto.Id}' refers to '{chainDto.Driven}', which is not a sprocket of the file.");
+                }
+
+                var chain = new RollerChain(chainDto.Id, driverSprocket, drivenSprocket, chainDto.CentreDistance)
+                {
+                    Name = chainDto.Name ?? chainDto.Id,
+                    CentreLineAngleDeg = chainDto.CentreLineAngleDeg
+                };
+                assembly.AddChain(chain);
+            }
+
             return assembly;
         }
 
@@ -245,6 +278,9 @@ namespace Bolsover.Gears.Model.Assemblies
                     break;
                 case HtdPulleyComponent g:
                     WriteHtdPulley(dto, g);
+                    break;
+                case SprocketComponent g:
+                    WriteSprocket(dto, g);
                     break;
                 case CycloidalGearComponent g:
                     WriteCycloidal(dto, g);
@@ -362,6 +398,20 @@ namespace Bolsover.Gears.Model.Assemblies
             }
         }
 
+        private static void WriteSprocket(GearDto dto, SprocketComponent g)
+        {
+            dto.Type = "Sprocket";
+            dto.Teeth = g.Teeth;
+            dto.ChainSeries = g.Series.ToString();
+            dto.ToothForm = g.ToothForm.ToString();
+            if (g.BoreDiameter > 0.0) dto.BoreDiameter = g.BoreDiameter;
+            if (g.HasHub)
+            {
+                dto.HubDiameter = g.HubDiameter;
+                dto.HubLength = g.HubLength;
+            }
+        }
+
         private static void WriteCycloidal(GearDto dto, CycloidalGearComponent g)
         {
             dto.Type = "Cycloidal";
@@ -452,6 +502,9 @@ namespace Bolsover.Gears.Model.Assemblies
                     break;
                 case "HtdPulley":
                     component = ReadHtdPulley(dto);
+                    break;
+                case "Sprocket":
+                    component = ReadSprocket(dto);
                     break;
                 case "Cycloidal":
                     component = ReadCycloidal(dto);
@@ -577,6 +630,19 @@ namespace Bolsover.Gears.Model.Assemblies
             };
         }
 
+        private static SprocketComponent ReadSprocket(GearDto dto)
+        {
+            return new SprocketComponent(dto.Id)
+            {
+                Series = Enum.TryParse(dto.ChainSeries, true, out ChainSeries series) ? series : ChainSeries.B08,
+                Teeth = dto.Teeth ?? 19,
+                ToothForm = Enum.TryParse(dto.ToothForm, true, out SprocketToothForm form) ? form : SprocketToothForm.Maximum,
+                BoreDiameter = dto.BoreDiameter ?? 0.0,
+                HubDiameter = dto.HubDiameter ?? 0.0,
+                HubLength = dto.HubLength ?? 0.0
+            };
+        }
+
         private static CycloidalGearComponent ReadCycloidal(GearDto dto)
         {
             return new CycloidalGearComponent(dto.Id)
@@ -598,6 +664,9 @@ namespace Bolsover.Gears.Model.Assemblies
 
             /// <summary>Timing belts; absent in older files.</summary>
             public List<BeltDto> Belts { get; set; } = new List<BeltDto>();
+
+            /// <summary>Roller chains (the same fields as a belt); absent in older files.</summary>
+            public List<BeltDto> Chains { get; set; } = new List<BeltDto>();
         }
 
         private sealed class BeltDto
@@ -675,6 +744,10 @@ namespace Bolsover.Gears.Model.Assemblies
             public bool? CustomSlopEnabled { get; set; }
             public double? CustomSlop { get; set; }
             public double? CentreHole { get; set; }
+
+            /// <summary>Sprocket: the ISO 606 chain series (B06 to B40) and the tooth form (Maximum or Minimum); the teeth, bore and hub use the shared fields.</summary>
+            public string ChainSeries { get; set; }
+            public string ToothForm { get; set; }
 
             /// <summary>Spiral, zerol and hypoid bevel gears: the mean spiral angle (degrees; the pinion's for a hypoid pair), the cutter radius (mm, zero is automatic) and the hand ("R" or "L").</summary>
             public double? MeanSpiralAngleDeg { get; set; }

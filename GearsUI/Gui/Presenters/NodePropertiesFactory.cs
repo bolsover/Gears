@@ -22,7 +22,7 @@ namespace Bolsover.Gears.Gui.Presenters
             if (planetary != null) return new PlanetaryNodeProperties(_presenter, planetary);
 
             if (selected is RackComponent || selected is BevelGearComponent || selected is WormComponent || selected is WormWheelComponent
-                || selected is HtdPulleyComponent || selected is CycloidalGearComponent)
+                || selected is HtdPulleyComponent || selected is SprocketComponent || selected is CycloidalGearComponent)
             {
                 var component = (GearComponent)selected;
                 var componentMount = assembly.FindMount(component, out _);
@@ -30,6 +30,7 @@ namespace Bolsover.Gears.Gui.Presenters
                 var relation = assembly.FindDrivingRelation(component);
                 if (component is RackComponent rack) return new RackNodeProperties(_presenter, rack, componentMount, relation);
                 if (component is HtdPulleyComponent pulley) return new PulleyNodeProperties(_presenter, pulley, componentMount, relation);
+                if (component is SprocketComponent sprocket) return new SprocketNodeProperties(_presenter, sprocket, componentMount, relation);
                 if (component is CycloidalGearComponent cycloidal) return new CycloidalNodeProperties(_presenter, cycloidal, componentMount, relation);
                 if (component is HypoidGearComponent hypoid) return new HypoidNodeProperties(_presenter, hypoid, componentMount, relation);
                 if (component is SpiralBevelGearComponent spiral) return new SpiralBevelNodeProperties(_presenter, spiral, componentMount, relation);
@@ -53,6 +54,11 @@ namespace Bolsover.Gears.Gui.Presenters
             if (selected is TimingBelt belt && assembly.Belts.Contains(belt))
             {
                 return new BeltNodeProperties(belt);
+            }
+
+            if (selected is RollerChain chain && assembly.Chains.Contains(chain))
+            {
+                return new ChainNodeProperties(chain);
             }
 
             return null;

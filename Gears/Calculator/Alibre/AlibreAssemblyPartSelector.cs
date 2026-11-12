@@ -83,10 +83,26 @@ namespace Bolsover.Gears.Calculator.Alibre
             return parts;
         }
 
+        internal static IReadOnlyList<KeyValuePair<RollerChain, Transform3D>> GetChainAssemblyParts(GearAssembly train, IReadOnlyCollection<object> selection = null)
+        {
+            if (train == null) throw new ArgumentNullException(nameof(train));
+
+            var parts = new List<KeyValuePair<RollerChain, Transform3D>>();
+            foreach (var chain in train.Chains)
+            {
+                if (!IsIncluded(selection, chain)) continue;
+                var mount = train.FindMount(chain.Driver, out var shaft);
+                if (mount == null) continue;
+                parts.Add(new KeyValuePair<RollerChain, Transform3D>(chain, AlibrePartPlacement.GetBeltPlacement(shaft, mount)));
+            }
+
+            return parts;
+        }
+
         internal static bool IsExportable(GearComponent component)
         {
             return component is InvoluteGearComponent || component is RackComponent || component is WormComponent || component is WormWheelComponent
-                || component is BevelGearComponent || component is HtdPulleyComponent || component is CycloidalGearComponent;
+                || component is BevelGearComponent || component is HtdPulleyComponent || component is SprocketComponent || component is CycloidalGearComponent;
         }
 
         internal static bool IsHerringbone(GearComponent component)

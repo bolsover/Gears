@@ -397,7 +397,7 @@ namespace Bolsover.Gears.Model.Assemblies
             AddPolygon(mesh, outline, z, facesUp);
         }
 
-        private static void AddPolygon(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> polygon, double z, bool facesUp)
+        internal static void AddPolygon(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> polygon, double z, bool facesUp)
         {
             var start = mesh.Vertices.Count;
             foreach (var p in polygon) mesh.Vertices.Add(new GearPoint3D(p.X, p.Y, z));
@@ -410,7 +410,7 @@ namespace Bolsover.Gears.Model.Assemblies
         }
 
         /// <summary>A flat ring between two radii at height z; a disc when the inner radius is zero.</summary>
-        private static void AddRing(GearMesh3DBuilder.Mesh3D mesh, double innerRadius, double outerRadius, double z, int segments, bool facesUp)
+        internal static void AddRing(GearMesh3DBuilder.Mesh3D mesh, double innerRadius, double outerRadius, double z, int segments, bool facesUp)
         {
             for (var i = 0; i < segments; i++)
             {
@@ -434,7 +434,7 @@ namespace Bolsover.Gears.Model.Assemblies
         }
 
         /// <summary>A cylinder wall between two heights; the faces point away from the axis when <paramref name="outward"/>, else towards it.</summary>
-        private static void AddWall(GearMesh3DBuilder.Mesh3D mesh, double radius, double zLow, double zHigh, int segments, bool outward)
+        internal static void AddWall(GearMesh3DBuilder.Mesh3D mesh, double radius, double zLow, double zHigh, int segments, bool outward)
         {
             for (var i = 0; i < segments; i++)
             {
@@ -449,7 +449,7 @@ namespace Bolsover.Gears.Model.Assemblies
             }
         }
 
-        private static void AddQuad(GearMesh3DBuilder.Mesh3D mesh, GearPoint3D a, GearPoint3D b, GearPoint3D c, GearPoint3D d)
+        internal static void AddQuad(GearMesh3DBuilder.Mesh3D mesh, GearPoint3D a, GearPoint3D b, GearPoint3D c, GearPoint3D d)
         {
             var k = mesh.Vertices.Count;
             mesh.Vertices.AddRange(new[] { a, b, c, d });
@@ -463,7 +463,7 @@ namespace Bolsover.Gears.Model.Assemblies
             mesh.TriangleIndices.AddRange(new[] { k, k + 1, k + 2 });
         }
 
-        private static List<GearPoint> Circle(double radius, int segments)
+        internal static List<GearPoint> Circle(double radius, int segments)
         {
             var circle = new List<GearPoint>(segments + 1);
             for (var i = 0; i <= segments; i++)

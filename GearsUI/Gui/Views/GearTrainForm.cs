@@ -200,6 +200,7 @@ namespace Bolsover.Gears.Gui.Views
             var menuWorm = CreateWormMenu(createRemoveItem);
             var menuPlanetary = CreatePlanetaryMenu();
             var menuPulley = CreatePulleyMenu();
+            var menuSprocket = CreateSprocketMenu();
             var menuCycloidal = CreateCycloidalMenu();
             var menuView = CreateViewMenu(btnFit);
             var menuSimulation = CreateSimulationMenu();
@@ -208,7 +209,7 @@ namespace Bolsover.Gears.Gui.Views
 
             var menuHelp = CreateHelpMenu();
 
-            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuSpur, menuBevel, menuWorm, menuPlanetary, menuPulley, menuCycloidal, menuView, menuSimulation, menuHelp });
+            menu.Items.AddRange(new ToolStripItem[] { ddFile, menuSpur, menuBevel, menuWorm, menuPlanetary, menuPulley, menuSprocket, menuCycloidal, menuView, menuSimulation, menuHelp });
             MainMenuStrip = menu;
 
             var statusBar = new StatusStrip();
@@ -376,6 +377,40 @@ namespace Bolsover.Gears.Gui.Views
             });
 
             return menuPulley;
+        }
+
+        private ToolStripMenuItem CreateSprocketMenu()
+        {
+            var menuSprocket = new ToolStripMenuItem("Spr&ocket");
+            var ddSprocketStart = new ToolStripMenuItem("&New train with sprocket")
+            {
+                ToolTipText = "Start a new train with one ISO 606 (DIN 8187) B-series roller chain sprocket of the chosen chain. It is drawn in the 2D and 3D views."
+            };
+            var ddSprocketAdd = new ToolStripMenuItem("&Add sprocket to shaft")
+            {
+                ToolTipText = "Add a sprocket of the chosen chain to the selected shaft (or the shaft of the selected gear)."
+            };
+            foreach (var profile in ChainProfile.Profiles)
+            {
+                var series = profile.Series;
+                var caption = "ISO 606 " + profile.Name + "-1 (" + profile.Pitch.ToString("0.###", CultureInfo.InvariantCulture) + " mm pitch)";
+                ddSprocketStart.DropDownItems.Add(caption, null, (s, e) => RunCommand(() => _presenter.NewSprocket(series)));
+                ddSprocketAdd.DropDownItems.Add(caption, null, (s, e) => RunCommand(() => AddSprocketToSelectedShaft(series)));
+            }
+
+            menuSprocket.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                ddSprocketStart, ddSprocketAdd, new ToolStripSeparator(),
+                new ToolStripMenuItem("Add &chained sprocket to selected sprocket", null, (s, e) => RunCommand(AddChainedSprocketToSelectedSprocket))
+                {
+                    ToolTipText = "Adds a second sprocket of the same chain on a new shaft, joined to the selected sprocket by a roller chain. Select the chain to set the centre distance."
+                },
+                new ToolStripMenuItem("&Remove selected chain", null, (s, e) => RunCommand(RemoveSelectedChain)),
+                new ToolStripSeparator(),
+                new ToolStripMenuItem("ISO 606 chain &data…", null, (s, e) => ShowChainData())
+            });
+
+            return menuSprocket;
         }
 
         private ToolStripMenuItem CreateCycloidalMenu()
@@ -848,6 +883,69 @@ namespace Bolsover.Gears.Gui.Views
 
             pulley.HasFlanges = !pulley.HasFlanges;
             _presenter.Refresh();
+        }
+
+        private void AddSprocketToSelectedShaft(ChainSeries series)
+        {
+            Shaft shaft = _selected as Shaft;
+            if (shaft == null && _selected is GearComponent gear) _presenter.Assembly.FindMount(gear, out shaft);
+            if (shaft == null) shaft = _presenter.InputShaft;
+            if (shaft == null)
+            {
+                ShowMessage("Select a shaft first, or start a new train with a sprocket.", true);
+                return;
+            }
+
+            _presenter.AddSprocketToShaft(shaft, series);
+        }
+
+        private void AddChainedSprocketToSelectedSprocket()
+        {
+            if (!(_selected is SprocketComponent sprocket))
+            {
+                ShowMessage("Select a sprocket first.", true);
+                return;
+            }
+
+            _presenter.AddChainedSprocket(sprocket);
+        }
+
+        private void RemoveSelectedChain()
+        {
+            if (!(_selected is RollerChain))
+            {
+                ShowMessage("Select a chain in the tree or in the views first.", true);
+                return;
+            }
+
+            _presenter.RemoveSelected();
+        }
+
+        /// <summary>Shows the ISO 606 chain dimensions and tooth form formulae that the sprockets are built from.</summary>
+        private void ShowChainData()
+        {
+            var ci = CultureInfo.InvariantCulture;
+            var text = new System.Text.StringBuilder();
+            text.AppendLine("ISO 606 (DIN 8187) B-series simplex roller chains and sprockets, dimensions in mm");
+            text.AppendLine();
+            text.AppendLine("Chain    Pitch p   Roller d1   Inner width b1   Pin    Plate height   Tooth width");
+            foreach (var p in ChainProfile.Profiles)
+            {
+                text.AppendLine(string.Format(ci, "{0,-8} {1,-9:0.###} {2,-11:0.##} {3,-16:0.##} {4,-6:0.##} {5,-14:0.##} {6:0.##}",
+                    p.Name + "-1", p.Pitch, p.RollerDiameter, p.InnerWidth, p.PinDiameter, p.PlateHeight, p.ToothWidth));
+            }
+
+            text.AppendLine();
+            text.AppendLine("Pitch diameter          d = p / sin(180 / z)");
+            text.AppendLine("Root diameter           d_f = d - d1");
+            text.AppendLine("Tip diameter            d_a = d + p (1 - 1.6 / z) - d1  (minimum)  to  d + 1.25 p - d1  (maximum)");
+            text.AppendLine("Roller seating radius   r_i = 0.505 d1  (minimum)  to  0.505 d1 + 0.069 d1^(1/3)  (maximum)");
+            text.AppendLine("Roller seating angle    alpha = 120 - 90 / z  (minimum)  to  140 - 90 / z  (maximum) degrees");
+            text.AppendLine("Tooth flank radius      r_e = 0.12 d1 (z + 2)  (minimum)  to  0.008 d1 (z^2 + 180)  (maximum)");
+            text.AppendLine("Tooth width             0.93 b1 for a pitch up to 12.7 mm, else 0.95 b1");
+            text.AppendLine();
+            text.AppendLine("The chain makers' pin, plate height and plate thicknesses are maximum values and only draw the chain.");
+            MessageBox.Show(this, text.ToString(), "ISO 606 chain data", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>Shows the HTD dimensions that the pulleys are built from.</summary>

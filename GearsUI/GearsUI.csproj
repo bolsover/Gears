@@ -182,6 +182,8 @@
     <Compile Include="Gui\Presenters\PulleyNodeProperties.cs" />
     <Compile Include="Gui\Presenters\CycloidalNodeProperties.cs" />
     <Compile Include="Gui\Presenters\BeltNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\SprocketNodeProperties.cs" />
+    <Compile Include="Gui\Presenters\ChainNodeProperties.cs" />
     <Compile Include="Gui\Presenters\BevelNodeProperties.cs" />
     <Compile Include="Gui\Presenters\SpiralBevelNodeProperties.cs" />
     <Compile Include="Gui\Presenters\HypoidNodeProperties.cs" />

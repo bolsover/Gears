@@ -188,6 +188,9 @@
     <Compile Include="TestHerringboneGear.cs" />
     <Compile Include="TestHelicalPlanetary.cs" />
     <Compile Include="TestHtdPulley.cs" />
+    <Compile Include="TestSprocket.cs" />
+    <Compile Include="TestRollerChain.cs" />
+    <Compile Include="TestSprocketEditor.cs" />
     <Compile Include="TestHtdBeltAndExport.cs" />
     <Compile Include="TestHtdBeltPhase.cs" />
     <Compile Include="TestCrossedHelicalMesh.cs" />
