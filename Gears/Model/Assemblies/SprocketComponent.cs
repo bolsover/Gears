@@ -306,18 +306,264 @@ namespace Bolsover.Gears.Model.Assemblies
             return _cachedGeometry;
         }
 
+        /// <summary>
+        /// The tooth side relief of the sprocket catalogue (tooth radius r3, radius width C), the same one that the Alibre export cuts: the tooth
+        /// side face is rounded by an arc of radius r3 that is tangent to it at <paramref name="startRadius"/> R0 and has moved in by C at the tip
+        /// circle, so R0 = Ra - sqrt(2 r3 C - C^2). When R0 would be below the bottom of the roller seats (few teeth, short tooth form) the arc
+        /// starts at the bottom radius instead and the cut-back at the tip circle is smaller than C. False when the chain has no relief, or when
+        /// it is wider than half the tooth.
+        /// </summary>
+        public bool TrySideRelief(out double startRadius)
+        {
+            startRadius = 0.0;
+            var profile = Profile;
+            var radius = profile.SideRadius;
+            var width = profile.SideReliefWidth;
+            if (radius <= 0.0 || width <= 0.0 || width >= radius || width >= FaceWidth / 2.0) return false;
+
+            var tip = OutsideDiameter / 2.0;
+            var start = tip - Math.Sqrt(2.0 * radius * width - width * width);
+            var bottom = RollerCentreRadius - profile.SeatRadius(ToothForm);
+            if (start <= bottom)
+            {
+                start = bottom;
+                var reach = tip - bottom;
+                if (reach <= 0.0 || reach >= radius) return false;
+            }
+
+            startRadius = start;
+            return true;
+        }
+
+        /// <summary>How far the tooth side is cut back at <paramref name="radius"/> by the side relief that starts at <paramref name="startRadius"/> (mm).</summary>
+        public double SideDrop(double radius, double startRadius)
+        {
+            var r3 = Profile.SideRadius;
+            var d = radius - startRadius;
+            if (d <= 0.0) return 0.0;
+            return r3 - Math.Sqrt(Math.Max(0.0, r3 * r3 - d * d));
+        }
+
+        /// <summary>Number of columns on each side of the tooth middle in the relief surface of a tooth.</summary>
+        private const int ReliefHalfColumns = 2;
+
+        /// <summary>The parts of a sprocket with side relief: the flat end face outline, the flat part of a gap and the levels of the relief surface.</summary>
+        private sealed class ReliefShape
+        {
+            /// <summary>The closed outline of the flat part of the end face (the teeth cut off at the start radius of the relief).</summary>
+            public List<GearPoint> FlatOutline;
+
+            /// <summary>Points of the flat outline of one gap and the arc of the tooth after it.</summary>
+            public int Block;
+
+            /// <summary>Index of the seat bottom within a block.</summary>
+            public int Bottom;
+
+            /// <summary>The flat part of a gap, anticlockwise from its left flank over the seat bottom to its right flank (gap 0, on the +X axis).</summary>
+            public List<GearPoint> Gap;
+
+            /// <summary>Per level of the relief, from its start radius to the top of the tooth: radius, polar angle of the gap flank, half angle of the tooth and cut-back.</summary>
+            public double[] Radius, Angle, Psi, Drop;
+        }
+
+        /// <summary>The relief shape for the side relief that starts at <paramref name="reliefStart"/>, or null when the tooth form does not allow the surface to be built.</summary>
+        private ReliefShape BuildReliefShape(double reliefStart)
+        {
+            var half = HalfGap(Profile, Teeth, ToothForm, out _);
+            var n = half.Count;
+            var step = 2.0 * Math.PI / Teeth;
+            var rho = new double[n];
+            var ang = new double[n];
+            for (var i = 0; i < n; i++)
+            {
+                rho[i] = Math.Sqrt(half[i].X * half[i].X + half[i].Y * half[i].Y);
+                ang[i] = Math.Atan2(half[i].Y, half[i].X);
+                if (i > 0 && rho[i] <= rho[i - 1] + 1e-9) return null;
+            }
+
+            if (reliefStart >= rho[n - 1] - 1e-6) return null;
+
+            double AngleAt(double r)
+            {
+                for (var i = 0; i < n - 1; i++)
+                {
+                    if (r > rho[i + 1] + 1e-12) continue;
+                    var t = Math.Min(1.0, Math.Max(0.0, (r - rho[i]) / (rho[i + 1] - rho[i])));
+                    return Math.Atan2(half[i].Y + t * (half[i + 1].Y - half[i].Y), half[i].X + t * (half[i + 1].X - half[i].X));
+                }
+
+                return ang[n - 1];
+            }
+
+            var radii = new List<double> { reliefStart };
+            for (var i = 0; i < n; i++)
+            {
+                if (rho[i] > reliefStart + 1e-9) radii.Add(rho[i]);
+            }
+
+            var levels = new List<double>();
+            for (var i = 0; i < radii.Count - 1; i++)
+            {
+                levels.Add(radii[i]);
+                levels.Add((radii[i] + radii[i + 1]) / 2.0);
+            }
+
+            levels.Add(radii[radii.Count - 1]);
+
+            var shape = new ReliefShape
+            {
+                Radius = levels.ToArray(),
+                Angle = new double[levels.Count],
+                Psi = new double[levels.Count],
+                Drop = new double[levels.Count]
+            };
+            for (var j = 0; j < levels.Count; j++)
+            {
+                shape.Angle[j] = AngleAt(levels[j]);
+                var psi = step / 2.0 - shape.Angle[j];
+                shape.Psi[j] = psi < 1e-9 ? 0.0 : psi;
+                shape.Drop[j] = SideDrop(levels[j], reliefStart);
+            }
+
+            // The flat half gap: the seat bottom, the points below the start radius, and the point on the start radius.
+            var flatHalf = new List<GearPoint> { half[0] };
+            for (var i = 1; i < n && rho[i] < reliefStart - 1e-9; i++) flatHalf.Add(half[i]);
+            if (reliefStart > rho[0] + 1e-9)
+            {
+                var a = shape.Angle[0];
+                flatHalf.Add(new GearPoint(reliefStart * Math.Cos(a), reliefStart * Math.Sin(a)));
+            }
+
+            var gap = new List<GearPoint>();
+            for (var i = flatHalf.Count - 1; i >= 1; i--) gap.Add(new GearPoint(flatHalf[i].X, -flatHalf[i].Y));
+            gap.AddRange(flatHalf);
+            shape.Gap = gap;
+            shape.Bottom = flatHalf.Count - 1;
+
+            var columns = 2 * ReliefHalfColumns;
+            var outline = new List<GearPoint>();
+            for (var k = 0; k < Teeth; k++)
+            {
+                var rotation = k * step;
+                foreach (var p in gap) outline.Add(Rotate(p, rotation));
+                for (var c = 1; c < columns; c++) outline.Add(ReliefPoint(shape, 0, k * step + step / 2.0, c));
+            }
+
+            shape.FlatOutline = outline;
+            shape.Block = outline.Count / Teeth;
+            return shape;
+        }
+
+        private static GearPoint Rotate(GearPoint p, double angle)
+        {
+            var cos = Math.Cos(angle);
+            var sin = Math.Sin(angle);
+            return new GearPoint(p.X * cos - p.Y * sin, p.X * sin + p.Y * cos);
+        }
+
+        private static GearPoint Polar(double radius, double angle) => new GearPoint(radius * Math.Cos(angle), radius * Math.Sin(angle));
+
+        /// <summary>The point at a level and column of the relief surface of the tooth with its middle at <paramref name="toothAngle"/>.</summary>
+        private static GearPoint ReliefPoint(ReliefShape shape, int level, double toothAngle, int column)
+        {
+            var psi = shape.Psi[level];
+            return Polar(shape.Radius[level], toothAngle - psi + 2.0 * psi * column / (2 * ReliefHalfColumns));
+        }
+
+        private static void AddReliefWall(GearMesh3DBuilder.Mesh3D mesh, GearPoint a, GearPoint b, double zA, double zB)
+        {
+            HtdPulleyComponent.AddQuad(mesh,
+                new GearPoint3D(a.X, a.Y, zA), new GearPoint3D(a.X, a.Y, -zA), new GearPoint3D(b.X, b.Y, -zB), new GearPoint3D(b.X, b.Y, zB));
+        }
+
+        /// <summary>
+        /// The walls of the toothed part and the relief surface on both end faces: the flat walls of the gaps, the relief edges of the flanks,
+        /// the tip faces, and per tooth a grid of quads that follows the relief arc from its start radius to the top of the tooth.
+        /// </summary>
+        private void AddReliefSurfaces(GearMesh3DBuilder.Mesh3D mesh, ReliefShape shape)
+        {
+            var step = 2.0 * Math.PI / Teeth;
+            var halfWidth = FaceWidth / 2.0;
+            var columns = 2 * ReliefHalfColumns;
+            var levels = shape.Radius.Length;
+            var top = levels - 1;
+
+            for (var k = 0; k < Teeth; k++)
+            {
+                var rotation = k * step;
+                var toothAngle = rotation + step / 2.0;
+
+                for (var i = 0; i + 1 < shape.Gap.Count; i++)
+                {
+                    AddReliefWall(mesh, Rotate(shape.Gap[i], rotation), Rotate(shape.Gap[i + 1], rotation), halfWidth, halfWidth);
+                }
+
+                for (var j = 0; j + 1 < levels; j++)
+                {
+                    AddReliefWall(mesh, Polar(shape.Radius[j], rotation + shape.Angle[j]), Polar(shape.Radius[j + 1], rotation + shape.Angle[j + 1]),
+                        halfWidth - shape.Drop[j], halfWidth - shape.Drop[j + 1]);
+                }
+
+                var topZ = halfWidth - shape.Drop[top];
+                for (var c = 0; c < columns; c++)
+                {
+                    var a = ReliefPoint(shape, top, toothAngle, c);
+                    var b = ReliefPoint(shape, top, toothAngle, c + 1);
+                    if (Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y) > 1e-9) AddReliefWall(mesh, a, b, topZ, topZ);
+                }
+
+                for (var j = top; j >= 1; j--)
+                {
+                    AddReliefWall(mesh, Polar(shape.Radius[j], rotation + step - shape.Angle[j]), Polar(shape.Radius[j - 1], rotation + step - shape.Angle[j - 1]),
+                        halfWidth - shape.Drop[j], halfWidth - shape.Drop[j - 1]);
+                }
+
+                for (var j = 0; j + 1 < levels; j++)
+                {
+                    var zLow = halfWidth - shape.Drop[j];
+                    var zHigh = halfWidth - shape.Drop[j + 1];
+                    for (var c = 0; c < columns; c++)
+                    {
+                        var p00 = ReliefPoint(shape, j, toothAngle, c);
+                        var p01 = ReliefPoint(shape, j, toothAngle, c + 1);
+                        var p10 = ReliefPoint(shape, j + 1, toothAngle, c);
+                        var p11 = ReliefPoint(shape, j + 1, toothAngle, c + 1);
+                        HtdPulleyComponent.AddQuad(mesh,
+                            new GearPoint3D(p00.X, p00.Y, zLow), new GearPoint3D(p10.X, p10.Y, zHigh),
+                            new GearPoint3D(p11.X, p11.Y, zHigh), new GearPoint3D(p01.X, p01.Y, zLow));
+                        HtdPulleyComponent.AddQuad(mesh,
+                            new GearPoint3D(p00.X, p00.Y, -zLow), new GearPoint3D(p01.X, p01.Y, -zLow),
+                            new GearPoint3D(p11.X, p11.Y, -zHigh), new GearPoint3D(p10.X, p10.Y, -zHigh));
+                    }
+                }
+            }
+        }
+
         private GearGeometry CreateGeometry()
         {
             var outline = BuildOutline();
             var closed = new List<GearPoint>(outline) { outline[0] };
             var polylines = new List<List<GearPoint>> { closed };
 
+            ReliefShape relief = null;
+            if (TrySideRelief(out var reliefStart)) relief = BuildReliefShape(reliefStart);
+
             if (HasBoreOrHub)
             {
-                return CreateBoredGeometry(outline, polylines);
+                return CreateBoredGeometry(outline, polylines, relief);
             }
 
-            var mesh = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, -FaceWidth / 2.0, 1.0, false);
+            if (relief == null)
+            {
+                var plain = SolidMeshBuilder.Loft(outline, FaceWidth / 2.0, 1.0, -FaceWidth / 2.0, 1.0, false);
+                return new GearGeometry(null, polylines, plain);
+            }
+
+            var mesh = new GearMesh3DBuilder.Mesh3D();
+            AddReliefSurfaces(mesh, relief);
+            HtdPulleyComponent.AddPolygon(mesh, relief.FlatOutline, FaceWidth / 2.0, true);
+            HtdPulleyComponent.AddPolygon(mesh, relief.FlatOutline, -FaceWidth / 2.0, false);
+            mesh.CalculateNormals();
             return new GearGeometry(null, polylines, mesh);
         }
 
@@ -326,7 +572,7 @@ namespace Bolsover.Gears.Model.Assemblies
         /// number of teeth, so the rings and cylinders join without gaps. The end faces of the toothed part are made of one cell per tooth
         /// (an ear-clipped polygon between the outline and a circle just inside the seat bottoms) and a ring from there to the bore.
         /// </summary>
-        private GearGeometry CreateBoredGeometry(List<GearPoint> outline, List<List<GearPoint>> polylines)
+        private GearGeometry CreateBoredGeometry(List<GearPoint> outline, List<List<GearPoint>> polylines, ReliefShape relief)
         {
             var mesh = new GearMesh3DBuilder.Mesh3D();
             var halfWidth = FaceWidth / 2.0;
@@ -335,23 +581,34 @@ namespace Bolsover.Gears.Model.Assemblies
             var segments = Teeth * cellSteps;
 
             var count = outline.Count;
-            for (var i = 0; i < count; i++)
+            if (relief != null)
             {
-                var j = (i + 1) % count;
-                HtdPulleyComponent.AddQuad(mesh,
-                    new GearPoint3D(outline[i].X, outline[i].Y, halfWidth), new GearPoint3D(outline[i].X, outline[i].Y, -halfWidth),
-                    new GearPoint3D(outline[j].X, outline[j].Y, -halfWidth), new GearPoint3D(outline[j].X, outline[j].Y, halfWidth));
-            }
-
-            if (boreRadius > 0.0)
-            {
-                AddToothedCap(mesh, outline, halfWidth, true, boreRadius, cellSteps);
-                AddToothedCap(mesh, outline, -halfWidth, false, boreRadius, cellSteps);
+                AddReliefSurfaces(mesh, relief);
             }
             else
             {
-                HtdPulleyComponent.AddPolygon(mesh, outline, halfWidth, true);
-                HtdPulleyComponent.AddPolygon(mesh, outline, -halfWidth, false);
+                for (var i = 0; i < count; i++)
+                {
+                    var j = (i + 1) % count;
+                    HtdPulleyComponent.AddQuad(mesh,
+                        new GearPoint3D(outline[i].X, outline[i].Y, halfWidth), new GearPoint3D(outline[i].X, outline[i].Y, -halfWidth),
+                        new GearPoint3D(outline[j].X, outline[j].Y, -halfWidth), new GearPoint3D(outline[j].X, outline[j].Y, halfWidth));
+                }
+            }
+
+            // With relief the end faces are flat only up to the start radius of the relief; the teeth above it were built with the walls.
+            var capOutline = relief != null ? relief.FlatOutline : outline;
+            var block = relief != null ? relief.Block : outline.Count / Teeth;
+            var bottomIndex = relief != null ? relief.Bottom : SeatArcSteps + FlankSteps;
+            if (boreRadius > 0.0)
+            {
+                AddToothedCap(mesh, capOutline, halfWidth, true, boreRadius, cellSteps, block, bottomIndex);
+                AddToothedCap(mesh, capOutline, -halfWidth, false, boreRadius, cellSteps, block, bottomIndex);
+            }
+            else
+            {
+                HtdPulleyComponent.AddPolygon(mesh, capOutline, halfWidth, true);
+                HtdPulleyComponent.AddPolygon(mesh, capOutline, -halfWidth, false);
             }
 
             var low = -halfWidth;
@@ -377,14 +634,13 @@ namespace Bolsover.Gears.Model.Assemblies
         }
 
         /// <summary>The end face of the toothed part with a bore: a ring to a circle just inside the seat bottoms, and one cell per tooth outside it.</summary>
-        private void AddToothedCap(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> outline, double z, bool facesUp, double boreRadius, int cellSteps)
+        private void AddToothedCap(GearMesh3DBuilder.Mesh3D mesh, List<GearPoint> outline, double z, bool facesUp, double boreRadius, int cellSteps,
+            int block, int bottom)
         {
             var profile = Profile;
             var bottomRadius = RollerCentreRadius - profile.SeatRadius(ToothForm);
             var ringRadius = bottomRadius - Math.Min(0.5, (bottomRadius - boreRadius) / 2.0);
             var step = 2.0 * Math.PI / Teeth;
-            var block = outline.Count / Teeth;
-            var bottom = SeatArcSteps + FlankSteps; // index of the seat bottom within a block: the points of the left flank come first
 
             HtdPulleyComponent.AddRing(mesh, boreRadius, ringRadius, z, Teeth * cellSteps, facesUp);
 

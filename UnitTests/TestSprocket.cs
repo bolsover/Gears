@@ -245,9 +245,39 @@ namespace UnitTests
                 Assert.AreEqual(width / 2.0, mesh.Vertices.Max(v => v.Z), 1e-9);
                 Assert.AreEqual(-width / 2.0, mesh.Vertices.Min(v => v.Z), 1e-9);
                 Assert.AreEqual(sprocket.BuildOutline().Max(Radius), mesh.Vertices.Max(v => Math.Sqrt(v.X * v.X + v.Y * v.Y)), 1e-9);
-                var expected = SolidMeshBuilder.SignedArea(sprocket.BuildOutline()) * width;
-                Assert.AreEqual(expected, Volume(mesh), expected * 1e-6, series + ": the caps cover the whole outline");
+                var prism = SolidMeshBuilder.SignedArea(sprocket.BuildOutline()) * width;
+                var tip = sprocket.OutsideDiameter / 2.0;
+                Assert.IsTrue(sprocket.TrySideRelief(out var reliefStart));
+                var upper = 2.0 * Math.PI * (tip * tip - reliefStart * reliefStart) / 2.0 * sprocket.SideDrop(tip, reliefStart) * 2.0;
+                var volume = Volume(mesh);
+                Assert.Less(volume, prism, series + ": the side relief removes material");
+                Assert.Greater(volume, prism - upper, series + ": the side relief removes no more than the full ring above its start");
                 Assert.AreEqual(1, geometry.Polylines.Count);
+            }
+        }
+
+        [Test]
+        public void TestSprocket_Mesh_HasTheSideReliefOfTheAlibreExport()
+        {
+            foreach (var series in new[] { ChainSeries.B06, ChainSeries.B08, ChainSeries.B16 })
+            {
+                var sprocket = Sprocket(series, 19);
+                var mesh = sprocket.BuildGeometry().Mesh;
+                var half = sprocket.FaceWidth / 2.0;
+                var tip = sprocket.OutsideDiameter / 2.0;
+                Assert.IsTrue(sprocket.TrySideRelief(out var start));
+
+                foreach (var v in mesh.Vertices)
+                {
+                    var r = Math.Sqrt(v.X * v.X + v.Y * v.Y);
+                    var limit = half - sprocket.SideDrop(r, start);
+                    Assert.LessOrEqual(Math.Abs(v.Z), limit + 1e-6, series + ": a vertex at r = " + r + " is outside the relief");
+                }
+
+                var atTip = mesh.Vertices.Where(v => Math.Abs(Math.Sqrt(v.X * v.X + v.Y * v.Y) - tip) < 1e-6).Max(v => v.Z);
+                Assert.AreEqual(half - sprocket.Profile.SideReliefWidth, atTip, 1e-6, series + ": the side is cut back by C at the tip circle");
+                Assert.AreEqual(half, mesh.Vertices.Max(v => v.Z), 1e-9, series + ": the flat side face is kept");
+                Assert.AreEqual(mesh.Vertices.Max(v => v.Z), -mesh.Vertices.Min(v => v.Z), 1e-9, series + ": the relief is mirrored");
             }
         }
 
@@ -273,7 +303,8 @@ namespace UnitTests
             Assert.AreEqual(-width / 2.0, start, 1e-9);
             Assert.AreEqual(width / 2.0 + 12.0, end, 1e-9);
 
-            var toothed = SolidMeshBuilder.SignedArea(sprocket.BuildOutline()) * width;
+            // The bore and the hub are inside the flat part of the side faces, so they change the volume of the relieved toothed part by their own volume.
+            var toothed = Volume(Sprocket(ChainSeries.B08, 21).BuildGeometry().Mesh);
             var expected = toothed - Disc(10.0) * width + (Disc(20.0) - Disc(10.0)) * 12.0;
             Assert.AreEqual(expected, Volume(mesh), expected * 1e-4, "outline prism minus the bore plus the hub");
             Assert.AreEqual(3, geometry.Polylines.Count, "outline, hub and bore circles");
@@ -289,7 +320,7 @@ namespace UnitTests
             var cellSteps = Math.Max(2, (int)Math.Ceiling(64.0 / 18));
             var segments = 18 * cellSteps;
             var disc = 0.5 * segments * 81.0 * Math.Sin(2.0 * Math.PI / segments);
-            var toothed = SolidMeshBuilder.SignedArea(bored.BuildOutline()) * width;
+            var toothed = Volume(Sprocket(ChainSeries.B10, 18).BuildGeometry().Mesh);
             Assert.IsFalse(bored.HasHub);
             Assert.AreEqual(toothed - disc * width, Volume(bored.BuildGeometry().Mesh), toothed * 1e-4);
 
@@ -528,6 +559,77 @@ namespace UnitTests
             Assert.IsTrue(plan.HasBore);
             Assert.AreEqual(10.0 * unit, plan.BoreRadius, 1e-6);
             Assert.Greater(plan.BoreDepth, (sprocket.FaceWidth + 2.0 * 10.0) * unit, "the cut is deeper than the whole body, both ways from the mid-plane");
+        }
+
+        [Test]
+        public void TestChainProfile_SideRelief_FollowsTheSprocketCatalogue()
+        {
+            // Tooth radius r3 and radius width C of the SIT sprocket catalogue (DIN 8187 / ISO 606).
+            var expected = new (ChainSeries Series, double R3, double C)[]
+            {
+                (ChainSeries.B06, 10.0, 1.0), (ChainSeries.B08, 13.0, 1.3), (ChainSeries.B10, 16.0, 1.6), (ChainSeries.B12, 19.0, 2.0),
+                (ChainSeries.B16, 26.0, 2.5), (ChainSeries.B20, 32.0, 3.5), (ChainSeries.B24, 38.0, 4.0), (ChainSeries.B28, 44.0, 5.0),
+                (ChainSeries.B32, 51.0, 6.0)
+            };
+
+            foreach (var (series, r3, c) in expected)
+            {
+                var profile = ChainProfile.Get(series);
+                Assert.AreEqual(r3, profile.SideRadius, 1e-9, series + " tooth radius r3");
+                Assert.AreEqual(c, profile.SideReliefWidth, 1e-9, series + " radius width C");
+            }
+        }
+
+        [Test]
+        public void TestSprocketSketch_Relief_IsATangentArcThatCutsBackByTheRadiusWidthAtTheTip()
+        {
+            var sprocket = Sprocket(ChainSeries.B08, 19);
+            var plan = SprocketSketchBuilder.Build(sprocket);
+            var unit = SingleToothSketchBuilder.MmToAlibreUnits;
+            var r3 = sprocket.Profile.SideRadius;
+            var c = sprocket.Profile.SideReliefWidth;
+            var halfWidth = sprocket.FaceWidth / 2.0;
+            var tipRadius = sprocket.OutsideDiameter / 2.0;
+
+            Assert.IsTrue(plan.HasRelief);
+            Assert.IsTrue(plan.IsReliefClosed(), "The relief is one closed sketch.");
+            Assert.AreEqual(4, plan.Relief.Count);
+
+            var arc = plan.Relief.Single(f => f.Kind == ToothSketchFigureKind.Arc);
+            Assert.AreEqual(r3 * unit, Math.Sqrt(Math.Pow(arc.StartX - arc.CentreX, 2) + Math.Pow(arc.StartY - arc.CentreY, 2)), 1e-6, "arc radius r3 (start)");
+            Assert.AreEqual(r3 * unit, Math.Sqrt(Math.Pow(arc.EndX - arc.CentreX, 2) + Math.Pow(arc.EndY - arc.CentreY, 2)), 1e-6, "arc radius r3 (end)");
+
+            // Anticlockwise from the tip end to the tangent point, which is straight above the centre: the arc is tangent to the side face.
+            Assert.AreEqual(tipRadius * unit, arc.StartX, 1e-6, "the arc reaches the tip circle");
+            Assert.AreEqual((halfWidth - c) * unit, arc.StartY, 1e-6, "the side is cut back by C at the tip circle");
+            Assert.AreEqual(arc.CentreX, arc.EndX, 1e-6, "the tangent point is above the centre");
+            Assert.AreEqual(halfWidth * unit, arc.EndY, 1e-6, "the arc is tangent to the tooth side face");
+            Assert.AreEqual((halfWidth - r3) * unit, arc.CentreY, 1e-6, "the centre is r3 inside the tooth side face");
+            Assert.AreEqual((tipRadius - Math.Sqrt(2.0 * r3 * c - c * c)) * unit, arc.EndX, 1e-6, "the relief starts at R0");
+
+            var bottom = (sprocket.RollerCentreRadius - sprocket.Profile.SeatRadius(sprocket.ToothForm)) * unit;
+            Assert.Greater(arc.EndX, bottom, "the relief starts above the bottom of the roller seats");
+            Assert.LessOrEqual(plan.Relief.Max(f => Math.Max(f.StartY, f.EndY)), halfWidth * unit + 1e-9, "nothing is cut beyond the side face");
+        }
+
+        [Test]
+        public void TestSprocketSketch_Relief_IsClosedForEverySeriesAndToothForm()
+        {
+            foreach (ChainSeries series in Enum.GetValues(typeof(ChainSeries)))
+            {
+                foreach (var form in new[] { SprocketToothForm.Maximum, SprocketToothForm.Minimum })
+                {
+                    foreach (var teeth in new[] { 9, 19, 40 })
+                    {
+                        var sprocket = Sprocket(series, teeth);
+                        sprocket.ToothForm = form;
+                        var plan = SprocketSketchBuilder.Build(sprocket);
+                        var text = $"{series} z={teeth} {form}";
+                        Assert.IsTrue(plan.HasRelief, text);
+                        Assert.IsTrue(plan.IsReliefClosed(), text);
+                    }
+                }
+            }
         }
 
         [Test]

@@ -72,6 +72,9 @@ namespace Bolsover.Gears.Calculator.Alibre
         public const string PulleyAxisName = "Z-Axis";
         public const string HubSketchName = "HubSection";
         public const string HubFeatureName = "Hub";
+        public const string ReliefSketchName = "ToothReliefSection";
+        public const string ReliefFeatureName = "ToothRelief";
+        public const string ReliefMirrorFeatureName = "ToothReliefMirror";
         public const string BoreSketchName = "BoreSection";
         public const string BoreFeatureName = "Bore";
         public const string ChainSketchNamePrefix = "ChainLinks";
@@ -537,7 +540,8 @@ namespace Bolsover.Gears.Calculator.Alibre
         /// <summary>
         /// Creates an ISO 606 roller chain sprocket in a new Alibre part: a closed sketch of one tooth cell (a wedge one pitch wide, with the
         /// roller seating arc, the two flank arcs and the tip arcs) on the XY plane, extruded mid-plane (half the width to each side of the
-        /// plane), a circular pattern of that cell about the Z axis, for a sprocket with a hub a revolve of the hub rectangle on the positive
+        /// plane), a circular pattern of that cell about the Z axis, the tooth side relief (a closed sketch on the plane that holds the Z axis,
+        /// revolve cut about the Z axis and mirrored about the XY plane), for a sprocket with a hub a revolve of the hub rectangle on the positive
         /// side (sketched on the plane that holds the Z axis) about the Z axis, and for a sprocket with a bore a circle on the XY plane that is
         /// cut through the whole body. The toothed width runs from z = -width / 2 to z = width / 2, so the sketch plane is the mid-plane.
         /// </summary>
@@ -547,6 +551,7 @@ namespace Bolsover.Gears.Calculator.Alibre
             var cell = plan.Tooth;
             if (!cell.IsClosed()) throw new InvalidOperationException($"The tooth sketch of sprocket '{sprocket.Id}' is not closed, so it cannot be exported.");
             if (!plan.IsHubClosed()) throw new InvalidOperationException($"The hub sketch of sprocket '{sprocket.Id}' is not closed, so it cannot be exported.");
+            if (!plan.IsReliefClosed()) throw new InvalidOperationException($"The tooth side relief sketch of sprocket '{sprocket.Id}' is not closed, so it cannot be exported.");
 
             var stage = "creating the part";
             try
@@ -581,6 +586,25 @@ namespace Bolsover.Gears.Calculator.Alibre
 
                 stage = "patterning the tooth cell";
                 session.Features.AddCircularFeaturePattern(targets, cell.Teeth, cell.PatternAngle, null, axis, false, PatternGeometry, PatternFeatureName);
+
+                if (plan.HasRelief)
+                {
+                    var ySign = AxialPlaneSketchYIsNegativeZ ? -1.0 : 1.0;
+                    var axialPlane = session.DesignPlanes.Item(AxialSketchPlaneName);
+
+                    // The tooth side relief is one closed sketch in a plane that holds the Z axis, revolved about the axis as a cut; the cut
+                    // on the +Z side is then mirrored across the XY plane (the mid-plane) for the -Z side.
+                    stage = "drawing the tooth side relief";
+                    var reliefSketch = session.Sketches.AddSketch(null, axialPlane, ReliefSketchName);
+                    DrawFigures(reliefSketch, plan.Relief, null, ySign);
+
+                    stage = "cutting the tooth side relief";
+                    var relief = session.Features.AddRevolvedCutout(reliefSketch, null, axis, 2.0 * Math.PI, ReliefFeatureName);
+                    CheckFeature(relief, "The tooth side relief");
+
+                    stage = "mirroring the tooth side relief across the " + SketchPlaneName;
+                    AddMirror(session, relief, plane, ReliefMirrorFeatureName, "The mirror of the tooth side relief");
+                }
 
                 if (plan.HasHub)
                 {
