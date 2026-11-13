@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="g"
+                 name="Gears"
+                 start-page="Gears-Overview.md">
+
+    <toc-element topic="Gears-Overview.md">
+        <toc-element topic="Symbols.md"/>
+        <toc-element topic="Involute-Spur-Gears.md"/>
+        <toc-element topic="Helical-Gears.md"/>
+        <toc-element topic="Gear-Pair-Calculations.md"/>
+        <toc-element topic="Racks.md"/>
+        <toc-element topic="Straight-Bevel-Gears.md"/>
+        <toc-element topic="Spiral-and-Zerol-Bevel-Gears.md"/>
+        <toc-element topic="Hypoid-Gears.md"/>
+        <toc-element topic="Worm-Gears.md"/>
+        <toc-element topic="Cycloidal-Gears.md"/>
+        <toc-element topic="Planetary-Gear-Sets.md"/>
+        <toc-element topic="HTD-Pulleys-and-Timing-Belts.md"/>
+        <toc-element topic="Roller-Chain-Sprockets.md"/>
+        <toc-element topic="Design-Limits.md"/>
+    </toc-element>
+</instance-profile>
