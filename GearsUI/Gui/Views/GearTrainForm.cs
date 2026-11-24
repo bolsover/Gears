@@ -483,6 +483,7 @@ namespace Bolsover.Gears.Gui.Views
             menuHelp.DropDownItems.Add("&About", null, (s, e) => ShowAbout());
             menuHelp.DropDownItems.Add("&Help", null, (s, e) => ShowDocument("Help", "README.html"));
             menuHelp.DropDownItems.Add("&License", null, (s, e) => ShowDocument("License", "LICENSE.html"));
+            menuHelp.DropDownItems.Add("&Reference", null, (s, e) => ShowReference());
 
             return menuHelp;
         }
@@ -1192,6 +1193,28 @@ namespace Bolsover.Gears.Gui.Views
             catch (Exception ex)
             {
                 MessageBox.Show(this, $"Could not open {path}.\n{ex.Message}", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowReference()
+        {
+            var topicsFolder = MarkdownTopicRenderer.FindTopicsFolder(Path.GetDirectoryName(typeof(GearTrainForm).Assembly.Location));
+            if (topicsFolder == null)
+            {
+                MessageBox.Show(this, "The Writerside reference topics were not found.", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                using (var form = new ReferenceForm(topicsFolder))
+                {
+                    form.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"Could not open the reference topics in {topicsFolder}.\n{ex.Message}", "Gear Train", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
