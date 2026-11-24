@@ -161,6 +161,7 @@
     <Compile Include="TestGearTrain.cs" />
     <Compile Include="TestGearAdjustments.cs" />
     <Compile Include="TestPropertyLayout.cs" />
+    <Compile Include="TestNumericInputs.cs" />
     <Compile Include="TestImperialUnits.cs" />
     <Compile Include="TestGearScene2D.cs" />
     <Compile Include="TestBevelGearTypes.cs" />

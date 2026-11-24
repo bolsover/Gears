@@ -74,18 +74,16 @@ external gear, both carried to the working circle in the same way.
 ## Contact ratio
 
 The contact ratio is the average number of tooth pairs in contact. The transverse (radial) contact ratio of an
-external pair is
+external pair is:
 
 $$
-\varepsilon_\alpha = \frac{\sqrt{\left(\frac{d_{a1}}{2}\right)^2 - \left(\frac{d_{b1}}{2}\right)^2}
-+ \sqrt{\left(\frac{d_{a2}}{2}\right)^2 - \left(\frac{d_{b2}}{2}\right)^2} - a_w \sin\alpha_w}{\pi m \cos\alpha}
+\varepsilon_\alpha = \frac{\sqrt{\left(\frac{d_{a1}}{2}\right)^2 - \left(\frac{d_{b1}}{2}\right)^2} + \sqrt{\left(\frac{d_{a2}}{2}\right)^2 - \left(\frac{d_{b2}}{2}\right)^2} - a_w \sin\alpha_w}{\pi m \cos\alpha}
 $$
 
 For an internal pair the second root and the centre distance term change sign:
 
 $$
-\varepsilon_\alpha = \frac{\sqrt{\left(\frac{d_{a1}}{2}\right)^2 - \left(\frac{d_{b1}}{2}\right)^2}
-- \sqrt{\left(\frac{d_{a2}}{2}\right)^2 - \left(\frac{d_{b2}}{2}\right)^2} + a_w \sin\alpha_w}{\pi m \cos\alpha}
+\varepsilon_\alpha = \frac{\sqrt{\left(\frac{d_{a1}}{2}\right)^2 - \left(\frac{d_{b1}}{2}\right)^2} - \sqrt{\left(\frac{d_{a2}}{2}\right)^2 - \left(\frac{d_{b2}}{2}\right)^2} + a_w \sin\alpha_w}{\pi m \cos\alpha}
 $$
 
 For helical gears replace $m$ by $m_t$, $\alpha$ by $\alpha_t$ and $\alpha_w$ by $\alpha_{wt}$, and add the axial contact

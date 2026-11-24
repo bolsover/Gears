@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing.Design;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Bolsover.Gears.Gui.Views;
 
 namespace Bolsover.Gears.Gui.Presenters
 {
@@ -288,6 +291,11 @@ namespace Bolsover.Gears.Gui.Presenters
                     descriptor = TypeDescriptor.CreateProperty(target.GetType(), descriptor, new CategoryAttribute(prefix + item.Category));
                 }
 
+                if (!descriptor.IsReadOnly && (descriptor.PropertyType == typeof(int) || descriptor.PropertyType == typeof(double)))
+                {
+                    descriptor = new NumericPropertyDescriptor(descriptor);
+                }
+
                 list.Add(descriptor);
             }
 
@@ -314,6 +322,45 @@ namespace Bolsover.Gears.Gui.Presenters
         public PropertyDescriptorCollection GetProperties(Attribute[] attributes) => _properties;
         public PropertyDescriptorCollection GetProperties() => _properties;
         public object GetPropertyOwner(PropertyDescriptor pd) => _target;
+
+        private sealed class NumericPropertyDescriptor : PropertyDescriptor
+        {
+            private readonly PropertyDescriptor _property;
+            private readonly NumericLimits _limits;
+
+            public NumericPropertyDescriptor(PropertyDescriptor property)
+                : base(property, new Attribute[] { new EditorAttribute(typeof(NumericUpDownEditor), typeof(UITypeEditor)) })
+            {
+                _property = property;
+                _limits = NumericInputLimits.For(property);
+            }
+
+            public override Type ComponentType => _property.ComponentType;
+            public override bool IsReadOnly => _property.IsReadOnly;
+            public override Type PropertyType => _property.PropertyType;
+            public override bool CanResetValue(object component) => _property.CanResetValue(component);
+            public override object GetValue(object component) => _property.GetValue(component);
+            public override void ResetValue(object component) => _property.ResetValue(component);
+            public override bool ShouldSerializeValue(object component) => _property.ShouldSerializeValue(component);
+
+            public override void SetValue(object component, object value)
+            {
+                var numeric = Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+                var clamped = _limits.Clamp(numeric);
+                object normalized;
+                if (PropertyType == typeof(int))
+                {
+                    normalized = decimal.ToInt32(decimal.Round(clamped, 0, MidpointRounding.AwayFromZero));
+                }
+                else
+                {
+                    normalized = decimal.ToDouble(decimal.Round(clamped, 3, MidpointRounding.AwayFromZero));
+                }
+
+                _property.SetValue(component, normalized);
+                OnValueChanged(component, EventArgs.Empty);
+            }
+        }
 
         private sealed class NoteDescriptor : PropertyDescriptor
         {

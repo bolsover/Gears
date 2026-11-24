@@ -53,15 +53,15 @@ namespace Bolsover.Gears.Gui.Views
         };
 
         private readonly ToolStripStatusLabel _status = new ToolStripStatusLabel("Ready");
-        private readonly NumericUpDown _numSpeed = new NumericUpDown { Minimum = -100000, Maximum = 100000, DecimalPlaces = 1, Value = 1000, Width = 80 };
-        private readonly NumericUpDown _numAngle = new NumericUpDown { Minimum = -360, Maximum = 360, DecimalPlaces = 1, Value = 0, Width = 70 };
+        private readonly NumericUpDown _numSpeed = new NumericUpDown { Minimum = -100000, Maximum = 100000, DecimalPlaces = 3, Increment = 0.1m, Value = 1000, Width = 80 };
+        private readonly NumericUpDown _numAngle = new NumericUpDown { Minimum = -360, Maximum = 360, DecimalPlaces = 3, Increment = 0.1m, Value = 0, Width = 70 };
         private readonly ToolStripMenuItem _btnWireframe = new ToolStripMenuItem("Wireframe") { CheckOnClick = true };
         private readonly ToolStripMenuItem _btnShafts = new ToolStripMenuItem("Shafts") { CheckOnClick = true, Checked = true };
         private readonly ToolStripMenuItem _btnPitchCircles = new ToolStripMenuItem("Pitch circles") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the pitch circle of each spur and helical gear." };
         private readonly ToolStripMenuItem _btnLabels = new ToolStripMenuItem("Labels") { CheckOnClick = true, Checked = true, ToolTipText = "2D view: show the name of each gear." };
         private readonly ToolStripMenuItem _btnAnimate = new ToolStripMenuItem("Animate") { CheckOnClick = true };
         private readonly ToolStripMenuItem _btnExportSelected = new ToolStripMenuItem("Export &selected to Alibre…")         {             Enabled = false,             ToolTipText = "Create the selected parts in Alibre Design. One selected part (an involute gear, rack, worm, worm wheel, bevel gear, cycloidal gear, HTD pulley, timing belt, shaft or planetary carrier) is exported directly as a new Alibre part. With several parts selected you choose between separate new parts and one new assembly that holds only the selected gears, shafts, carriers and belts at their train positions. Click parts in the 3D or 2D view to select several. Available when the editor runs inside Alibre Design."         };         private readonly ToolStripMenuItem _btnExportAll = new ToolStripMenuItem("Export &all to Alibre…")         {             Enabled = false,             ToolTipText = "Create a new Alibre assembly from the whole gear train: every gear, every shaft (a shaft that only carries a rack is skipped), every planetary carrier and every timing belt. Each one is built as a new part and placed at its train position. The assembly needs at least two parts. Available when the editor runs inside Alibre Design."         };
-        private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 1, Value = 30, Width = 70 };
+        private readonly NumericUpDown _numAnimSpeed = new NumericUpDown { Minimum = -600, Maximum = 600, DecimalPlaces = 3, Increment = 0.1m, Value = 30, Width = 70 };
         private readonly Timer _animationTimer = new Timer { Interval = 60 };
 
         private bool _syncingAngle;

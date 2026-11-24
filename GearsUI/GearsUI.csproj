@@ -164,6 +164,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Design" />
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
@@ -178,6 +179,7 @@
     <Compile Include="Gui\Presenters\GearTrainPresenter.cs" />
     <Compile Include="Gui\Presenters\GearNodeProperties.cs" />
     <Compile Include="Gui\Presenters\ComponentNodePropertiesBase.cs" />
+    <Compile Include="Gui\Presenters\NumericInputLimits.cs" />
     <Compile Include="Gui\Presenters\RackNodeProperties.cs" />
     <Compile Include="Gui\Presenters\PulleyNodeProperties.cs" />
     <Compile Include="Gui\Presenters\CycloidalNodeProperties.cs" />
@@ -201,6 +203,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Gui\Views\IGearTrainView.cs" />
+    <Compile Include="Gui\Views\NumericUpDownEditor.cs" />
     <Compile Include="Gui\Views\ExportChoiceDialog.cs" />
     <Compile Include="Gui\Views\HtmlDocumentForm.cs">
       <SubType>Form</SubType>
