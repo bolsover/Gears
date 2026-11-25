@@ -172,7 +172,9 @@ namespace Bolsover.Gears.Calculator
                 var singleInner = new List<GearPoint>();
                 foreach (var pt in profile.LowerArc2) singleInner.Add(pt);
                 foreach (var pt in profile.Involute1) singleInner.Add(pt);
+                foreach (var pt in profile.RootFillet1) singleInner.Add(pt);
                 foreach (var pt in profile.UpperArc) singleInner.Add(pt);
+                foreach (var pt in profile.RootFillet2) singleInner.Add(pt);
                 foreach (var pt in profile.Involute2) singleInner.Add(pt);
                 foreach (var pt in profile.LowerArc1) singleInner.Add(pt);
 
@@ -218,9 +220,13 @@ namespace Bolsover.Gears.Calculator
             {
                 var singleOuter = new List<GearPoint>();
                 foreach (var pt in profile.Trochoid1) singleOuter.Add(pt);
+                foreach (var pt in profile.RootFillet1) singleOuter.Add(pt);
+                foreach (var pt in profile.FlankLine1) singleOuter.Add(pt);
                 foreach (var pt in profile.Involute1) singleOuter.Add(pt);
                 foreach (var pt in profile.UpperArc) singleOuter.Add(pt);
                 foreach (var pt in profile.Involute2) singleOuter.Add(pt);
+                foreach (var pt in profile.FlankLine2) singleOuter.Add(pt);
+                foreach (var pt in profile.RootFillet2) singleOuter.Add(pt);
                 foreach (var pt in profile.Trochoid2) singleOuter.Add(pt);
                 foreach (var pt in profile.LowerArc) singleOuter.Add(pt);
 

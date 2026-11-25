@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Model.Assemblies
 {
@@ -306,6 +307,7 @@ namespace Bolsover.Gears.Model.Assemblies
             dto.RimThickness = g.RimThickness;
             dto.OptimalShift = g.OptimalShift;
             dto.ShowFullGear = g.ShowFullGear;
+            if (g.RootFillet != RootFilletType.Standard) dto.RootFillet = g.RootFillet.ToString();
         }
 
         private static void WriteRack(GearDto dto, RackComponent g)
@@ -376,6 +378,7 @@ namespace Bolsover.Gears.Model.Assemblies
             dto.LeadAngleDeg = g.LeadAngleDeg;
             dto.HelicalDirection = g.HelicalDirection;
             dto.Backlash = g.Backlash;
+            if (g.RootFillet != RootFilletType.Standard) dto.RootFillet = g.RootFillet.ToString();
         }
 
         private static void WriteHtdPulley(GearDto dto, HtdPulleyComponent g)
@@ -534,7 +537,8 @@ namespace Bolsover.Gears.Model.Assemblies
                 IsInternal = dto.IsInternal ?? false,
                 RimThickness = dto.RimThickness ?? 10.0,
                 OptimalShift = dto.OptimalShift ?? false,
-                ShowFullGear = dto.ShowFullGear ?? true
+                ShowFullGear = dto.ShowFullGear ?? true,
+                RootFillet = Enum.TryParse(dto.RootFillet, true, out RootFilletType rootFillet) ? rootFillet : RootFilletType.Standard
             };
         }
 
@@ -611,7 +615,8 @@ namespace Bolsover.Gears.Model.Assemblies
                 Teeth = dto.Teeth ?? 30,
                 LeadAngleDeg = dto.LeadAngleDeg ?? 0.0,
                 HelicalDirection = dto.HelicalDirection ?? "R",
-                Backlash = dto.Backlash ?? 0.0
+                Backlash = dto.Backlash ?? 0.0,
+                RootFillet = Enum.TryParse(dto.RootFillet, true, out RootFilletType rootFillet) ? rootFillet : RootFilletType.Standard
             };
         }
 
@@ -714,6 +719,7 @@ namespace Bolsover.Gears.Model.Assemblies
             public double? RimThickness { get; set; }
             public bool? OptimalShift { get; set; }
             public bool? ShowFullGear { get; set; }
+            public string RootFillet { get; set; }
             public double? BodyHeight { get; set; }
             public int? MateTeeth { get; set; }
             public double? ShaftAngleDeg { get; set; }

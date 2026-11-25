@@ -26,7 +26,7 @@
     <Prefer32bit>true</Prefer32bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -158,6 +158,7 @@
     <Compile Include="NCalcTests.cs" />
     <Compile Include="NewtonRaphsonTest.cs" />
     <Compile Include="TestGearAssembly.cs" />
+    <Compile Include="TestRootFillet.cs" />
     <Compile Include="TestGearTrain.cs" />
     <Compile Include="TestGearAdjustments.cs" />
     <Compile Include="TestPropertyLayout.cs" />
@@ -166,6 +167,7 @@
     <Compile Include="TestGearScene2D.cs" />
     <Compile Include="TestBevelGearTypes.cs" />
     <Compile Include="TestReferenceRenderer.cs" />
+    <Compile Include="TestRootFillet.cs" />
     <Compile Include="TestSpiralToothTrace.cs" />
     <Compile Include="TestSpiralBlankMesh.cs" />
     <Compile Include="TestSpiralBevelGears.cs" />

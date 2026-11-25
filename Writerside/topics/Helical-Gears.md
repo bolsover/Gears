@@ -79,11 +79,11 @@ pitch diameter:
 | 5 | Shaft angle, opposite hands | $\Sigma$ | $\lvert \beta_1 - \beta_2 \rvert$ |
 | 6 | Gear ratio | $i$ | $\dfrac{z_2}{z_1}$ |
 
-<note>
-The speed ratio is determined by the <b>tooth numbers</b> $z_2 / z_1$, not by the pitch diameters, because the
-helix angles may differ. A shaft angle of $0°$ with opposite hands and equal helix angles is the ordinary parallel
-helical mesh.
-</note>
+### Note
+> The speed ratio is determined by the <b>tooth numbers</b> $z_2 / z_1$ , not by the pitch diameters, because the
+> helix angles may differ. A shaft angle of $0°$ with opposite hands and equal helix angles is the ordinary parallel
+> helical mesh.
+
 
 ## Engineering requirements
 

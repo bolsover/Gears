@@ -20,11 +20,18 @@ namespace Bolsover.Gears.Calculator
         {
             // External profile segments
             public List<GearPoint> Trochoid1 { get; set; } = new List<GearPoint>();
+            public List<GearPoint> RootFillet1 { get; set; } = new List<GearPoint>();
+            public List<GearPoint> FlankLine1 { get; set; } = new List<GearPoint>();
             public List<GearPoint> Involute1 { get; set; } = new List<GearPoint>();
             public List<GearPoint> UpperArc { get; set; } = new List<GearPoint>();
             public List<GearPoint> Involute2 { get; set; } = new List<GearPoint>();
+            public List<GearPoint> FlankLine2 { get; set; } = new List<GearPoint>();
+            public List<GearPoint> RootFillet2 { get; set; } = new List<GearPoint>();
             public List<GearPoint> Trochoid2 { get; set; } = new List<GearPoint>();
             public List<GearPoint> LowerArc { get; set; } = new List<GearPoint>();
+
+            public GearPoint RootFilletCentre1 { get; set; }
+            public GearPoint RootFilletCentre2 { get; set; }
 
             // Additional internal profile segments
             public List<GearPoint> LowerArc1 { get; set; } = new List<GearPoint>();
@@ -103,7 +110,8 @@ namespace Bolsover.Gears.Calculator
             int[] numPoints = null,
             double? clearance = null,
             double? backlash = null,
-            double? helixAngle = null)
+            double? helixAngle = null,
+            RootFilletType rootFillet = RootFilletType.Standard)
         {
             numPoints = numPoints ?? new[] { 10, 10, 5, 5 };
             var c = clearance ?? (0.25 * m);
@@ -154,6 +162,17 @@ namespace Bolsover.Gears.Calculator
             var addendumInvoluteAngle = Math.Acos(baseRadius / addendumRadius);
             var maxInvoluteAngle = addendumInvoluteAngle + InvoluteFunction(addendumInvoluteAngle);
 
+            // Tooth positioning angle
+            var toothAngle = -angularToothWidth - 2 * phi;
+
+            var rootFilletRadius = rootFillet == RootFilletType.Radius ? 0.38 * m : 0.0;
+            ExternalRootFilletGeometry rootFilletGeometry = null;
+            if (rootFillet == RootFilletType.Radius)
+            {
+                dedendumRadius = AdjustExternalRootRadius(baseRadius, dedendumRadius, pitchRadius, rootFilletRadius, toothAngle, z);
+                rootFilletGeometry = CreateExternalRootFillet(baseRadius, dedendumRadius, rootFilletRadius);
+            }
+
             // Dedendum involute angle only if base radius is smaller than dedendum radius
             double dedendumInvoluteAngle;
             if (baseRadius < dedendumRadius)
@@ -165,10 +184,9 @@ namespace Bolsover.Gears.Calculator
                 dedendumInvoluteAngle = 0;
             }
 
-            var minInvoluteAngle = dedendumInvoluteAngle + InvoluteFunction(dedendumInvoluteAngle);
-
-            // Tooth positioning angle
-            var toothAngle = -angularToothWidth - 2 * phi;
+            var minInvoluteAngle = rootFilletGeometry != null
+                ? rootFilletGeometry.Theta
+                : dedendumInvoluteAngle + InvoluteFunction(dedendumInvoluteAngle);
 
             var profile = new AlibreGearProfile();
 
@@ -196,7 +214,7 @@ namespace Bolsover.Gears.Calculator
 
             // === Trochoid curves ===
             double betaTrochoid = 0;
-            if (baseRadius > dedendumRadius)
+            if (rootFilletGeometry == null && baseRadius > dedendumRadius)
             {
                 var tTrochoid = baseRadius - dedendumRadius;
                 var bTrochoid = Math.Sqrt(
@@ -255,7 +273,13 @@ namespace Bolsover.Gears.Calculator
             // Lower arc (dedendum)
             var pitchAngle = 2.0 * Math.PI / z;
             double startAngleLower, endAngleLower;
-            if (baseRadius > dedendumRadius)
+            if (rootFilletGeometry != null)
+            {
+                var secondRootPoint = TransformSecondFlank(rootFilletGeometry.RootPoint, toothAngle, 0.0);
+                startAngleLower = Math.Atan2(secondRootPoint.Y, secondRootPoint.X);
+                endAngleLower = Math.Atan2(rootFilletGeometry.RootPoint.Y, rootFilletGeometry.RootPoint.X) - pitchAngle;
+            }
+            else if (baseRadius > dedendumRadius)
             {
                 startAngleLower = toothAngle - betaTrochoid;
                 endAngleLower = -pitchAngle + betaTrochoid;
@@ -282,7 +306,34 @@ namespace Bolsover.Gears.Calculator
             profile.Trochoid2 = GearPoint.Rotated(profile.Trochoid2, rotationAngle);
             profile.LowerArc = GearPoint.Rotated(profile.LowerArc, rotationAngle);
 
-            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt, betaDeg);
+            if (rootFilletGeometry != null)
+            {
+                profile.RootFillet1 = Rotate(rootFilletGeometry.Points, rotationAngle);
+                profile.RootFilletCentre1 = rootFilletGeometry.Centre.Rotate(rotationAngle);
+                profile.RootFillet2 = TransformSecondFlank(rootFilletGeometry.Points, toothAngle, rotationAngle);
+                profile.RootFillet2.Reverse();
+                profile.RootFilletCentre2 = TransformSecondFlank(rootFilletGeometry.Centre, toothAngle, rotationAngle);
+
+                if (rootFilletGeometry.HasFlankLine)
+                {
+                    var firstFlankLine = new List<GearPoint> { rootFilletGeometry.ContactPoint, new GearPoint(baseRadius, 0.0) };
+                    profile.FlankLine1 = Rotate(firstFlankLine, rotationAngle);
+                    profile.FlankLine2 = TransformSecondFlank(firstFlankLine, toothAngle, rotationAngle);
+                    profile.FlankLine2.Reverse();
+                    profile.Involute1[0] = profile.FlankLine1[profile.FlankLine1.Count - 1];
+                    profile.Involute2[profile.Involute2.Count - 1] = profile.FlankLine2[0];
+                }
+                else
+                {
+                    profile.Involute1[0] = profile.RootFillet1[profile.RootFillet1.Count - 1];
+                    profile.Involute2[profile.Involute2.Count - 1] = profile.RootFillet2[0];
+                }
+
+                profile.LowerArc[0] = profile.RootFillet2[profile.RootFillet2.Count - 1];
+                profile.LowerArc[profile.LowerArc.Count - 1] = profile.RootFillet1[0].Rotate(-pitchAngle);
+            }
+
+            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt, betaDeg, rootFilletRadius);
             return profile;
         }
 
@@ -307,7 +358,8 @@ namespace Bolsover.Gears.Calculator
             int[] numPoints = null,
             double? clearance = null,
             double? backlash = null,
-            double? helixAngle = null)
+            double? helixAngle = null,
+            RootFilletType rootFillet = RootFilletType.Standard)
         {
             numPoints ??= new[] { 10, 5, 5, 10 };
             var c = clearance ?? (0.25 * m);
@@ -349,6 +401,15 @@ namespace Bolsover.Gears.Calculator
             var phi = InvoluteFunction(offsetAngle);
             var angularToothWidth = Math.Max(1e-6, (Math.PI * m / 2.0 - jt) / (m * z / 2.0));
 
+            var toothAngle = -angularToothWidth - 2 * phi;
+            var rootFilletRadius = rootFillet == RootFilletType.Radius ? 0.38 * m : 0.0;
+            InternalRootFilletGeometry rootFilletGeometry = null;
+            if (rootFillet == RootFilletType.Radius)
+            {
+                dedendumRadius = AdjustInternalRootRadius(baseRadius, dedendumRadius, rootFilletRadius, toothAngle, z);
+                rootFilletGeometry = CreateInternalRootFillet(baseRadius, dedendumRadius, rootFilletRadius, numPoints[1]);
+            }
+
             var dedendumInvoluteAngle = Math.Acos(baseRadius / dedendumRadius);
 
             double addendumInvoluteAngle;
@@ -361,10 +422,8 @@ namespace Bolsover.Gears.Calculator
                 addendumInvoluteAngle = 0;
             }
 
-            var maxInvoluteAngle = dedendumInvoluteAngle + InvoluteFunction(dedendumInvoluteAngle);
+            var maxInvoluteAngle = rootFilletGeometry?.Theta ?? (dedendumInvoluteAngle + InvoluteFunction(dedendumInvoluteAngle));
             var minInvoluteAngle = addendumInvoluteAngle + InvoluteFunction(addendumInvoluteAngle);
-
-            var toothAngle = -angularToothWidth - 2 * phi;
 
             var profile = new AlibreGearProfile();
 
@@ -390,8 +449,15 @@ namespace Bolsover.Gears.Calculator
 
             // Upper arc (addendum)
             var involuteAtDedendum = InvoluteFunction(dedendumInvoluteAngle);
-            var startAngleUpper = -involuteAtDedendum;
-            var endAngleUpper = toothAngle + involuteAtDedendum;
+            var startAngleUpper = rootFilletGeometry == null
+                ? -involuteAtDedendum
+                : Math.Atan2(rootFilletGeometry.RootPoint.Y, rootFilletGeometry.RootPoint.X);
+            var secondRootPoint = rootFilletGeometry == null
+                ? null
+                : TransformSecondFlank(rootFilletGeometry.RootPoint, toothAngle, 0.0);
+            var endAngleUpper = secondRootPoint == null
+                ? toothAngle + involuteAtDedendum
+                : Math.Atan2(secondRootPoint.Y, secondRootPoint.X);
 
             for (var i = 0; i < numPoints[1]; i++)
             {
@@ -446,7 +512,21 @@ namespace Bolsover.Gears.Calculator
             profile.LowerArc2 = GearPoint.Rotated(profile.LowerArc2, rotationAngle);
             profile.ExternalArc = GearPoint.Rotated(profile.ExternalArc, rotationAngle);
 
-            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt, betaDeg);
+            if (rootFilletGeometry != null)
+            {
+                profile.RootFillet1 = Rotate(rootFilletGeometry.Points, rotationAngle);
+                profile.RootFillet2 = TransformSecondFlank(rootFilletGeometry.Points, toothAngle, rotationAngle);
+                profile.RootFillet2.Reverse();
+                profile.RootFilletCentre1 = rootFilletGeometry.Centre.Rotate(rotationAngle);
+                profile.RootFilletCentre2 = TransformSecondFlank(rootFilletGeometry.Centre, toothAngle, rotationAngle);
+
+                profile.Involute1[profile.Involute1.Count - 1] = profile.RootFillet1[0];
+                profile.Involute2[0] = profile.RootFillet2[profile.RootFillet2.Count - 1];
+                profile.UpperArc[0] = profile.RootFillet1[profile.RootFillet1.Count - 1];
+                profile.UpperArc[profile.UpperArc.Count - 1] = profile.RootFillet2[0];
+            }
+
+            PopulateParameters(profile, z, m, alphaDeg, profileShift, pitchRadius, baseRadius, addendumRadius, dedendumRadius, c, jt, betaDeg, rootFilletRadius);
             return profile;
         }
 
@@ -464,7 +544,9 @@ namespace Bolsover.Gears.Calculator
             {
                 AddIfAny(segments, p.LowerArc2);
                 AddIfAny(segments, p.Involute1);
+                AddIfAny(segments, p.RootFillet1);
                 AddIfAny(segments, p.UpperArc);
+                AddIfAny(segments, p.RootFillet2);
                 AddIfAny(segments, p.Involute2);
                 AddIfAny(segments, p.LowerArc1);
                 AddIfAny(segments, p.ExternalArc);
@@ -472,9 +554,13 @@ namespace Bolsover.Gears.Calculator
             else
             {
                 AddIfAny(segments, p.Trochoid1);
+                AddIfAny(segments, p.RootFillet1);
+                AddIfAny(segments, p.FlankLine1);
                 AddIfAny(segments, p.Involute1);
                 AddIfAny(segments, p.UpperArc);
                 AddIfAny(segments, p.Involute2);
+                AddIfAny(segments, p.FlankLine2);
+                AddIfAny(segments, p.RootFillet2);
                 AddIfAny(segments, p.Trochoid2);
                 AddIfAny(segments, p.LowerArc);
             }
@@ -504,6 +590,190 @@ namespace Bolsover.Gears.Calculator
             return result;
         }
 
+        private sealed class ExternalRootFilletGeometry
+        {
+            public double Theta { get; set; }
+            public GearPoint ContactPoint { get; set; }
+            public GearPoint Centre { get; set; }
+            public GearPoint RootPoint { get; set; }
+            public List<GearPoint> Points { get; set; }
+            public bool HasFlankLine { get; set; }
+        }
+
+        private sealed class InternalRootFilletGeometry
+        {
+            public double Theta { get; set; }
+            public GearPoint Centre { get; set; }
+            public GearPoint RootPoint { get; set; }
+            public List<GearPoint> Points { get; set; }
+        }
+
+        private static double AdjustExternalRootRadius(double baseRadius, double rootRadius, double maximumRadius,
+            double filletRadius, double toothAngle, int teeth)
+        {
+            if (filletRadius <= 0.0) throw new InvalidOperationException("The root fillet radius must be positive.");
+            var maximumAngle = Math.PI / teeth;
+            if (ExternalRootAngle(baseRadius, rootRadius, filletRadius, toothAngle) <= maximumAngle) return rootRadius;
+            if (ExternalRootAngle(baseRadius, maximumRadius, filletRadius, toothAngle) > maximumAngle)
+            {
+                throw new InvalidOperationException("The external root fillets overlap and the root radius cannot be adjusted to fit them.");
+            }
+
+            var low = rootRadius;
+            var high = maximumRadius;
+            for (var i = 0; i < 80; i++)
+            {
+                var middle = (low + high) / 2.0;
+                if (ExternalRootAngle(baseRadius, middle, filletRadius, toothAngle) <= maximumAngle) high = middle;
+                else low = middle;
+            }
+
+            return high;
+        }
+
+        private static double ExternalRootAngle(double baseRadius, double rootRadius, double filletRadius, double toothAngle)
+        {
+            var point = CreateExternalRootFillet(baseRadius, rootRadius, filletRadius).RootPoint;
+            return Math.Atan2(point.Y, point.X) - toothAngle / 2.0;
+        }
+
+        private static ExternalRootFilletGeometry CreateExternalRootFillet(double baseRadius, double rootRadius, double filletRadius)
+        {
+            var discriminant = (rootRadius + filletRadius) * (rootRadius + filletRadius) - baseRadius * baseRadius;
+            var theta = discriminant >= filletRadius * filletRadius
+                ? (Math.Sqrt(discriminant) - filletRadius) / baseRadius
+                : 0.0;
+            GearPoint contactPoint;
+            GearPoint centre;
+            var hasFlankLine = theta <= 1e-12;
+            if (hasFlankLine)
+            {
+                var x = Math.Sqrt(rootRadius * rootRadius + 2.0 * rootRadius * filletRadius);
+                contactPoint = new GearPoint(x, 0.0);
+                centre = new GearPoint(x, filletRadius);
+                hasFlankLine = x < baseRadius - 1e-12;
+            }
+            else
+            {
+                var sinTheta = Math.Sin(theta);
+                var cosTheta = Math.Cos(theta);
+                contactPoint = new GearPoint(baseRadius * (cosTheta + theta * sinTheta),
+                    -baseRadius * (sinTheta - theta * cosTheta));
+                centre = new GearPoint(contactPoint.X + filletRadius * sinTheta,
+                    contactPoint.Y + filletRadius * cosTheta);
+            }
+
+            var rootPoint = new GearPoint(centre.X * rootRadius / (rootRadius + filletRadius),
+                centre.Y * rootRadius / (rootRadius + filletRadius));
+            var points = SampleCircleArc(centre, filletRadius, rootPoint, contactPoint, 15, true);
+            return new ExternalRootFilletGeometry
+            {
+                Theta = theta,
+                ContactPoint = contactPoint,
+                Centre = centre,
+                RootPoint = rootPoint,
+                Points = points,
+                HasFlankLine = hasFlankLine
+            };
+        }
+
+        private static double AdjustInternalRootRadius(double baseRadius, double rootRadius, double filletRadius,
+            double toothAngle, int teeth)
+        {
+            if (filletRadius <= 0.0) throw new InvalidOperationException("The root fillet radius must be positive.");
+            if (InternalRootAngle(baseRadius, rootRadius, filletRadius, toothAngle) > 1e-12) return rootRadius;
+
+            var low = baseRadius + filletRadius + Math.Max(1e-9, baseRadius * 1e-12);
+            if (low >= rootRadius || InternalRootAngle(baseRadius, low, filletRadius, toothAngle) <= 1e-12)
+            {
+                throw new InvalidOperationException("The internal root fillets overlap and the root radius cannot be adjusted to fit them.");
+            }
+
+            var high = rootRadius;
+            for (var i = 0; i < 80; i++)
+            {
+                var middle = (low + high) / 2.0;
+                if (InternalRootAngle(baseRadius, middle, filletRadius, toothAngle) > 1e-12) low = middle;
+                else high = middle;
+            }
+
+            return low;
+        }
+
+        private static double InternalRootAngle(double baseRadius, double rootRadius, double filletRadius, double toothAngle)
+        {
+            var point = CreateInternalRootFillet(baseRadius, rootRadius, filletRadius, 2).RootPoint;
+            return Math.Atan2(point.Y, point.X) - toothAngle / 2.0;
+        }
+
+        private static InternalRootFilletGeometry CreateInternalRootFillet(double baseRadius, double rootRadius,
+            double filletRadius, int pointCount)
+        {
+            var centreRadius = rootRadius - filletRadius;
+            var discriminant = centreRadius * centreRadius - baseRadius * baseRadius;
+            if (discriminant < -1e-10)
+            {
+                throw new InvalidOperationException("The internal root radius is too small for a tangent root fillet.");
+            }
+
+            var theta = (filletRadius + Math.Sqrt(Math.Max(0.0, discriminant))) / baseRadius;
+            var sinTheta = Math.Sin(theta);
+            var cosTheta = Math.Cos(theta);
+            var contactPoint = new GearPoint(baseRadius * (cosTheta + theta * sinTheta),
+                -baseRadius * (sinTheta - theta * cosTheta));
+            var centre = new GearPoint(contactPoint.X - filletRadius * sinTheta,
+                contactPoint.Y - filletRadius * cosTheta);
+            var rootPoint = new GearPoint(centre.X * rootRadius / centreRadius, centre.Y * rootRadius / centreRadius);
+            var points = SampleCircleArc(centre, filletRadius, contactPoint, rootPoint, pointCount, false);
+            return new InternalRootFilletGeometry { Theta = theta, Centre = centre, RootPoint = rootPoint, Points = points };
+        }
+
+        private static List<GearPoint> SampleCircleArc(GearPoint centre, double radius, GearPoint start, GearPoint end,
+            int pointCount, bool counterClockwise)
+        {
+            var count = Math.Max(2, pointCount);
+            var startAngle = Math.Atan2(start.Y - centre.Y, start.X - centre.X);
+            var endAngle = Math.Atan2(end.Y - centre.Y, end.X - centre.X);
+            var sweep = endAngle - startAngle;
+            if (counterClockwise)
+            {
+                while (sweep < 0.0) sweep += 2.0 * Math.PI;
+            }
+            else
+            {
+                while (sweep > 0.0) sweep -= 2.0 * Math.PI;
+            }
+
+            var points = new List<GearPoint>(count);
+            for (var i = 0; i < count; i++)
+            {
+                if (i == 0) points.Add(start);
+                else if (i == count - 1) points.Add(end);
+                else
+                {
+                    var angle = startAngle + sweep * i / (count - 1);
+                    points.Add(new GearPoint(centre.X + radius * Math.Cos(angle), centre.Y + radius * Math.Sin(angle)));
+                }
+            }
+
+            return points;
+        }
+
+        private static List<GearPoint> Rotate(List<GearPoint> points, double angle)
+        {
+            return points.ConvertAll(point => point.Rotate(angle));
+        }
+
+        private static List<GearPoint> TransformSecondFlank(List<GearPoint> points, double toothAngle, double rotationAngle)
+        {
+            return points.ConvertAll(point => TransformSecondFlank(point, toothAngle, rotationAngle));
+        }
+
+        private static GearPoint TransformSecondFlank(GearPoint point, double toothAngle, double rotationAngle)
+        {
+            return new GearPoint(point.X, -point.Y).Rotate(toothAngle).Rotate(rotationAngle);
+        }
+
         private static void AddIfAny(List<List<GearPoint>> segments, List<GearPoint> points)
         {
             if (points is { Count: > 0 }) segments.Add(points);
@@ -513,7 +783,7 @@ namespace Bolsover.Gears.Calculator
 
         private static void PopulateParameters(AlibreGearProfile profile, int z, double m, double alphaDeg,
             double profileShift, double pitchRadius, double baseRadius, double addendumRadius, double dedendumRadius,
-            double clearance = 0.0, double backlash = 0.0, double helixAngle = 0.0)
+            double clearance = 0.0, double backlash = 0.0, double helixAngle = 0.0, double rootFilletRadius = 0.0)
         {
             profile.Parameters["z"] = z;
             profile.Parameters["m"] = m;
@@ -526,6 +796,7 @@ namespace Bolsover.Gears.Calculator
             profile.Parameters["baseRadius"] = baseRadius;
             profile.Parameters["addendumRadius"] = addendumRadius;
             profile.Parameters["dedendumRadius"] = dedendumRadius;
+            profile.Parameters["rootFilletRadius"] = rootFilletRadius;
         }
     }
 }

@@ -43,16 +43,18 @@ namespace Bolsover.Gears.Calculator.Alibre
 
         private sealed class Segment
         {
-            public Segment(string name, ToothSketchFigureKind kind, List<GearPoint> points)
+            public Segment(string name, ToothSketchFigureKind kind, List<GearPoint> points, GearPoint centre = null)
             {
                 Name = name;
                 Kind = kind;
                 Points = points;
+                Centre = centre;
             }
 
             public string Name { get; }
             public ToothSketchFigureKind Kind { get; }
             public List<GearPoint> Points { get; }
+            public GearPoint Centre { get; }
         }
 
         /// <summary>Throws <see cref="InvalidOperationException"/> when the gear is not a simple involute spur or helical gear.</summary>
@@ -90,10 +92,10 @@ namespace Bolsover.Gears.Calculator.Alibre
             var profile = isInternal
                 ? AlibreGearGenerator.GenerateInternalToothProfile(
                     gear.Teeth, gear.Module, gear.PressureAngleDeg, gear.RimThickness, gear.ProfileShift, gear.OptimalShift,
-                    InternalPointsPerCurve, gear.Clearance, gear.Backlash, helixAngle)
+                    InternalPointsPerCurve, gear.Clearance, gear.Backlash, helixAngle, gear.RootFillet)
                 : AlibreGearGenerator.GenerateExternalToothProfile(
                     gear.Teeth, gear.Module, gear.PressureAngleDeg, gear.ProfileShift, gear.OptimalShift,
-                    ExternalPointsPerCurve, gear.Clearance, gear.Backlash, helixAngle);
+                    ExternalPointsPerCurve, gear.Clearance, gear.Backlash, helixAngle, gear.RootFillet);
 
             var segments = isInternal ? InternalSegments(profile) : ExternalSegments(profile);
 
@@ -222,9 +224,13 @@ namespace Bolsover.Gears.Calculator.Alibre
             return new List<Segment>
             {
                 new Segment("Trochoid 1", ToothSketchFigureKind.Spline, Scale(profile.Trochoid1)),
+                new Segment("Root fillet 1", ToothSketchFigureKind.Arc, Scale(profile.RootFillet1), Scale(profile.RootFilletCentre1)),
+                new Segment("Flank line 1", ToothSketchFigureKind.Line, Scale(profile.FlankLine1)),
                 new Segment("Involute 1", ToothSketchFigureKind.Spline, Scale(profile.Involute1)),
                 new Segment("Addendum arc", ToothSketchFigureKind.Arc, Scale(profile.UpperArc)),
                 new Segment("Involute 2", ToothSketchFigureKind.Spline, Scale(profile.Involute2)),
+                new Segment("Flank line 2", ToothSketchFigureKind.Line, Scale(profile.FlankLine2)),
+                new Segment("Root fillet 2", ToothSketchFigureKind.Arc, Scale(profile.RootFillet2), Scale(profile.RootFilletCentre2)),
                 new Segment("Trochoid 2", ToothSketchFigureKind.Spline, Scale(profile.Trochoid2)),
                 new Segment("Root arc", ToothSketchFigureKind.Arc, Scale(profile.LowerArc))
             };
@@ -237,7 +243,9 @@ namespace Bolsover.Gears.Calculator.Alibre
             {
                 new Segment("Inside arc 1", ToothSketchFigureKind.Arc, Scale(profile.LowerArc2)),
                 new Segment("Involute 1", ToothSketchFigureKind.Spline, Scale(profile.Involute1)),
+                new Segment("Root fillet 1", ToothSketchFigureKind.Arc, Scale(profile.RootFillet1), Scale(profile.RootFilletCentre1)),
                 new Segment("Root arc", ToothSketchFigureKind.Arc, Scale(profile.UpperArc)),
+                new Segment("Root fillet 2", ToothSketchFigureKind.Arc, Scale(profile.RootFillet2), Scale(profile.RootFilletCentre2)),
                 new Segment("Involute 2", ToothSketchFigureKind.Spline, Scale(profile.Involute2)),
                 new Segment("Inside arc 2", ToothSketchFigureKind.Arc, Scale(profile.LowerArc1))
             };
@@ -260,11 +268,15 @@ namespace Bolsover.Gears.Calculator.Alibre
                 case ToothSketchFigureKind.Arc:
                 {
                     // Alibre draws an arc anticlockwise from its start point to its end point.
-                    var sweep = NormaliseAngle(Math.Atan2(last.Y, last.X) - Math.Atan2(first.Y, first.X));
+                    var centre = segment.Centre ?? new GearPoint(0.0, 0.0);
+                    var sweep = NormaliseAngle(Math.Atan2(last.Y - centre.Y, last.X - centre.X) -
+                                               Math.Atan2(first.Y - centre.Y, first.X - centre.X));
                     return sweep >= 0
-                        ? new ToothSketchFigure(ToothSketchFigureKind.Arc, segment.Name, first.X, first.Y, last.X, last.Y)
-                        : new ToothSketchFigure(ToothSketchFigureKind.Arc, segment.Name, last.X, last.Y, first.X, first.Y);
+                        ? new ToothSketchFigure(ToothSketchFigureKind.Arc, segment.Name, first.X, first.Y, last.X, last.Y, centre.X, centre.Y)
+                        : new ToothSketchFigure(ToothSketchFigureKind.Arc, segment.Name, last.X, last.Y, first.X, first.Y, centre.X, centre.Y);
                 }
+                case ToothSketchFigureKind.Line:
+                    return new ToothSketchFigure(ToothSketchFigureKind.Line, segment.Name, first.X, first.Y, last.X, last.Y);
                 default:
                     return new ToothSketchFigure(ToothSketchFigureKind.Spline, segment.Name, first.X, first.Y, last.X, last.Y, 0.0, 0.0, points);
             }
@@ -276,6 +288,11 @@ namespace Bolsover.Gears.Calculator.Alibre
             if (points == null) return result;
             foreach (var point in points) result.Add(new GearPoint(Q(point.X), Q(point.Y)));
             return result;
+        }
+
+        private static GearPoint Scale(GearPoint point)
+        {
+            return point == null ? null : new GearPoint(Q(point.X), Q(point.Y));
         }
 
         /// <summary>Rounds a length in millimetres to 7 decimal places and converts it to Alibre units.</summary>

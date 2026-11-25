@@ -1232,6 +1232,7 @@ namespace Bolsover.Gears.Gui.Presenters
                 gear.Clearance = template.Clearance;
                 gear.Backlash = template.Backlash;
                 gear.ShowFullGear = template.ShowFullGear;
+                gear.RootFillet = template.RootFillet;
             }
 
             return gear;

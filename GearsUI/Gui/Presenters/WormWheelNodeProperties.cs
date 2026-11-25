@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Gui.Presenters
@@ -39,5 +40,13 @@ namespace Bolsover.Gears.Gui.Presenters
         [Category("Teeth")]
         [DisplayName("Hand (R/L)")]
         public string HelicalDirection => _wheel.HelicalDirection;
+
+        [Category("Teeth")]
+        [DisplayName("Root fillet")]
+        public RootFilletType RootFillet
+        {
+            get => _wheel.RootFillet;
+            set => _wheel.RootFillet = value;
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Bolsover.Gears.Calculator.Assemblies;
+using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Model.Assemblies
 {
@@ -128,6 +129,9 @@ namespace Bolsover.Gears.Model.Assemblies
         public double PressureAngleDeg { get; set; } = 20.0;
         public double FaceWidth { get; set; } = 15.0;
         public double Backlash { get; set; }
+
+        /// <summary>Root transition method shared by the sun, planets and internal ring.</summary>
+        public RootFilletType RootFillet { get; set; } = RootFilletType.Standard;
 
         /// <summary>Helix angle of every gear of the stage (degrees); 0 gives spur gears.</summary>
         public double HelixAngleDeg { get; set; }
@@ -303,7 +307,8 @@ namespace Bolsover.Gears.Model.Assemblies
                     RimThickness = RingRimThickness,
                     HelixAngleDeg = HelixAngleDeg,
                     HelicalDirection = hand,
-                    IsHerringbone = IsHelical && IsHerringbone
+                    IsHerringbone = IsHelical && IsHerringbone,
+                    RootFillet = RootFillet
                 };
             }
 

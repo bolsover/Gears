@@ -1,4 +1,5 @@
 using System;
+using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Model.Assemblies
 {
@@ -33,6 +34,9 @@ namespace Bolsover.Gears.Model.Assemblies
         }
 
         public double Backlash { get; set; }
+
+        /// <summary>Root transition method for the involute wheel teeth.</summary>
+        public RootFilletType RootFillet { get; set; } = RootFilletType.Standard;
 
         public override int ToothCount => Teeth;
 
@@ -75,6 +79,7 @@ namespace Bolsover.Gears.Model.Assemblies
                 HelixAngleDeg = LeadAngleDeg,
                 HelicalDirection = HelicalDirection,
                 Backlash = Backlash,
+                RootFillet = RootFillet,
                 Clearance = 0.25 * normalModule
             };
         }

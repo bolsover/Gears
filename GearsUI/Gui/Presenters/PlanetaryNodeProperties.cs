@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Gui.Presenters
@@ -115,6 +116,14 @@ namespace Bolsover.Gears.Gui.Presenters
         {
             get => _set.IsHerringbone;
             set => _set.IsHerringbone = value;
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Root fillet")]
+        public RootFilletType RootFillet
+        {
+            get => _set.RootFillet;
+            set => _set.RootFillet = value;
         }
 
         [Category("Dimensions")]

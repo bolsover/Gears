@@ -74,6 +74,10 @@ the addendum, dedendum and diameters reverse.
 | 7 | Circular tooth thickness (space width) | $s$ | $m \left(\dfrac{\pi}{2} + 2 x \tan\alpha\right) + j_t$ for the tooth space |
 | 8 | Rim thickness | $s_{rim}$ | given by the designer |
 
+## Root transition
+
+Involute gears use a trochoidal root transition by default. The gear properties also offer a circular dedendum fillet with radius $0.38m$; when the available root space is too narrow, the root diameter is adjusted to keep the fillets tangent and prevent them from overlapping. This option applies to external and internal involute gears, including helical forms, and does not change cycloidal gears.
+
 ## Involute function
 
 The involute function converts a pressure angle into a roll angle and is used in every shifted-gear calculation:

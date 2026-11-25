@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using Bolsover.Gears.Model;
 using Bolsover.Gears.Model.Assemblies;
 
 namespace Bolsover.Gears.Gui.Presenters
@@ -107,6 +108,14 @@ namespace Bolsover.Gears.Gui.Presenters
         {
             get => _gear.IsInternal;
             set => _gear.IsInternal = value;
+        }
+
+        [Category("Teeth")]
+        [DisplayName("Root fillet")]
+        public RootFilletType RootFillet
+        {
+            get => _gear.RootFillet;
+            set => _gear.RootFillet = value;
         }
 
         [Category("Teeth")]

@@ -19,8 +19,10 @@ namespace Bolsover.Gears.AddOn
         /// <summary>Menu ID of the root menu item.</summary>
         public const int MenuIdRoot = 3001;
 
-        public const string Title = "Gears";
-   
+        /// <summary>Menu ID of the command that opens the gear train editor.</summary>
+        public const int MenuIdGearTrain = 3002;
+
+        private static readonly int[] RootItems = { MenuIdGearTrain };
 
         private readonly Func<Form> _formFactory;
         private readonly IWin32Window _owner;
@@ -104,10 +106,21 @@ namespace Bolsover.Gears.AddOn
         }
 
         /// <summary>Returns the IDs of the sub menu items under a menu item; the ID of a leaf item is its command ID.</summary>
-        public Array SubMenuItems(int menuId) => null;
+        public Array SubMenuItems(int menuId)
+        {
+            return menuId == MenuIdRoot ? (int[]) RootItems.Clone() : null;
+        }
 
-        // Alibre builds no menu if the root item's text is empty.
-        public string MenuItemText(int menuId) => menuId == MenuIdRoot ? Title : string.Empty;
+        /// <summary>Returns the display text of a menu item.</summary>
+        public string MenuItemText(int menuId)
+        {
+            switch (menuId)
+            {
+                case MenuIdRoot: return "Gears";
+                case MenuIdGearTrain: return "Gears";
+                default: return string.Empty;
+            }
+        }
 
         /// <summary>Returns true if the menu item is a popup menu.</summary>
         public bool PopupMenu(int menuId)
@@ -126,8 +139,8 @@ namespace Bolsover.Gears.AddOn
         {
             switch (menuId)
             {
-                case MenuIdRoot: return "Opens the gear train editor: shafts, spur, helical, bevel, worm and planetary gears, with 2D and 3D views";
-           
+                case MenuIdRoot: return "Gears";
+                case MenuIdGearTrain: return "Opens the gear train editor: shafts, spur, helical, bevel, worm and planetary gears, with 2D and 3D views";
                 default: return string.Empty;
             }
         }
@@ -154,7 +167,7 @@ namespace Bolsover.Gears.AddOn
         /// </summary>
         public IAlibreAddOnCommand InvokeCommand(int menuId, string sessionIdentifier)
         {
-            if (menuId != MenuIdRoot) return null;
+            if (menuId != MenuIdGearTrain) return null;
 
             try
             {

@@ -1,5 +1,6 @@
 using System;
 using Bolsover.Gears.Calculator;
+using Bolsover.Gears.Model;
 
 namespace Bolsover.Gears.Model.Assemblies
 {
@@ -33,6 +34,9 @@ namespace Bolsover.Gears.Model.Assemblies
         public double Backlash { get; set; }
         public double ProfileShift { get; set; }
         public bool IsInternal { get; set; }
+
+        /// <summary>Root transition method for this involute gear.</summary>
+        public RootFilletType RootFillet { get; set; } = RootFilletType.Standard;
 
         /// <summary>Rim thickness (mm), used for internal gears only.</summary>
         public double RimThickness { get; set; } = 10.0;
@@ -80,8 +84,8 @@ namespace Bolsover.Gears.Model.Assemblies
             Validate();
 
             var profile = IsInternal
-                ? AlibreGearGenerator.GenerateInternalToothProfile(Teeth, Module, PressureAngleDeg, RimThickness, ProfileShift, OptimalShift, null, Clearance, Backlash, HelixAngleDeg)
-                : AlibreGearGenerator.GenerateExternalToothProfile(Teeth, Module, PressureAngleDeg, ProfileShift, OptimalShift, null, Clearance, Backlash, HelixAngleDeg);
+                ? AlibreGearGenerator.GenerateInternalToothProfile(Teeth, Module, PressureAngleDeg, RimThickness, ProfileShift, OptimalShift, null, Clearance, Backlash, HelixAngleDeg, RootFillet)
+                : AlibreGearGenerator.GenerateExternalToothProfile(Teeth, Module, PressureAngleDeg, ProfileShift, OptimalShift, null, Clearance, Backlash, HelixAngleDeg, RootFillet);
 
             var tooth = AlibreGearGenerator.BuildToothOutline(profile, IsInternal);
             var polylines = ShowFullGear
